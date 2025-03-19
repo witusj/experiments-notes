@@ -1,0 +1,73 @@
+---
+jupyter: python3
+---
+
+# `compute_convolutions` {.unnumbered}
+
+This notebook provides documentation for the function `compute_convolutions`, which computes the k-fold convolution of a probability mass function (PMF) for k in the range 1 to N. The function is generic and can be applied to any PMF, not only those representing service times. Additionally, the function adjusts the PMF for no-shows using the `service_time_with_no_shows` function.
+
+## Function Documentation
+
+`compute_convolutions(probabilities: List[float], N: int, q: float = 0.0) -> Dict[int, np.ndarray]`
+
+#### Description
+
+Computes the k-fold convolution of a given probability mass function (PMF) for k from 1 up to N. Before computing the convolutions, the PMF is adjusted for no-shows using the provided no-show probability `q` via the `service_time_with_no_shows` function. Convolution is performed using NumPy's `np.convolve`.
+
+#### Parameters
+
+- **probabilities** (`List[float]`): The original PMF represented as a list where the index corresponds to a value (for instance, a service time) and the value at that index is its probability. This function is generic and does not have to be used solely for service times.
+- **N** (`int`): The maximum number of convolutions to compute.
+- **q** (`float`, optional): The probability of a no-show. Defaults to `0.0`.
+
+#### Returns
+
+- **`Dict[int, np.ndarray]`**: A dictionary where each key `k` (with 1 ≤ k ≤ N) corresponds to the PMF resulting from the k-fold convolution of the adjusted PMF.
+
+#### Example
+
+```{python}
+import numpy as np
+from functions import compute_convolutions, service_time_with_no_shows
+
+# Example usage
+original_pmf = [0.0, 0.5, 0.3, 0.2]
+N = 3
+no_show_probability = 0.1
+
+convs = compute_convolutions(original_pmf, N, no_show_probability)
+for k, pmf in convs.items():
+    print(f"{k}-fold convolution: {pmf}")
+```
+
+```{python}
+import unittest
+
+class TestComputeConvolutions(unittest.TestCase):
+    def test_single_convolution(self):
+        # When N = 1, the result should be the adjusted PMF
+        original_pmf = [0.0, 0.5, 0.3, 0.2]
+        no_show_probability = 0.1
+        N = 1
+        expected = np.array(service_time_with_no_shows(original_pmf, no_show_probability))
+        result = compute_convolutions(original_pmf, N, no_show_probability)
+        self.assertTrue(np.allclose(result[1], expected), "Single convolution test failed")
+
+    def test_multiple_convolutions(self):
+        # Test for N = 3 using a simple PMF
+        original_pmf = [0.0, 0.5, 0.3, 0.2]
+        no_show_probability = 0.0  # No adjustment for simplicity
+        N = 3
+        result = compute_convolutions(original_pmf, N, no_show_probability)
+
+        # For N=1, result is the original pmf
+        self.assertTrue(np.allclose(result[1], np.array(original_pmf)))
+
+        # For higher convolutions, ensure the sum of probabilities remains 1 (within numerical precision)
+        for k in range(1, N + 1):
+            self.assertAlmostEqual(np.sum(result[k]), 1.0, places=5, msg=f"Sum of probabilities for {k}-fold convolution is not 1")
+
+if __name__ == '__main__':
+    unittest.main(argv=[''], exit=False)
+```
+

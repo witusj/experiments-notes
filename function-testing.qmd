@@ -1,0 +1,345 @@
+---
+title: "Function testing"
+author: "Witek ten Hove"
+jupyter: python3
+---
+
+## Objective
+
+In this experiment we will test whether the functions for calculating the objective values works properly and efficiently.
+
+## Background
+
+For developing new methods for optimizing appointment schedules it is necessary that the function for calculating objective values works properly. It is also important that the function is efficient, as it will be used in optimization algorithms that will be run many times.
+
+## Hypothesis
+
+The functions for calculating that have been developed are working fast and generate correct results.
+
+## Methodology
+
+### Tools and Materials
+
+For testing the correct working of the functions used to calculate objective values we will compare the exact calculation to results from Monte Carlo (MC) simulations. The MC simulations allow modeling the system and replicating closely the actual process of patients arriving and being served. The exact calculation is based on the convolution of the service time distribution and the number of patients arriving at each time slot.
+
+### Experimental Design
+
+We will define some typical instances of schedules and calculate the objective values for them both using the exact method as well as through MC simulations. We will then compare the results.
+
+### Variables
+
+-   **Independent Variables**:
+    -   Different instances of appointment schedules.
+-   **Dependent Variables**:
+    -   Objective value results from exact calculations and simulations.
+    -   Speed indicators
+
+### Setup
+
+We have defined the following test cases:
+
+```{python}
+import numpy as np
+import pandas as pd
+import time
+import plotly.graph_objects as go
+from functions import service_time_with_no_shows, compute_convolutions, compute_convolutions_fft, calculate_objective_serv_time_lookup
+
+# Parameters
+d = 5
+q = 0.1
+    
+# Create service time distribution
+service_time = np.zeros(11)
+service_time[3] = 0.2
+service_time[5] = 0.3
+service_time[8] = 0.5
+
+average_service_time = np.dot(range(len(service_time)), service_time)
+print(f"Average service time: {average_service_time}")
+    
+# Different schedule patterns with the same total number of patients (except for test schedule)
+schedules = [
+    ("Calibration", [2, 0, 0, 0, 0, 1]),
+    ("Uniform", [2, 2, 2, 2]),
+    ("Decreasing", [5, 2, 1, 0]),
+    ("Increasing", [0, 1, 2, 5]),
+    ("Front-heavy", [4, 4, 0, 0]),
+    ("Back-heavy", [0, 0, 4, 4]),
+    ("Alternating", [4, 0, 4, 0]),
+    ("Bailey-rule", [2, 1, 1, 1, 1, 1, 1])  # Schedule 2 initially, then 1 each slot
+]
+
+# Set number of simulations for Monte Carlo simulation
+nr_simulations = 1000
+
+# Create dictionary for storing results
+results_dict = {'schedule_name': [], 'average_waiting_time': [], 'average_overtime': [], 'expected_waiting_time': [], 'expected_overtime': [], 'average_computation_time': []}
+results_dict['schedule_name'] = [s[0] for s in schedules]
+```
+
+The "Calibration" test set is used to calibrate the simulation results with the exact results. For this schedule, the exact results can be easily calculated by hand. The average service time after correcting for no-shows for one patient is 5.49 (see below) and only the second patient in this example will experience waiting times. So the average expected waiting time is 5.49 / 3 = 1.83.
+
+The expected overtime is is the expected spillover time caused by the last patient in the schedule. As there are no patients before the last patient in the last interval, the spillover time distribution is simply distribution of the event that the (adjusted) service time will exceed the interval time. For the case that overtime is 3 (8 - 5), the probability is 0.45 and for other values it is 0.55. So the expected overtime is 0.45 * 3 + 0.55 * 0 = 1.35.
+  
+The other test sets are used to examine the performance of the functions for different schedule patterns.
+
+
+### Sample Size and Selection
+
+**Sample Size**: - For each schedule instance we will run `{python} nr_simulations` simulations.
+
+**Sample Selection**: - During each simulation for each patient a random service time will be sampled from the distribution (adjusted for no-shows).
+
+### Experimental Procedure
+
+#### Step 1: Adjust the service time distribution for no-shows.
+
+```{python}
+# Adjust service time distribution for no-shows and compare to original
+service_time_no_shows = service_time_with_no_shows(service_time, q)
+print(f"Service time distribution with no-shows: {service_time_no_shows}")
+
+average_service_time_no_shows = np.dot(range(len(service_time_no_shows)), service_time_no_shows)
+print(f"Average service time with no-shows: {average_service_time_no_shows}")
+```
+#### Step 2: Monte carlo simulation
+
+For each schedule instance:
+
+1.  Calculate $N$ and $T$, the total number of patients and the total time of the schedule.
+2.  For each simulation:
+    1.  Sample random service times for each of the $N$ patient from service times distribution with no-shows.
+    2.  Calculate the the average waiting time and the overtime for the schedule using a Lindley recursion, starting at $t = 0$ and ending at $t = T - 1$.
+
+```{python}
+import numpy as np
+from typing import List, Tuple, Union
+
+def simulate_schedule(
+    schedule: List[int],
+    service_time_no_shows: Union[List[float], np.ndarray],
+    d: int,
+    nr_simulations: int
+) -> Tuple[float, float]:
+    """
+    Runs a Monte Carlo simulation for a single schedule.
+
+    This function simulates patient scheduling over multiple time slots and computes the average waiting 
+    time per patient and the average overtime across all simulation iterations. Each time slot has a duration 
+    threshold `d`. Service times for patients are sampled based on the provided probability mass function.
+
+    Parameters:
+        schedule (List[int]): A list where each element represents the number of patients scheduled in each time slot.
+        service_time_no_shows (Union[List[float], np.ndarray]): A probability mass function (PMF) for service times.
+        d (int): The duration threshold for a time slot.
+        nr_simulations (int): The number of simulation iterations to run.
+
+    Returns:
+        Tuple[float, float]: A tuple containing:
+            - The average waiting time per patient across simulations.
+            - The average overtime across simulations.
+    """
+    N: int = sum(schedule)  # Total number of patients
+    T: int = len(schedule)  # Total number of time slots
+
+    total_waiting_time: float = 0.0
+    total_overtime: float = 0.0
+
+    for _ in range(nr_simulations):
+        cum_waiting_time: float = 0.0
+
+        # --- Process the first time slot ---
+        num_patients: int = schedule[0]
+        # Generate random service times for the first slot
+        sampled: np.ndarray = np.random.choice(
+            range(len(service_time_no_shows)),
+            size=num_patients,
+            p=service_time_no_shows
+        )
+
+        if num_patients == 0:
+            waiting_time: float = 0.0
+            spillover_time: float = 0.0
+        elif num_patients == 1:
+            waiting_time = 0.0
+            spillover_time = max(0, sampled[0])
+        else:
+            # For more than one patient, the waiting time is the cumulative sum
+            # of the service times for all but the last patient.
+            waiting_time = float(sum(np.cumsum(sampled[:-1])))
+            spillover_time = max(0, sum(sampled) - d)
+        cum_waiting_time += waiting_time
+
+        # --- Process the remaining time slots ---
+        for t in range(1, T):
+            num_patients = schedule[t]
+            # Generate random service times for time slot t
+            sampled = np.random.choice(
+                range(len(service_time_no_shows)),
+                size=num_patients,
+                p=service_time_no_shows
+            )
+            if num_patients == 0:
+                waiting_time = 0.0
+                spillover_time = max(0, spillover_time - d)
+            elif num_patients == 1:
+                waiting_time = spillover_time
+                spillover_time = max(0, spillover_time + sampled[0] - d)
+            else:
+                # Each patient waits the current spillover,
+                # plus additional waiting due to the service times of those ahead.
+                waiting_time = spillover_time * num_patients + sum(np.cumsum(sampled[:-1]))
+                spillover_time = max(0, spillover_time + sum(sampled) - d)
+            cum_waiting_time += waiting_time
+
+        # Accumulate normalized waiting time (per patient) and overtime
+        total_waiting_time += cum_waiting_time / N
+        total_overtime += spillover_time
+
+    avg_waiting_time: float = total_waiting_time / nr_simulations
+    avg_overtime: float = total_overtime / nr_simulations
+
+    return avg_waiting_time, avg_overtime
+
+
+# Loop through the schedules
+for schedule_name, schedule in schedules:
+    N = sum(schedule)
+    T = len(schedule)
+    print(f"Schedule: {schedule_name} {schedule}, N: {N}, T: {T}")
+    
+    avg_waiting_time, avg_overtime = simulate_schedule(schedule, service_time_no_shows, d, nr_simulations)
+    
+    print(f"Average waiting time: {avg_waiting_time}, average overtime: {avg_overtime}")
+    results_dict['average_waiting_time'].append(avg_waiting_time)
+    results_dict['average_overtime'].append(avg_overtime)
+```
+
+#### Step 3: Exact calculation
+
+For each schedule instance run 10 evaluations of the objective value using the exact method and calculate the average waiting time and overtime.
+
+
+```{python}
+# Loop through the schedules, run 10 evaluations, calculate average waiting time and overtime for each schedule, calculate average computation times and store the results in the results dictionary
+
+for schedule_name, schedule in schedules:
+    N = sum(schedule)
+    T = len(schedule)
+    print(f"Schedule: {schedule_name} {schedule}, N: {N}, T: {T}")
+    convolutions = compute_convolutions(service_time, N, q)
+    
+    total_time = 0
+    # Exact calculation over 10 evaluations
+    for i in range(10):
+        start_time = time.time()
+        # Calculate the objective value using the exact method
+        waiting_time, overtime = calculate_objective_serv_time_lookup(schedule, d, convolutions)
+        elapsed_time = time.time() - start_time
+        total_time += elapsed_time
+        
+    avg_time = total_time / 10
+    print(f"Expected waiting time: {waiting_time / N}, Expected overtime: {overtime}")
+    results_dict['expected_waiting_time'].append(waiting_time / N)
+    results_dict['expected_overtime'].append(overtime)
+    results_dict['average_computation_time'].append(avg_time)
+```
+## Results
+
+Comparison of the results of the exact calculations with the results of the Monte Carlo simulations.
+
+```{python}
+df_results = pd.DataFrame.from_dict(results_dict)
+df_results
+```
+
+
+```{python}
+# Extract schedule names from the dataframe
+schedule_names = df_results['schedule_name'].tolist()
+
+# Create new x-values for simulation and exact results
+x_sim = [f"{s}<br>Simulation" for s in schedule_names]
+x_exact = [f"{s}<br>Exact" for s in schedule_names]
+
+# Extract values from the dataframe
+sim_wait = df_results['average_waiting_time'].tolist()
+sim_over = df_results['average_overtime'].tolist()
+exact_wait = df_results['expected_waiting_time'].tolist()
+exact_over = df_results['expected_overtime'].tolist()
+
+# Create a combined category list with an empty category between the two groups
+categories = x_sim + [""] + x_exact
+
+# Create the figure
+fig = go.Figure()
+
+# Simulation bar traces (stacked)
+fig.add_trace(go.Bar(
+    x=x_sim,
+    y=sim_wait,
+    name='Waiting Time',
+    marker_color='blue'
+))
+fig.add_trace(go.Bar(
+    x=x_sim,
+    y=sim_over,
+    name='Overtime',
+    marker_color='red'
+))
+
+# Exact bar traces (stacked)
+fig.add_trace(go.Bar(
+    x=x_exact,
+    y=exact_wait,
+    name='Waiting Time',
+    marker_color='blue',
+    showlegend=False  # legend already shown for waiting time above
+))
+fig.add_trace(go.Bar(
+    x=x_exact,
+    y=exact_over,
+    name='Overtime',
+    marker_color='red',
+    showlegend=False  # legend already shown for overtime above
+))
+
+# Update x-axis to use the full category array (which includes the gap)
+fig.update_xaxes(
+    tickangle=45,
+    categoryorder='array',
+    categoryarray=categories
+)
+
+# Optionally, adjust the vertical dotted line.
+# For example, you can remove it if the gap is sufficient or reposition it.
+fig.update_layout(
+    title="Comparison of Simulation vs. Exact Results",
+    xaxis_title="Schedule Type",
+    yaxis_title="Time",
+    barmode='stack',
+    shapes=[
+        dict(
+            type="line",
+            xref="paper", x0=0.5, x1=0.5,
+            yref="paper", y0=0, y1=1,
+            line=dict(
+                color="black",
+                width=2,
+                dash="dot"
+            )
+        )
+    ]
+)
+
+fig.show()
+```
+
+## Discussion
+
+The results show that the exact calculations and the Monte Carlo simulations are in good agreement. The average waiting times and overtimes are very close for both methods. The computation times for the exact calculations are also reasonable, indicating that the functions are efficient - at least for these limited instances.
+
+## Timeline
+
+This experiment has been started on 07-03-2025 and is expected to be finished on 14-03-2025.

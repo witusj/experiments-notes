@@ -1,0 +1,23 @@
+project:
+  type: book
+  output-dir: docs
+
+book:
+  title: "Appointment Scheduling Experiments"
+  author: "Witek ten Hove"
+  date: "8/18/2021"
+  chapters:
+    - index.qmd
+    - function-testing.qmd
+    - references.qmd
+    - part: "Function documentation"
+      chapters:
+        - service-time-with-no-shows.qmd
+        - compute-convolutions.qmd
+        - calculate-objective-serv-time-lookup.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo

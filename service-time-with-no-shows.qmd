@@ -1,0 +1,59 @@
+---
+jupyter: python3
+---
+# `service_time_with_no_shows` {.unnumbered}
+
+This notebook provides documentation for the function `service_time_with_no_shows` and includes a unit test to verify its functionality.
+
+## Function Documentation
+
+`service_time_with_no_shows(s: List[float], q: float) -> List[float]`
+
+#### Description
+
+Adjusts a distribution of service times to account for no-shows. The function scales the original service time distribution by the probability of a patient showing up (i.e., `1 - q`) and then adds the no-show probability `q` to the service time for zero time slots.
+
+#### Parameters
+
+- **s** (`List[float]`): The original service time probability distribution. This list represents the probabilities associated with different service times.
+- **q** (`float`): The probability of no-shows. This value should be between 0 and 1.
+
+#### Returns
+
+- **`List[float]`**: The adjusted service time probability distribution where the no-show probability has been incorporated into the probability of zero service time.
+
+#### Example
+
+```{python}
+from functions import service_time_with_no_shows
+
+# Example usage
+original_distribution = [0.0, 0.5, 0.3, 0.2]
+no_show_probability = 0.1
+adjusted_distribution = service_time_with_no_shows(original_distribution, no_show_probability)
+print("Adjusted distribution:", adjusted_distribution)
+```
+
+```{python}
+import unittest
+
+class TestServiceTimeWithNoShows(unittest.TestCase):
+    def test_adjust_distribution(self):
+        # Test with a known distribution and no-show probability
+        original_distribution = [0.0, 0.5, 0.3, 0.2]
+        no_show_probability = 0.1
+        
+        # Expected adjustment: second element 0.1, 
+        # other elements: multiplied by 0.9
+        expected_distribution = [0.1, 0.45, 0.27, 0.18]
+        
+        result = service_time_with_no_shows(original_distribution, no_show_probability)
+        
+        # Using almost equal check due to floating point arithmetic
+        for r, e in zip(result, expected_distribution):
+            self.assertAlmostEqual(r, e, places=5)
+
+if __name__ == '__main__':
+    unittest.main(argv=[''], exit=False)
+```
+

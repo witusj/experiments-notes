@@ -1,0 +1,79 @@
+---
+jupyter: python3
+---
+
+# `calculate_objective_serv_time_lookup` {.unnumbered}
+
+## Function Documentation
+
+`calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutions: dict) -> Tuple[float, float]`
+
+#### Description
+
+This notebook provides documentation for the function `calculate_objective_serv_time_lookup`, which calculates an objective value (in terms of expected waiting time and expected spillover) based on a given schedule and pre-computed convolutions of a probability mass function (PMF). 
+
+The function uses the following inputs:
+
+- **schedule**: A list of integers representing the number of patients scheduled in each time slot.
+- **d**: An integer indicating the duration threshold for a time slot.
+- **convolutions**: A dictionary of precomputed convolutions of the service time PMF. The key `1` should correspond to the adjusted service time distribution (for example, one adjusted for no-shows), while keys greater than `1` are used for multiple patients in a time slot.
+
+The function returns a tuple:
+
+- **ewt**: The sum of expected waiting times over the schedule.
+- **esp**: The expected spillover time (or overtime) after the final time slot.
+
+## Example Usage
+
+A trivial example using a precomputed convolution dictionary with a degenerate PMF (i.e. always zero service time) is provided in the unit tests below.
+
+
+```{python}
+import numpy as np
+from typing import List, Dict, Tuple
+from functions import service_time_with_no_shows, compute_convolutions, calculate_objective_serv_time_lookup
+
+# For demonstration purposes, we use a trivial convolution dictionary
+# where the service time PMF is degenerate (always zero service time).
+# In this case, the adjusted PMF has all mass at index 0, and convolutions for any x are identical.
+original_distribution = [0.0, 0.5, 0.3, 0.2]
+no_show_probability = 0.1
+adjusted_distribution = service_time_with_no_shows(original_distribution, no_show_probability)
+schedule_example = [2, 0, 0, 0, 0, 0, 1]
+N = sum(schedule_example)
+convolutions_example = compute_convolutions(original_distribution, N, no_show_probability)
+d_example = 1
+ewt, esp = calculate_objective_serv_time_lookup(schedule_example, d_example, convolutions_example)
+print("Adjusted Service Time Distribution: ", adjusted_distribution)
+print("Expected Adjusted Service Time: ", np.dot(range(len(adjusted_distribution)), adjusted_distribution))
+print("Expected Waiting Time:", ewt)
+print("Expected Spillover:", esp)
+```
+
+```{python}
+import unittest
+
+class TestCalculateObjectiveServTimeLookup(unittest.TestCase):
+    def setUp(self):
+        # Create a convolution dictionary
+        self.convolutions = convolutions_example
+        self.d = d_example
+
+    def test_single_time_slot(self):
+        # With one patient and a degenerate PMF (always 0 service time), no waiting and spillover can be calculated by hand.
+        schedule = [1]
+        ewt, esp = calculate_objective_serv_time_lookup(schedule, self.d, self.convolutions)
+        self.assertAlmostEqual(ewt, 0.0, places=5, msg="Expected waiting time should be 0")
+        self.assertAlmostEqual(esp, 0.6300000000000001, places=5, msg="Expected spillover should be 0")
+
+    def test_zero_patients(self):
+        # If no patients are scheduled in a time slot, the process simply advances in time.
+        schedule = [0]
+        ewt, esp = calculate_objective_serv_time_lookup(schedule, self.d, self.convolutions)
+        self.assertAlmostEqual(ewt, 0.0, places=5, msg="Expected waiting time should be 0 when no patients")
+        self.assertAlmostEqual(esp, 0.0, places=5, msg="Expected spillover should be 0 when no patients")
+
+if __name__ == '__main__':
+    unittest.main(argv=[''], exit=False)
+```
+
