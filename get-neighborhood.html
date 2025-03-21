@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Appointment Scheduling Experiments - calculate_objective_serv_time_lookup</title>
+<title>get-neighborhood</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -57,156 +57,29 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="site_libs/quarto-nav/headroom.min.js"></script>
-<script src="site_libs/clipboard/clipboard.min.js"></script>
-<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="site_libs/quarto-search/fuse.min.js"></script>
-<script src="site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="./">
-<link href="./compute-convolutions.html" rel="prev">
-<script src="site_libs/quarto-html/quarto.js"></script>
-<script src="site_libs/quarto-html/popper.min.js"></script>
-<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="site_libs/quarto-html/anchor.min.js"></script>
-<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
-<script id="quarto-search-options" type="application/json">{
-  "location": "sidebar",
-  "copy-button": false,
-  "collapse-after": 3,
-  "panel-placement": "start",
-  "type": "textbox",
-  "limit": 50,
-  "keyboard-shortcut": [
-    "f",
-    "/",
-    "s"
-  ],
-  "show-item-context": false,
-  "language": {
-    "search-no-results-text": "No results",
-    "search-matching-documents-text": "matching documents",
-    "search-copy-link-title": "Copy link to search",
-    "search-hide-matches-text": "Hide additional matches",
-    "search-more-match-text": "more match in this document",
-    "search-more-matches-text": "more matches in this document",
-    "search-clear-button-title": "Clear",
-    "search-text-placeholder": "",
-    "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit",
-    "search-label": "Search"
-  }
-}</script>
+<script src="get-neighborhood_files/libs/clipboard/clipboard.min.js"></script>
+<script src="get-neighborhood_files/libs/quarto-html/quarto.js"></script>
+<script src="get-neighborhood_files/libs/quarto-html/popper.min.js"></script>
+<script src="get-neighborhood_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="get-neighborhood_files/libs/quarto-html/anchor.min.js"></script>
+<link href="get-neighborhood_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="get-neighborhood_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="get-neighborhood_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="get-neighborhood_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="get-neighborhood_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
 
 </head>
 
-<body class="nav-sidebar floating">
+<body class="fullcontent">
 
-<div id="quarto-search-results"></div>
-  <header id="quarto-header" class="headroom fixed-top">
-  <nav class="quarto-secondary-nav">
-    <div class="container-fluid d-flex">
-      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
-        <i class="bi bi-layout-text-sidebar-reverse"></i>
-      </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./calculate-objective-serv-time-lookup.html"><code>calculate_objective_serv_time_lookup</code></a></li></ol></nav>
-        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
-        </a>
-      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
-        <i class="bi bi-search"></i>
-      </button>
-    </div>
-  </nav>
-</header>
-<!-- content -->
-<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
-<!-- sidebar -->
-  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
-    <div class="pt-lg-2 mt-2 text-left sidebar-header">
-    <div class="sidebar-title mb-0 py-0">
-      <a href="./">Appointment Scheduling Experiments</a> 
-    </div>
-      </div>
-        <div class="mt-2 flex-shrink-0 align-items-center">
-        <div class="sidebar-search">
-        <div id="quarto-search" class="" title="Search"></div>
-        </div>
-        </div>
-    <div class="sidebar-menu-container"> 
-    <ul class="list-unstyled mt-1">
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./function-testing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Function testing</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./references.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">References</span></span></a>
-  </div>
-</li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
- <span class="menu-text">Function documentation</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./service-time-with-no-shows.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><code>service_time_with_no_shows</code></span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./compute-convolutions.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><code>compute_convolutions</code></span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="./calculate-objective-serv-time-lookup.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><code>calculate_objective_serv_time_lookup</code></span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-    </ul>
-    </div>
-</nav>
-<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
-<!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">Table of contents</h2>
-   
-  <ul>
-  <li><a href="#function-documentation" id="toc-function-documentation" class="nav-link active" data-scroll-target="#function-documentation">Function Documentation</a></li>
-  <li><a href="#example-usage" id="toc-example-usage" class="nav-link" data-scroll-target="#example-usage">Example Usage</a></li>
-  </ul>
-</nav>
-    </div>
-<!-- main -->
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./calculate-objective-serv-time-lookup.html"><code>calculate_objective_serv_time_lookup</code></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><code>calculate_objective_serv_time_lookup</code></h1>
+<h1 class="title"><code>get_neighborhood</code></h1>
 </div>
 
 
@@ -223,91 +96,115 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
+<p>This notebook provides documentation for the function <code>get_neighborhood</code>, which generates the neighborhood of a solution vector by adding combinations of adjustment vectors from a precomputed array (<code>v_star</code>). The function filters out any candidate neighbors that result in negative values.</p>
 <section id="function-documentation" class="level2">
 <h2 class="anchored" data-anchor-id="function-documentation">Function Documentation</h2>
-<p><code>calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutions: dict) -&gt; Tuple[float, float]</code></p>
+<p><code>get_neighborhood(x: Union[List[int], np.ndarray], v_star: np.ndarray, ids: List[List[int]], verbose: bool = False) -&gt; np.ndarray</code></p>
 <section id="description" class="level4">
 <h4 class="anchored" data-anchor-id="description">Description</h4>
-<p>This notebook provides documentation for the function <code>calculate_objective_serv_time_lookup</code>, which calculates an objective value (in terms of expected waiting time and expected spillover) based on a given schedule and pre-computed convolutions of a probability mass function (PMF).</p>
-<p>The function uses the following inputs:</p>
+<p>The <code>get_neighborhood</code> function computes a set of neighbor solutions by adding together selected rows from the array <code>v_star</code> to an initial solution vector <code>x</code>. The selection of rows is determined by the list of index lists <code>ids</code>, where each inner list represents a combination of indices. After generating the candidate neighbors, the function filters out any that contain negative values. An optional <code>verbose</code> flag provides debugging output during execution.</p>
+</section>
+<section id="parameters" class="level4">
+<h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <ul>
-<li><strong>schedule</strong>: A list of integers representing the number of patients scheduled in each time slot.</li>
-<li><strong>d</strong>: An integer indicating the duration threshold for a time slot.</li>
-<li><strong>convolutions</strong>: A dictionary of precomputed convolutions of the service time PMF. The key <code>1</code> should correspond to the adjusted service time distribution (for example, one adjusted for no-shows), while keys greater than <code>1</code> are used for multiple patients in a time slot.</li>
-</ul>
-<p>The function returns a tuple:</p>
-<ul>
-<li><strong>ewt</strong>: The sum of expected waiting times over the schedule.</li>
-<li><strong>esp</strong>: The expected spillover time (or overtime) after the final time slot.</li>
+<li><p><strong>x</strong> (<code>Union[List[int], np.ndarray]</code>):<br>
+The current solution vector. Can be provided as a list of integers or as a NumPy array.</p></li>
+<li><p><strong>v_star</strong> (<code>np.ndarray</code>):<br>
+A 2D NumPy array where each row is an adjustment vector. These vectors are used to modify the current solution to explore its neighborhood.</p></li>
+<li><p><strong>ids</strong> (<code>List[List[int]]</code>):<br>
+A list of index lists, where each inner list specifies which rows from <code>v_star</code> to sum together. Each combination represents a potential adjustment to the current solution.</p></li>
+<li><p><strong>verbose</strong> (<code>bool</code>, optional):<br>
+A flag indicating whether to print debugging information (e.g., intermediate computations, progress messages). Defaults to <code>False</code>.</p></li>
 </ul>
 </section>
+<section id="returns" class="level4">
+<h4 class="anchored" data-anchor-id="returns">Returns</h4>
+<ul>
+<li><strong><code>np.ndarray</code></strong>:<br>
+A 2D NumPy array where each row is a neighbor solution (i.e., the result of adding a valid combination of adjustment vectors from <code>v_star</code> to <code>x</code>). Only neighbors with all non-negative entries are included in the output.</li>
+</ul>
 </section>
-<section id="example-usage" class="level2">
-<h2 class="anchored" data-anchor-id="example-usage">Example Usage</h2>
-<p>A trivial example using a precomputed convolution dictionary with a degenerate PMF (i.e.&nbsp;always zero service time) is provided in the unit tests below.</p>
-<div id="894a76e1" class="cell" data-execution_count="1">
+<section id="example" class="level4">
+<h4 class="anchored" data-anchor-id="example">Example</h4>
+<div id="4964c6e0" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Dict, Tuple</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> service_time_with_no_shows, compute_convolutions, calculate_objective_serv_time_lookup</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># For demonstration purposes, we use a trivial convolution dictionary.</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>original_distribution <span class="op">=</span> [<span class="fl">0.0</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>]</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>no_show_probability <span class="op">=</span> <span class="fl">0.1</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>adjusted_distribution <span class="op">=</span> service_time_with_no_shows(original_distribution, no_show_probability)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>schedule_example <span class="op">=</span> [<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>]</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="bu">sum</span>(schedule_example)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>convolutions_example <span class="op">=</span> compute_convolutions(original_distribution, N, no_show_probability)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>d_example <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>ewt, esp <span class="op">=</span> calculate_objective_serv_time_lookup(schedule_example, d_example, convolutions_example)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Adjusted Service Time Distribution: "</span>, adjusted_distribution)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Expected Adjusted Service Time: "</span>, np.dot(<span class="bu">range</span>(<span class="bu">len</span>(adjusted_distribution)), adjusted_distribution))</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Expected Waiting Time:"</span>, ewt)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Expected Spillover:"</span>, esp)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_neighborhood, get_v_star, powerset</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Define an initial solution vector</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate adjustment vectors using get_v_star</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># For instance, create a set of cyclic adjustment vectors of length 3</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>v_star <span class="op">=</span> get_v_star(<span class="dv">3</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate combinations of indices (e.g., using a powerset for switching 1 patient)</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>ids <span class="op">=</span> powerset(<span class="bu">range</span>(<span class="dv">3</span>), size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate the neighborhood (neighbors with non-negative entries only)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>neighbors <span class="op">=</span> get_neighborhood(x, v_star, ids, echo<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Neighbor solutions:"</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(neighbors)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Adjusted Service Time Distribution:  [0.1, 0.45, 0.27, 0.18000000000000002]
-Expected Adjusted Service Time:  1.53
-Expected Waiting Time: 1.53
-Expected Spillover: 0.6300000000000001</code></pre>
+<pre><code>Printing every 50th result
+v_star[0]: [-1  0  1]
+x, x', delta:
+[3 2 1],
+[2 2 2],
+[-1  0  1]
+-----------------
+v_star[1]: [ 1 -1  0]
+v_star[2]: [ 0  1 -1]
+Size of raw neighborhood: 3
+Filtered out: 0 schedules with negative values.
+Size of filtered neighborhood: 3
+Neighbor solutions:
+[[2 2 2]
+ [4 1 1]
+ [3 3 0]]</code></pre>
 </div>
 </div>
-<div id="2fb81168" class="cell" data-execution_count="2">
+<div id="cc48f0b8" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> unittest</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TestCalculateObjectiveServTimeLookup(unittest.TestCase):</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> setUp(<span class="va">self</span>):</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Create a convolution dictionary</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.convolutions <span class="op">=</span> convolutions_example</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.d <span class="op">=</span> d_example</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_single_time_slot(<span class="va">self</span>):</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># With one patient there will be no waiting and spillover (overtime) can be calculated by hand.</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        schedule <span class="op">=</span> [<span class="dv">1</span>]</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        ewt, esp <span class="op">=</span> calculate_objective_serv_time_lookup(schedule, <span class="va">self</span>.d, <span class="va">self</span>.convolutions)</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertAlmostEqual(ewt, <span class="fl">0.0</span>, places<span class="op">=</span><span class="dv">5</span>, msg<span class="op">=</span><span class="st">"Expected waiting time should be 0"</span>)</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertAlmostEqual(esp, <span class="fl">0.6300000000000001</span>, places<span class="op">=</span><span class="dv">5</span>, msg<span class="op">=</span><span class="st">"Expected spillover should be 0"</span>)</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_zero_patients(<span class="va">self</span>):</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If no patients are scheduled in a time slot, the process simply advances in time.</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        schedule <span class="op">=</span> [<span class="dv">0</span>]</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        ewt, esp <span class="op">=</span> calculate_objective_serv_time_lookup(schedule, <span class="va">self</span>.d, <span class="va">self</span>.convolutions)</span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertAlmostEqual(ewt, <span class="fl">0.0</span>, places<span class="op">=</span><span class="dv">5</span>, msg<span class="op">=</span><span class="st">"Expected waiting time should be 0 when no patients"</span>)</span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertAlmostEqual(esp, <span class="fl">0.0</span>, places<span class="op">=</span><span class="dv">5</span>, msg<span class="op">=</span><span class="st">"Expected spillover should be 0 when no patients"</span>)</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>    unittest.main(argv<span class="op">=</span>[<span class="st">''</span>], exit<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_neighborhood, get_v_star, powerset</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TestGetNeighborhood(unittest.TestCase):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_non_negative_neighbors(<span class="va">self</span>):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Test with a simple solution vector and adjustment vectors</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        v_star <span class="op">=</span> get_v_star(<span class="dv">3</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        ids <span class="op">=</span> powerset(<span class="bu">range</span>(<span class="dv">3</span>), size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        neighbors <span class="op">=</span> get_neighborhood(x, v_star, ids, echo<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Ensure that no neighbor has negative entries</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertTrue(np.<span class="bu">all</span>(neighbors <span class="op">&gt;=</span> <span class="dv">0</span>), <span class="st">"Some neighbor solutions contain negative values"</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_neighborhood_shape(<span class="va">self</span>):</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Test that the neighborhood returns a NumPy array with the proper dimensions</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        x <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        v_star <span class="op">=</span> get_v_star(<span class="dv">3</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        ids <span class="op">=</span> powerset(<span class="bu">range</span>(<span class="dv">3</span>), size<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        neighbors <span class="op">=</span> get_neighborhood(x, v_star, ids, echo<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertIsInstance(neighbors, np.ndarray, <span class="st">"Neighborhood is not a NumPy array"</span>)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="co"># The number of rows should equal the number of valid combinations in ids (after filtering negatives)</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertLessEqual(neighbors.shape[<span class="dv">0</span>], <span class="bu">len</span>(ids), <span class="st">"Neighborhood size is larger than expected"</span>)</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    unittest.main(argv<span class="op">=</span>[<span class="st">''</span>], exit<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>..
 ----------------------------------------------------------------------
-Ran 2 tests in 0.001s
+Ran 2 tests in 0.002s
 
 OK</code></pre>
 </div>
 </div>
-
-
+</section>
 </section>
 
-</main> <!-- /main -->
+</main>
+<!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
 window.document.addEventListener("DOMContentLoaded", function (event) {
   const toggleBodyColorMode = (bsSheetEl) => {
@@ -717,15 +614,6 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   }
 });
 </script>
-<nav class="page-navigation">
-  <div class="nav-page nav-page-previous">
-      <a href="./compute-convolutions.html" class="pagination-link" aria-label="`compute_convolutions`">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><code>compute_convolutions</code></span>
-      </a>          
-  </div>
-  <div class="nav-page nav-page-next">
-  </div>
-</nav>
 </div> <!-- /content -->
 
 

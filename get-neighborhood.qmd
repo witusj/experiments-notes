@@ -1,0 +1,87 @@
+---
+jupyter: python3
+---
+
+# `get_neighborhood` {.unnumbered}
+
+This notebook provides documentation for the function `get_neighborhood`, which generates the neighborhood of a solution vector by adding combinations of adjustment vectors from a precomputed array (`v_star`). The function filters out any candidate neighbors that result in negative values.
+
+## Function Documentation
+
+`get_neighborhood(x: Union[List[int], np.ndarray], v_star: np.ndarray, ids: List[List[int]], verbose: bool = False) -> np.ndarray`
+
+#### Description
+
+The `get_neighborhood` function computes a set of neighbor solutions by adding together selected rows from the array `v_star` to an initial solution vector `x`. The selection of rows is determined by the list of index lists `ids`, where each inner list represents a combination of indices. After generating the candidate neighbors, the function filters out any that contain negative values. An optional `verbose` flag provides debugging output during execution.
+
+#### Parameters
+
+- **x** (`Union[List[int], np.ndarray]`):  
+  The current solution vector. Can be provided as a list of integers or as a NumPy array.
+
+- **v_star** (`np.ndarray`):  
+  A 2D NumPy array where each row is an adjustment vector. These vectors are used to modify the current solution to explore its neighborhood.
+
+- **ids** (`List[List[int]]`):  
+  A list of index lists, where each inner list specifies which rows from `v_star` to sum together. Each combination represents a potential adjustment to the current solution.
+
+- **verbose** (`bool`, optional):  
+  A flag indicating whether to print debugging information (e.g., intermediate computations, progress messages). Defaults to `False`.
+
+#### Returns
+
+- **`np.ndarray`**:  
+  A 2D NumPy array where each row is a neighbor solution (i.e., the result of adding a valid combination of adjustment vectors from `v_star` to `x`). Only neighbors with all non-negative entries are included in the output.
+
+#### Example
+
+```{python}
+import numpy as np
+from functions import get_neighborhood, get_v_star, powerset
+
+# Define an initial solution vector
+x = [3, 2, 1]
+
+# Generate adjustment vectors using get_v_star
+# For instance, create a set of cyclic adjustment vectors of length 3
+v_star = get_v_star(3)
+
+# Generate combinations of indices (e.g., using a powerset for switching 1 patient)
+ids = powerset(range(3), size=1)
+
+# Generate the neighborhood (neighbors with non-negative entries only)
+neighbors = get_neighborhood(x, v_star, ids, echo=True)
+print("Neighbor solutions:")
+print(neighbors)
+```
+
+```{python}
+import unittest
+import numpy as np
+from functions import get_neighborhood, get_v_star, powerset
+
+class TestGetNeighborhood(unittest.TestCase):
+    def test_non_negative_neighbors(self):
+        # Test with a simple solution vector and adjustment vectors
+        x = [3, 2, 1]
+        v_star = get_v_star(3)
+        ids = powerset(range(3), size=1)
+        
+        neighbors = get_neighborhood(x, v_star, ids, echo=False)
+        
+        # Ensure that no neighbor has negative entries
+        self.assertTrue(np.all(neighbors >= 0), "Some neighbor solutions contain negative values")
+    
+    def test_neighborhood_shape(self):
+        # Test that the neighborhood returns a NumPy array with the proper dimensions
+        x = [3, 2, 1]
+        v_star = get_v_star(3)
+        ids = powerset(range(3), size=1)
+        neighbors = get_neighborhood(x, v_star, ids, echo=False)
+        self.assertIsInstance(neighbors, np.ndarray, "Neighborhood is not a NumPy array")
+        # The number of rows should equal the number of valid combinations in ids (after filtering negatives)
+        self.assertLessEqual(neighbors.shape[0], len(ids), "Neighborhood size is larger than expected")
+
+if __name__ == '__main__':
+    unittest.main(argv=[''], exit=False)
+```

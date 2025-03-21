@@ -3,3 +3,12 @@ title: "Introduction"
 format: html
 ---
 
+To do:
+
+-   [ ] Add a brief introduction to the project
+-   [x] Add evaluator functions
+    -   [x] Document and test the evaluator functions
+    -   [x] Run experiment with the evaluator functions
+-   [x] Add search functions
+    -   [x] Document and test the search functions
+    -   [x] Run experiment with the search functions

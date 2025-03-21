@@ -33,9 +33,7 @@ import numpy as np
 from typing import List, Dict, Tuple
 from functions import service_time_with_no_shows, compute_convolutions, calculate_objective_serv_time_lookup
 
-# For demonstration purposes, we use a trivial convolution dictionary
-# where the service time PMF is degenerate (always zero service time).
-# In this case, the adjusted PMF has all mass at index 0, and convolutions for any x are identical.
+# For demonstration purposes, we use a trivial convolution dictionary.
 original_distribution = [0.0, 0.5, 0.3, 0.2]
 no_show_probability = 0.1
 adjusted_distribution = service_time_with_no_shows(original_distribution, no_show_probability)
@@ -60,7 +58,7 @@ class TestCalculateObjectiveServTimeLookup(unittest.TestCase):
         self.d = d_example
 
     def test_single_time_slot(self):
-        # With one patient and a degenerate PMF (always 0 service time), no waiting and spillover can be calculated by hand.
+        # With one patient there will be no waiting and spillover (overtime) can be calculated by hand.
         schedule = [1]
         ewt, esp = calculate_objective_serv_time_lookup(schedule, self.d, self.convolutions)
         self.assertAlmostEqual(ewt, 0.0, places=5, msg="Expected waiting time should be 0")

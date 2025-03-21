@@ -1,7 +1,20 @@
 import unittest
 import numpy as np
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Iterable, TypeVar, Union
 import copy
+from itertools import combinations
+
+"""
+These functions are used in the implementation of the optimization algorithm using local search for the scheduling problem.
+For this two building blocks are necessary:
+    - An evaluator: A set of functions whose task is to evaluate the objective function for a given solution (schedule).
+    - A searcher: This set of functions that generate the neighborhood of a given solution and then explore the
+      search space around the current solution using the evaluator.
+"""
+
+############################
+# Evaluator functions
+############################
 
 def service_time_with_no_shows(s: List[float], q: float) -> List[float]:
     """
@@ -10,11 +23,11 @@ def service_time_with_no_shows(s: List[float], q: float) -> List[float]:
     The adjusted service time distribution accounts for the probability q of no-shows.
 
     Parameters:
-    s (List[float]): The original service time probability distribution.
-    q (float): The no-show probability.
+        s (List[float]): The original service time probability distribution.
+        q (float): The no-show probability.
 
     Returns:
-    List[float]: The adjusted service time distribution.
+        List[float]: The adjusted service time distribution.
     """
     # Adjust the service times by multiplying with (1 - q)
     s_adj = [(1 - q) * si for si in s]
@@ -22,7 +35,8 @@ def service_time_with_no_shows(s: List[float], q: float) -> List[float]:
     s_adj[0] += q
     return s_adj
 
-def compute_convolutions(probabilities, N, q=0.0):
+
+def compute_convolutions(probabilities: List[float], N: int, q: float = 0.0) -> Dict[int, np.ndarray]:
     """
     Computes the k-fold convolution of a probability mass function (PMF) for k in range 1 to N.
     
@@ -31,8 +45,7 @@ def compute_convolutions(probabilities, N, q=0.0):
     
     Parameters:
         probabilities (List[float]): The original PMF represented as a list where the index is the value (e.g., service time) 
-                                      and the value is the corresponding probability. This function is generic and can be used
-                                      for any PMF, not just for service times.
+                                      and the value is the corresponding probability.
         N (int): The maximum number of convolutions to compute.
         q (float, optional): The no-show probability. Defaults to 0.0.
         
@@ -40,22 +53,23 @@ def compute_convolutions(probabilities, N, q=0.0):
         Dict[int, np.ndarray]: A dictionary where each key k (1 ≤ k ≤ N) corresponds to the PMF resulting from the k-fold convolution
                                  of the adjusted PMF.
     """
-    convolutions = {}
     probs_adj_q = service_time_with_no_shows(probabilities, q)
-    convolutions = {1: probs_adj_q}
+    convolutions: Dict[int, np.ndarray] = {1: np.array(probs_adj_q, dtype=np.float64)}
     for k in range(2, N + 1):
         convolutions[k] = np.convolve(convolutions[k - 1], probs_adj_q)
     return convolutions
 
-def fft_convolve(a, b):
+
+def fft_convolve(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
     Convolve two 1-D arrays using FFT.
     
     Parameters:
-        a, b (np.array): Input arrays.
+        a (np.ndarray): First input array.
+        b (np.ndarray): Second input array.
         
     Returns:
-        np.array: The convolution result.
+        np.ndarray: The convolution result.
     """
     n = len(a) + len(b) - 1
     # Use the next power of 2 for efficiency
@@ -65,26 +79,27 @@ def fft_convolve(a, b):
     conv_result = np.fft.irfft(A * B, n=n_fft)[:n]
     return conv_result
 
-def compute_convolutions_fft(probabilities, N, q=0.0):
+
+def compute_convolutions_fft(probabilities: Union[List[float], np.ndarray], N: int, q: float = 0.0) -> Dict[int, np.ndarray]:
     """
     Computes the k-fold convolution of a PMF using FFT-based convolution.
     
     Parameters:
-        probabilities (list or np.array): The PMF.
+        probabilities (Union[List[float], np.ndarray]): The PMF.
         N (int): Maximum number of convolutions.
         q (float): Parameter for adjusting the PMF.
         
     Returns:
-        dict: Keys are k (number of convolutions), values are the convolved PMFs.
+        Dict[int, np.ndarray]: Keys are k (number of convolutions), values are the convolved PMFs.
     """
-    convolutions = {}
-    probs_adj_q = service_time_with_no_shows(probabilities, q)
-    convolutions[1] = probs_adj_q
+    probs_adj_q = service_time_with_no_shows(list(probabilities), q)
+    convolutions: Dict[int, np.ndarray] = {1: np.array(probs_adj_q, dtype=np.float64)}
     for k in range(2, N + 1):
         convolutions[k] = fft_convolve(convolutions[k - 1], probs_adj_q)
     return convolutions
 
-def calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutions: dict) -> Tuple[float, float]:
+
+def calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutions: Dict[int, np.ndarray]) -> Tuple[float, float]:
     """
     Calculate the objective value based on the given schedule and parameters using precomputed convolutions.
     
@@ -93,22 +108,10 @@ def calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutio
     - **ewt**: The sum of expected waiting times across time slots.
     - **esp**: The expected spillover time (or overtime) after the final time slot.
     
-    The function assumes that the convolutions dictionary contains precomputed convolutions of the service time 
-    probability mass function (PMF). The key `1` corresponds to the adjusted service time distribution (for instance,
-    one adjusted for no-shows), and keys corresponding to the number of patients in a time slot (e.g., `x`) are used 
-    for computing the waiting time distribution when `x` patients are scheduled.
-    
-    The calculation proceeds by iteratively updating a spillover time distribution, `sp`, which is initially 
-     zero with probability 1. For each time slot:
-      - If no patients are scheduled, the service process is advanced by `d`.
-      - If patients are scheduled, the expected waiting time is updated based on the current spillover
-        and the expected service time. Then the waiting time distribution is updated via convolution with the PMF for the
-        given number of patients, and adjusted for the duration threshold `d`.
-    
     Parameters:
         schedule (List[int]): A list representing the number of patients scheduled in each time slot.
         d (int): Duration threshold for a time slot.
-        convolutions (Dict[int, np.ndarray]): A dictionary of precomputed convolutions of the service time PMF. 
+        convolutions (Dict[int, np.ndarray]): A dictionary of precomputed convolutions of the service time PMF.
                                                 The key `1` contains the adjusted service time distribution.
     
     Returns:
@@ -118,44 +121,229 @@ def calculate_objective_serv_time_lookup(schedule: List[int], d: int, convolutio
     """
     # Create initial service process with probability 1 at time 0
     sp = np.zeros(d + 1, dtype=np.float64)
-    sp[0] = 1.0  # Initial service process (no waiting time) The probability that the service time is zero is 1.
+    sp[0] = 1.0  # The probability that the service time is zero is 1.
     
-    ewt = 0  # The initial total expected waiting time
-    conv_s = convolutions.get(1)  # Adjusted service time distribution
+    ewt = 0.0  # Total expected waiting time
+    conv_s = convolutions.get(1)
     est = np.dot(range(len(conv_s)), conv_s)  # Expected service time
     
     for x in schedule:
         if x == 0:
-            # No patients in this time slot
-            # Handle the case when there are zero patients scheduled by advancing the time by d
+            # No patients in this time slot: advance time by d
             if len(sp) > d:
                 sp[d] = np.sum(sp[:d + 1])
                 sp = sp[d:]
             else:
-                # If sp is shorter than d, create a new array with one element (sum of all probabilities)
                 sp = np.array([np.sum(sp)], dtype=np.float64)
         else:
             # Patients are scheduled in this time slot
             esp = np.dot(range(len(sp)), sp)  # Expected spillover before this time slot
             
             # Calculate waiting time:
-            # - First patient: expected spillover from previous slot
-            # - For x patients: first patient's wait + sum of (x-1) additional patient wait times
             ewt += x * esp + est * (x - 1) * x / 2
             
             # Update the waiting time distribution after serving all patients in this slot
-            # First convolve with the service time distribution x times
             sp = np.convolve(sp, convolutions.get(x))
             
-            # Then adjust for the duration threshold d
+            # Adjust for the duration threshold d
             if len(sp) > d:
                 sp[d] = np.sum(sp[:d + 1])
                 sp = sp[d:]
             else:
-                # If sp is shorter than d, create a new array with one element (sum of all probabilities)
                 sp = np.array([np.sum(sp)], dtype=np.float64)
     
     # Expected spillover time at the end
     esp = np.dot(range(len(sp)), sp)
     
     return ewt, esp
+
+############################
+# Searcher functions
+############################
+
+T = TypeVar('T')  # Generic type variable
+
+def powerset(iterable: Iterable[int], size: int = 1) -> List[List[int]]:
+    """
+    Generate all subsets of a given size from the input iterable.
+
+    Parameters:
+        iterable (Iterable[int]): The input iterable containing integers.
+        size (int): The size of each subset to generate (default is 1).
+
+    Returns:
+        List[List[int]]: A list where each element is a list representing a subset of the given size.
+
+    Example:
+        powerset([1, 2, 3], 2) returns [[1, 2], [1, 3], [2, 3]]
+    """
+    # Use itertools.combinations to generate subsets of the specified size,
+    # then convert each combination (tuple) to a list.
+    return [[i for i in item] for item in combinations(iterable, size)]
+
+
+def get_v_star(T: int) -> np.ndarray:
+    """
+    Generate a set of vectors V* of length T, where each vector is a cyclic permutation of an initial vector.
+
+    The initial vector 'u' is defined as:
+      - u[0] = -1
+      - u[-1] = 1
+      - all other elements are 0
+
+    Parameters:
+        T (int): Length of the vectors.
+
+    Returns:
+        np.ndarray: An array of shape (T, T), where each row is a vector in V*.
+    """
+    # Create an initial vector 'u' of zeros with length T
+    u = np.zeros(T, dtype=np.int64)
+    u[0] = -1
+    u[-1] = 1
+    v_star = [u.copy()]
+
+    # Generate cyclic permutations of 'u'
+    for i in range(T - 1):
+        u = np.roll(u, 1)
+        v_star.append(u.copy())
+
+    return np.array(v_star)
+
+
+def get_neighborhood(x: Union[List[int], np.ndarray],
+                     v_star: np.ndarray,
+                     ids: List[List[int]],
+                     echo: bool = False) -> np.ndarray:
+    """
+    Generate the neighborhood of a solution by adding combinations of vectors from v_star to x.
+
+    Parameters:
+        x (Union[List[int], np.ndarray]): The current solution vector.
+        v_star (np.ndarray): An array where each row is a vector used for adjustments.
+        ids (List[List[int]]): A list of index lists, each specifying which rows in v_star to combine.
+        verbose (bool, optional): If True, prints debug information. Defaults to False.
+
+    Returns:
+        np.ndarray: An array of neighbor solutions (rows) with non-negative entries.
+    """
+    x = np.array(x)  # Convert input solution to a NumPy array
+    p = 50  # Print every pth result if verbose
+    if echo:
+        print(f"Printing every {p}th result")
+    neighborhood = []  # To store the generated neighbor solutions
+
+    # Loop over each combination of indices in ids
+    for i in range(len(ids)):
+        neighbor = np.zeros(len(x), dtype=int)
+        for j in range(len(ids[i])):
+            if echo:
+                print(f"v_star[{ids[i][j]}]: {v_star[ids[i][j]]}")
+            neighbor += v_star[ids[i][j]]
+        x_n = x + neighbor
+        if i % p == 0 and echo:
+            print(f"x, x', delta:\n{x},\n{x_n},\n{neighbor}\n-----------------")
+        neighborhood.append(x_n)
+    
+    neighborhood = np.array(neighborhood)
+    if echo:
+        print(f"Size of raw neighborhood: {len(neighborhood)}")
+    # Filter out neighbors that contain negative values
+    mask = ~np.any(neighborhood < 0, axis=1)
+    if echo:
+        print(f"Filtered out: {len(neighborhood) - mask.sum()} schedules with negative values.")
+    filtered_neighborhood = neighborhood[mask]
+    if echo:
+        print(f"Size of filtered neighborhood: {len(filtered_neighborhood)}")
+    return filtered_neighborhood
+
+def build_welch_bailey_schedule(N, T):
+    """
+    Build a schedule based on the Welch and Bailey (1952) heuristic.
+
+    Parameters:
+    N (int): Number of patients to be scheduled.
+    T (int): Number of time intervals in the schedule.
+
+    Returns:
+    list: A schedule of length T where each item represents the number of patients scheduled
+          at the corresponding time interval.
+    """
+    # Initialize the schedule with zeros
+    schedule = [0] * T
+
+    # Schedule the first two patients at the beginning
+    schedule[0] = 2
+    remaining_patients = N - 2
+
+    # Distribute patients in the middle time slots with gaps
+    for t in range(1, T - 1):
+        if remaining_patients <= 0:
+            break
+        if t % 2 == 1:  # Create gaps (only schedule patients at odd time slots)
+            schedule[t] = 1
+            remaining_patients -= 1
+
+    # Push any remaining patients to the last time slot
+    schedule[-1] += remaining_patients
+
+    return schedule
+
+def local_search(x: Union[List[int], np.ndarray],
+                 d: int,
+                 convolutions: Dict[int, np.ndarray],
+                 w: float,
+                 v_star: np.ndarray,
+                 size: int = 2,
+                 echo: bool = False) -> Tuple[np.ndarray, float]:
+    """
+    Perform local search to optimize a schedule.
+
+    Parameters:
+        x (Union[List[int], np.ndarray]): The initial solution vector.
+        d (int): Duration threshold for a time slot.
+        convolutions (Dict[int, np.ndarray]): Precomputed convolutions of the service time PMF.
+        w (float): Weighting factor for combining the objectives.
+        v_star (np.ndarray): Array of adjustment vectors.
+        size (int, optional): Maximum number of patients to switch in a neighborhood (default is 2).
+        echo (bool, optional): If True, prints progress messages. Defaults to False.
+
+    Returns:
+        Tuple[np.ndarray, float]: A tuple containing the best solution found and its associated cost.
+    """
+    x_star = np.array(x).flatten()  # Best solution (1D array)
+    objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
+    c_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
+    T = len(x_star)  # Length of the solution vector
+    N = np.sum(x_star)  # Total number of patients
+
+    t = 1
+    while t < size:
+        if echo:
+            print(f'Running local search with switching {t} patient(s)')
+
+        # Generate neighborhood by switching t patients
+        ids_gen = powerset(range(T), t)
+        neighborhood = get_neighborhood(x_star, v_star, ids_gen)
+        if echo:
+            print(f"Size of neighborhood: {len(neighborhood)}")
+
+        found_better_solution = False
+
+        for neighbor in neighborhood:
+            waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
+            cost = w * waiting_time / N + (1 - w) * spillover
+            if cost < c_star:
+                x_star = neighbor
+                c_star = cost
+                if echo:
+                    print(f"Found better solution: {x_star}, cost: {c_star}")
+                found_better_solution = True
+                break
+
+        if found_better_solution:
+            t = 1  # Restart search with t = 1 if improvement is found
+        else:
+            t += 1  # Increase neighborhood size if no improvement
+
+    return x_star, c_star
