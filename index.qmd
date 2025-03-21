@@ -11,4 +11,4 @@ To do:
     -   [x] Run experiment with the evaluator functions
 -   [x] Add search functions
     -   [x] Document and test the search functions
-    -   [x] Run experiment with the search functions
+    -   [ ] Run experiment with the search functions
