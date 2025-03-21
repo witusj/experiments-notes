@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Appointment Scheduling Experiments - compute_convolutions</title>
+<title>Appointment Scheduling Experiments - local_search</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -64,8 +64,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./calculate-objective-serv-time-lookup.html" rel="next">
-<link href="./service-time-with-no-shows.html" rel="prev">
+<link href="./get-neighborhood.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
@@ -115,7 +114,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./compute-convolutions.html"><code>compute_convolutions</code></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./local-search.html"><code>local_search</code></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
@@ -175,7 +174,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./compute-convolutions.html" class="sidebar-item-text sidebar-link active">
+  <a href="./compute-convolutions.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><code>compute_convolutions</code></span></a>
   </div>
 </li>
@@ -193,7 +192,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./local-search.html" class="sidebar-item-text sidebar-link">
+  <a href="./local-search.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><code>local_search</code></span></a>
   </div>
 </li>
@@ -216,9 +215,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./compute-convolutions.html"><code>compute_convolutions</code></a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./service-time-with-no-shows.html">Function documentation</a></li><li class="breadcrumb-item"><a href="./local-search.html"><code>local_search</code></a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title"><code>compute_convolutions</code></h1>
+<h1 class="title"><code>local_search</code></h1>
 </div>
 
 
@@ -235,84 +234,207 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>This notebook provides documentation for the function <code>compute_convolutions</code>, which computes the k-fold convolution of a probability mass function (PMF) for k in the range 1 to N. The function is generic and can be applied to any PMF, not only those representing service times. Additionally, the function adjusts the PMF for no-shows using the <code>service_time_with_no_shows</code> function.</p>
+<p>This notebook provides documentation for the function <code>local_search</code>, which performs a local search to optimize a scheduling solution. The function iteratively explores the neighborhood of the current best solution by switching a given number of patients. It utilizes precomputed convolution results and a set of adjustment vectors (<code>v_star</code>) to evaluate and improve the objective function.</p>
 <section id="function-documentation" class="level2">
 <h2 class="anchored" data-anchor-id="function-documentation">Function Documentation</h2>
-<p><code>compute_convolutions(probabilities: List[float], N: int, q: float = 0.0) -&gt; Dict[int, np.ndarray]</code></p>
+<p><code>local_search(x: Union[List[int], np.ndarray], d: int, convolutions: Dict[int, np.ndarray], w: float, v_star: np.ndarray, size: int = 2, echo: bool = False) -&gt; Tuple[np.ndarray, float]</code></p>
 <section id="description" class="level4">
 <h4 class="anchored" data-anchor-id="description">Description</h4>
-<p>Computes the k-fold convolution of a given probability mass function (PMF) for k from 1 up to N. Before computing the convolutions, the PMF is adjusted for no-shows using the provided no-show probability <code>q</code> via the <code>service_time_with_no_shows</code> function. Convolution is performed using NumPy’s <code>np.convolve</code>.</p>
+<p>The <code>local_search</code> function optimizes a schedule by iteratively exploring its neighborhood. Starting with an initial solution <code>x</code>, the function computes its objective value using the precomputed convolutions of the service time probability mass function. The neighborhood is generated by combining adjustment vectors from <code>v_star</code> (using a powerset-based approach) and filtering out candidates that contain negative values. The search continues until no further improvement is found for neighborhoods up to the specified <code>size</code>. The objective function combines expected average waiting time per patient and spillover time weighted by <code>w</code>.</p>
 </section>
 <section id="parameters" class="level4">
 <h4 class="anchored" data-anchor-id="parameters">Parameters</h4>
 <ul>
-<li><strong>probabilities</strong> (<code>List[float]</code>): The original PMF represented as a list where the index corresponds to a value (for instance, a service time) and the value at that index is its probability. This function is generic and does not have to be used solely for service times.</li>
-<li><strong>N</strong> (<code>int</code>): The maximum number of convolutions to compute.</li>
-<li><strong>q</strong> (<code>float</code>, optional): The probability of a no-show. Defaults to <code>0.0</code>.</li>
+<li><p><strong>x</strong> (<code>Union[List[int], np.ndarray]</code>):<br>
+The initial solution vector representing the schedule. It can be provided as a list of integers or as a NumPy array.</p></li>
+<li><p><strong>d</strong> (<code>int</code>):<br>
+The duration threshold for a time slot. It is used to adjust the service process and waiting time distribution.</p></li>
+<li><p><strong>convolutions</strong> (<code>Dict[int, np.ndarray]</code>):<br>
+A dictionary containing precomputed convolutions of the service time PMF. The key <code>1</code> represents the adjusted service time distribution, and other keys represent the convolution for the corresponding number of scheduled patients.</p></li>
+<li><p><strong>w</strong> (<code>float</code>):<br>
+The weighting factor for combining the two performance objectives: expected waiting time and expected spillover time.</p></li>
+<li><p><strong>v_star</strong> (<code>np.ndarray</code>):<br>
+A 2D NumPy array of adjustment vectors. Each row in <code>v_star</code> is used to modify the current solution vector in order to generate its neighborhood.</p></li>
+<li><p><strong>size</strong> (<code>int</code>, optional):<br>
+The maximum number of patients to switch (i.e., the size of the neighborhood to explore) during the local search. Defaults to <code>2</code>.</p></li>
+<li><p><strong>echo</strong> (<code>bool</code>, optional):<br>
+A flag that, when set to <code>True</code>, prints progress and debugging messages during the search process. Defaults to <code>False</code>.</p></li>
 </ul>
 </section>
 <section id="returns" class="level4">
 <h4 class="anchored" data-anchor-id="returns">Returns</h4>
 <ul>
-<li><strong><code>Dict[int, np.ndarray]</code></strong>: A dictionary where each key <code>k</code> (with 1 ≤ k ≤ N) corresponds to the PMF resulting from the k-fold convolution of the adjusted PMF.</li>
+<li><strong><code>Tuple[np.ndarray, float]</code></strong>:<br>
+A tuple containing:
+<ul>
+<li>The best solution found as a 1D NumPy array.</li>
+<li>The corresponding cost (objective value) as a float.</li>
+</ul></li>
 </ul>
 </section>
 <section id="example" class="level4">
 <h4 class="anchored" data-anchor-id="example">Example</h4>
-<div id="c7a291ce" class="cell" data-execution_count="1">
+<div id="d3c4df86" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> compute_convolutions, service_time_with_no_shows</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> local_search, calculate_objective_serv_time_lookup, compute_convolutions, get_v_star, powerset</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Example usage</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>original_pmf <span class="op">=</span> [<span class="fl">0.0</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>]</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>no_show_probability <span class="op">=</span> <span class="fl">0.1</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>convs <span class="op">=</span> compute_convolutions(original_pmf, N, no_show_probability)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> k, pmf <span class="kw">in</span> convs.items():</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>k<span class="sc">}</span><span class="ss">-fold convolution: </span><span class="sc">{</span>pmf<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Dict, Tuple, Union</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ways_to_distribute(N: <span class="bu">int</span>, T: <span class="bu">int</span>) <span class="op">-&gt;</span> List[List[<span class="bu">int</span>]]:</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">    Compute all possible ways to distribute N identical items into T bins.</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co">    Each distribution is represented as a list of T nonnegative integers whose sum is N.</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="co">    Parameters:</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co">        N (int): Total number of identical items.</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co">        T (int): Number of bins.</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co">        </span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">        List[List[int]]: A list of distributions. Each distribution is a list of T integers that sum to N.</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co">        </span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="co">    Example:</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co">        &gt;&gt;&gt; ways_to_distribute(3, 2)</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co">        [[0, 3], [1, 2], [2, 1], [3, 0]]</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Base case: only one bin left, all items must go into it.</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> T <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> [[N]]</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    distributions <span class="op">=</span> []</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Iterate over possible numbers of items in the first bin</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(N <span class="op">+</span> <span class="dv">1</span>):</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Recursively distribute the remaining items among the remaining bins.</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> distribution <span class="kw">in</span> ways_to_distribute(N <span class="op">-</span> i, T <span class="op">-</span> <span class="dv">1</span>):</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>            distributions.append([i] <span class="op">+</span> distribution)</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> distributions</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> choose_best_solution(solutions: List[np.ndarray], d: <span class="bu">int</span>, convs: Dict[<span class="bu">int</span>, np.ndarray], w: <span class="bu">float</span>, v_star: np.ndarray) <span class="op">-&gt;</span> Tuple[np.ndarray, <span class="bu">float</span>]:</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co">    Choose the best solution from a list of solutions based on the objective function.</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a><span class="co">    Parameters:</span></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="co">        solutions (List[np.ndarray]): A list of solution vectors.</span></span>
+<span id="cb1-42"><a href="#cb1-42" aria-hidden="true" tabindex="-1"></a><span class="co">        d (int): Duration threshold for a time slot.</span></span>
+<span id="cb1-43"><a href="#cb1-43" aria-hidden="true" tabindex="-1"></a><span class="co">        convs (Dict[int, np.ndarray]): Precomputed convolutions of the service time PMF.</span></span>
+<span id="cb1-44"><a href="#cb1-44" aria-hidden="true" tabindex="-1"></a><span class="co">        w (float): Weighting factor for the objective function.</span></span>
+<span id="cb1-45"><a href="#cb1-45" aria-hidden="true" tabindex="-1"></a><span class="co">        </span></span>
+<span id="cb1-46"><a href="#cb1-46" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb1-47"><a href="#cb1-47" aria-hidden="true" tabindex="-1"></a><span class="co">        Tuple[np.ndarray, float]: The best solution and its corresponding cost.</span></span>
+<span id="cb1-48"><a href="#cb1-48" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb1-49"><a href="#cb1-49" aria-hidden="true" tabindex="-1"></a>    best_solution <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb1-50"><a href="#cb1-50" aria-hidden="true" tabindex="-1"></a>    best_cost <span class="op">=</span> <span class="bu">float</span>(<span class="st">'inf'</span>)</span>
+<span id="cb1-51"><a href="#cb1-51" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-52"><a href="#cb1-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> solution <span class="kw">in</span> solutions:</span>
+<span id="cb1-53"><a href="#cb1-53" aria-hidden="true" tabindex="-1"></a>        waiting_time, spillover <span class="op">=</span> calculate_objective_serv_time_lookup(solution, d, convs)</span>
+<span id="cb1-54"><a href="#cb1-54" aria-hidden="true" tabindex="-1"></a>        cost <span class="op">=</span> w <span class="op">*</span> waiting_time <span class="op">/</span>N <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> spillover</span>
+<span id="cb1-55"><a href="#cb1-55" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> cost <span class="op">&lt;</span> best_cost:</span>
+<span id="cb1-56"><a href="#cb1-56" aria-hidden="true" tabindex="-1"></a>            best_solution <span class="op">=</span> solution</span>
+<span id="cb1-57"><a href="#cb1-57" aria-hidden="true" tabindex="-1"></a>            best_cost <span class="op">=</span> cost</span>
+<span id="cb1-58"><a href="#cb1-58" aria-hidden="true" tabindex="-1"></a>            </span>
+<span id="cb1-59"><a href="#cb1-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.array(best_solution), best_cost</span>
+<span id="cb1-60"><a href="#cb1-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-61"><a href="#cb1-61" aria-hidden="true" tabindex="-1"></a><span class="co"># Example schedule: initial solution vector</span></span>
+<span id="cb1-62"><a href="#cb1-62" aria-hidden="true" tabindex="-1"></a>x_initial <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">0</span>]</span>
+<span id="cb1-63"><a href="#cb1-63" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> <span class="bu">len</span>(x_initial)</span>
+<span id="cb1-64"><a href="#cb1-64" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="bu">sum</span>(x_initial)</span>
+<span id="cb1-65"><a href="#cb1-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-66"><a href="#cb1-66" aria-hidden="true" tabindex="-1"></a><span class="co"># Duration threshold for a time slot</span></span>
+<span id="cb1-67"><a href="#cb1-67" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb1-68"><a href="#cb1-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-69"><a href="#cb1-69" aria-hidden="true" tabindex="-1"></a><span class="co"># Example probability mass function and no-show probability</span></span>
+<span id="cb1-70"><a href="#cb1-70" aria-hidden="true" tabindex="-1"></a>service_time <span class="op">=</span> np.zeros(<span class="dv">11</span>)</span>
+<span id="cb1-71"><a href="#cb1-71" aria-hidden="true" tabindex="-1"></a>service_time[<span class="dv">3</span>] <span class="op">=</span> <span class="fl">0.2</span></span>
+<span id="cb1-72"><a href="#cb1-72" aria-hidden="true" tabindex="-1"></a>service_time[<span class="dv">5</span>] <span class="op">=</span> <span class="fl">0.3</span></span>
+<span id="cb1-73"><a href="#cb1-73" aria-hidden="true" tabindex="-1"></a>service_time[<span class="dv">8</span>] <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb1-74"><a href="#cb1-74" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb1-75"><a href="#cb1-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-76"><a href="#cb1-76" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute convolutions (precomputed service time distributions)</span></span>
+<span id="cb1-77"><a href="#cb1-77" aria-hidden="true" tabindex="-1"></a>convs <span class="op">=</span> compute_convolutions(service_time, N<span class="op">=</span>N, q<span class="op">=</span>q)</span>
+<span id="cb1-78"><a href="#cb1-78" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-79"><a href="#cb1-79" aria-hidden="true" tabindex="-1"></a><span class="co"># Weighting factor for the objective function</span></span>
+<span id="cb1-80"><a href="#cb1-80" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb1-81"><a href="#cb1-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-82"><a href="#cb1-82" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate adjustment vectors for the schedule (v_star)</span></span>
+<span id="cb1-83"><a href="#cb1-83" aria-hidden="true" tabindex="-1"></a>v_star <span class="op">=</span> get_v_star(<span class="bu">len</span>(x_initial))</span>
+<span id="cb1-84"><a href="#cb1-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-85"><a href="#cb1-85" aria-hidden="true" tabindex="-1"></a><span class="co"># Perform local search to optimize the schedule</span></span>
+<span id="cb1-86"><a href="#cb1-86" aria-hidden="true" tabindex="-1"></a>best_solution, best_cost <span class="op">=</span> local_search(x_initial, d, convs, w, v_star, size<span class="op">=</span>T, echo<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb1-87"><a href="#cb1-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-88"><a href="#cb1-88" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Best Solution:"</span>, best_solution)</span>
+<span id="cb1-89"><a href="#cb1-89" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Best Cost:"</span>, best_cost)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>1-fold convolution: [0.1  0.45 0.27 0.18]
-2-fold convolution: [0.01   0.09   0.2565 0.279  0.2349 0.0972 0.0324]
-3-fold convolution: [0.001    0.0135   0.06885  0.169425 0.234495 0.236925 0.160623 0.083106
- 0.026244 0.005832]</code></pre>
+<pre><code>Running local search with switching 1 patient(s)
+Size of neighborhood: 3
+Found better solution: [2 2 1 1], cost: 10.564046280924003
+Running local search with switching 1 patient(s)
+Size of neighborhood: 4
+Found better solution: [1 2 1 2], cost: 10.083192713700003
+Running local search with switching 1 patient(s)
+Size of neighborhood: 4
+Found better solution: [2 1 1 2], cost: 9.894705450000002
+Running local search with switching 1 patient(s)
+Size of neighborhood: 4
+Running local search with switching 2 patient(s)
+Size of neighborhood: 6
+Running local search with switching 3 patient(s)
+Size of neighborhood: 4
+Best Solution: [2 1 1 2]
+Best Cost: 9.894705450000002</code></pre>
 </div>
 </div>
-<div id="141f736c" class="cell" data-execution_count="2">
+<div id="a9d59854" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> unittest</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TestComputeConvolutions(unittest.TestCase):</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_single_convolution(<span class="va">self</span>):</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># When N = 1, the result should be the adjusted PMF</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        original_pmf <span class="op">=</span> [<span class="fl">0.0</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>]</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        no_show_probability <span class="op">=</span> <span class="fl">0.1</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        N <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        expected <span class="op">=</span> np.array(service_time_with_no_shows(original_pmf, no_show_probability))</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> compute_convolutions(original_pmf, N, no_show_probability)</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertTrue(np.allclose(result[<span class="dv">1</span>], expected), <span class="st">"Single convolution test failed"</span>)</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_multiple_convolutions(<span class="va">self</span>):</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Test for N = 3 using a simple PMF</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        original_pmf <span class="op">=</span> [<span class="fl">0.0</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>, <span class="fl">0.2</span>]</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        no_show_probability <span class="op">=</span> <span class="fl">0.0</span>  <span class="co"># No adjustment for simplicity</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        N <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> compute_convolutions(original_pmf, N, no_show_probability)</span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        <span class="co"># For N=1, result is the original pmf</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertTrue(np.allclose(result[<span class="dv">1</span>], np.array(original_pmf)))</span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="co"># For higher convolutions, ensure the sum of probabilities remains 1 (within numerical precision)</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, N <span class="op">+</span> <span class="dv">1</span>):</span>
-<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>            <span class="va">self</span>.assertAlmostEqual(np.<span class="bu">sum</span>(result[k]), <span class="fl">1.0</span>, places<span class="op">=</span><span class="dv">5</span>, msg<span class="op">=</span><span class="ss">f"Sum of probabilities for </span><span class="sc">{</span>k<span class="sc">}</span><span class="ss">-fold convolution is not 1"</span>)</span>
-<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    unittest.main(argv<span class="op">=</span>[<span class="st">''</span>], exit<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> local_search, compute_convolutions, get_v_star</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TestLocalSearch(unittest.TestCase):</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> test_local_search_improvement(<span class="va">self</span>):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Set up a simple test with a known schedule and parameters</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        x_initial <span class="op">=</span> [<span class="dv">3</span>, <span class="dv">2</span>, <span class="dv">1</span>, <span class="dv">0</span>]</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>        T <span class="op">=</span> <span class="bu">len</span>(x_initial)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        N <span class="op">=</span> <span class="bu">sum</span>(x_initial)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        d <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        service_time <span class="op">=</span> np.zeros(<span class="dv">11</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>        service_time[<span class="dv">3</span>] <span class="op">=</span> <span class="fl">0.2</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>        service_time[<span class="dv">5</span>] <span class="op">=</span> <span class="fl">0.3</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>        service_time[<span class="dv">8</span>] <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>        q <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>        convs <span class="op">=</span> compute_convolutions(service_time, N<span class="op">=</span>N, q<span class="op">=</span>q)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> <span class="fl">0.5</span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>        v_star <span class="op">=</span> get_v_star(<span class="bu">len</span>(x_initial))</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Perform local search</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>        best_solution, best_cost <span class="op">=</span> local_search(x_initial, d, convs, w, v_star, size<span class="op">=</span>T, echo<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Best Solution:"</span>, best_solution, <span class="st">"Best Cost:"</span>, best_cost)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Iterate over all solutions and choose best solution</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>        solutions <span class="op">=</span> ways_to_distribute(N, T)</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        best_solution_brute, best_cost_brute <span class="op">=</span> choose_best_solution(solutions, d, convs, w, v_star)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Best Brute-force Solution:"</span>, best_solution_brute, <span class="st">"Best Brute-force Cost:"</span>, best_cost_brute)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Verify that the local search solution is equal to the brute-force solution</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertTrue(np.array_equal(best_solution, best_solution_brute), <span class="st">"The local search solution should match the brute-force solution."</span>)</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Verify that the returned solution has the same length as the initial schedule</span></span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertEqual(<span class="bu">len</span>(best_solution), <span class="bu">len</span>(x_initial), <span class="st">"The optimized solution should have the same length as the initial solution."</span>)</span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Check that the cost is a float and that a solution is returned</span></span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a>        <span class="va">self</span>.assertIsInstance(best_cost, <span class="bu">float</span>, <span class="st">"Cost should be a float value."</span>)</span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">__name__</span> <span class="op">==</span> <span class="st">'__main__'</span>:</span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>    unittest.main(argv<span class="op">=</span>[<span class="st">''</span>], exit<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>..
+<pre><code>.
 ----------------------------------------------------------------------
-Ran 2 tests in 0.001s
+Ran 1 test in 0.011s
 
 OK</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Best Solution: [2 1 1 2] Best Cost: 9.894705450000002
+Best Brute-force Solution: [2 1 1 2] Best Brute-force Cost: 9.894705450000002</code></pre>
 </div>
 </div>
 
@@ -732,14 +854,11 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./service-time-with-no-shows.html" class="pagination-link" aria-label="`service_time_with_no_shows`">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><code>service_time_with_no_shows</code></span>
+      <a href="./get-neighborhood.html" class="pagination-link" aria-label="`get_neighborhood`">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><code>get_neighborhood</code></span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./calculate-objective-serv-time-lookup.html" class="pagination-link" aria-label="`calculate_objective_serv_time_lookup`">
-        <span class="nav-page-text"><code>calculate_objective_serv_time_lookup</code></span> <i class="bi bi-arrow-right-short"></i>
-      </a>
   </div>
 </nav>
 </div> <!-- /content -->

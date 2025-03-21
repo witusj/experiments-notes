@@ -1,12 +1,12 @@
 ---
-title: "Function testing"
+title: "Evaluator functions testing"
 author: "Witek ten Hove"
 jupyter: python3
 ---
 
 ## Objective
 
-In this experiment we will test whether the functions for calculating the objective values works properly and efficiently.
+In this experiment we will test whether the functions for calculating the objective values work properly and efficiently.
 
 ## Background
 

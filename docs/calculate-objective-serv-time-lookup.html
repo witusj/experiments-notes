@@ -64,6 +64,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./get-neighborhood.html" rel="next">
 <link href="./compute-convolutions.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -148,7 +149,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./function-testing.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Function testing</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Evaluator functions testing</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -182,6 +183,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <div class="sidebar-item-container"> 
   <a href="./calculate-objective-serv-time-lookup.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text"><code>calculate_objective_serv_time_lookup</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./get-neighborhood.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><code>get_neighborhood</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./local-search.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><code>local_search</code></span></a>
   </div>
 </li>
       </ul>
@@ -245,7 +258,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="example-usage" class="level2">
 <h2 class="anchored" data-anchor-id="example-usage">Example Usage</h2>
 <p>A trivial example using a precomputed convolution dictionary with a degenerate PMF (i.e.&nbsp;always zero service time) is provided in the unit tests below.</p>
-<div id="894a76e1" class="cell" data-execution_count="1">
+<div id="22b23654" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Dict, Tuple</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> service_time_with_no_shows, compute_convolutions, calculate_objective_serv_time_lookup</span>
@@ -270,7 +283,7 @@ Expected Waiting Time: 1.53
 Expected Spillover: 0.6300000000000001</code></pre>
 </div>
 </div>
-<div id="2fb81168" class="cell" data-execution_count="2">
+<div id="36c9a2a1" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> unittest</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> TestCalculateObjectiveServTimeLookup(unittest.TestCase):</span>
@@ -724,6 +737,9 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
+      <a href="./get-neighborhood.html" class="pagination-link" aria-label="`get_neighborhood`">
+        <span class="nav-page-text"><code>get_neighborhood</code></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
   </div>
 </nav>
 </div> <!-- /content -->

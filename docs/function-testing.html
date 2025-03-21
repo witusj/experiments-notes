@@ -8,7 +8,7 @@
 
 <meta name="author" content="Witek ten Hove">
 
-<title>Appointment Scheduling Experiments - 2&nbsp; Function testing</title>
+<title>Appointment Scheduling Experiments - 2&nbsp; Evaluator functions testing</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -164,7 +164,7 @@ window.Quarto = {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./function-testing.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Function testing</span></a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./function-testing.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Evaluator functions testing</span></a></li></ol></nav>
         <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
@@ -198,7 +198,7 @@ window.Quarto = {
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./function-testing.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Function testing</span></span></a>
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Evaluator functions testing</span></span></a>
   </div>
 </li>
         <li class="sidebar-item">
@@ -232,6 +232,18 @@ window.Quarto = {
   <div class="sidebar-item-container"> 
   <a href="./calculate-objective-serv-time-lookup.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text"><code>calculate_objective_serv_time_lookup</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./get-neighborhood.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><code>get_neighborhood</code></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./local-search.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><code>local_search</code></span></a>
   </div>
 </li>
       </ul>
@@ -269,7 +281,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Function testing</span></h1>
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Evaluator functions testing</span></h1>
 </div>
 
 
@@ -294,7 +306,7 @@ window.Quarto = {
 
 <section id="objective" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="objective"><span class="header-section-number">2.1</span> Objective</h2>
-<p>In this experiment we will test whether the functions for calculating the objective values works properly and efficiently.</p>
+<p>In this experiment we will test whether the functions for calculating the objective values work properly and efficiently.</p>
 </section>
 <section id="background" class="level2" data-number="2.2">
 <h2 data-number="2.2" class="anchored" data-anchor-id="background"><span class="header-section-number">2.2</span> Background</h2>
@@ -331,7 +343,7 @@ window.Quarto = {
 <section id="setup" class="level3" data-number="2.4.4">
 <h3 data-number="2.4.4" class="anchored" data-anchor-id="setup"><span class="header-section-number">2.4.4</span> Setup</h3>
 <p>We have defined the following test cases:</p>
-<div id="4f2c4cca" class="cell" data-execution_count="1">
+<div id="b3bb77d9" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
@@ -386,7 +398,7 @@ window.Quarto = {
 <h3 data-number="2.4.6" class="anchored" data-anchor-id="experimental-procedure"><span class="header-section-number">2.4.6</span> Experimental Procedure</h3>
 <section id="step-1-adjust-the-service-time-distribution-for-no-shows." class="level4" data-number="2.4.6.1">
 <h4 data-number="2.4.6.1" class="anchored" data-anchor-id="step-1-adjust-the-service-time-distribution-for-no-shows."><span class="header-section-number">2.4.6.1</span> Step 1: Adjust the service time distribution for no-shows.</h4>
-<div id="c68f7f9f" class="cell" data-execution_count="2">
+<div id="89394717" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Adjust service time distribution for no-shows and compare to original</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>service_time_no_shows <span class="op">=</span> service_time_with_no_shows(service_time, q)</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Service time distribution with no-shows: </span><span class="sc">{</span>service_time_no_shows<span class="sc">}</span><span class="ss">"</span>)</span>
@@ -410,7 +422,7 @@ Average service time with no-shows: 5.49</code></pre>
 <li>Calculate the the average waiting time and the overtime for the schedule using a Lindley recursion, starting at <span class="math inline">\(t = 0\)</span> and ending at <span class="math inline">\(t = T - 1\)</span>.</li>
 </ol></li>
 </ol>
-<div id="67bd9d85" class="cell" data-execution_count="3">
+<div id="00db8560" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple, Union</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -514,28 +526,28 @@ Average service time with no-shows: 5.49</code></pre>
 <span id="cb5-101"><a href="#cb5-101" aria-hidden="true" tabindex="-1"></a>    results_dict[<span class="st">'average_overtime'</span>].append(avg_overtime)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Schedule: Calibration [2, 0, 0, 0, 0, 1], N: 3, T: 6
-Average waiting time: 1.8440000000000187, average overtime: 1.392
+Average waiting time: 1.839666666666684, average overtime: 1.29
 Schedule: Uniform [2, 2, 2, 2], N: 8, T: 4
-Average waiting time: 11.762375, average overtime: 23.996
+Average waiting time: 11.808625, average overtime: 24.134
 Schedule: Decreasing [5, 2, 1, 0], N: 8, T: 4
-Average waiting time: 16.8195, average overtime: 23.941
+Average waiting time: 16.8395, average overtime: 24.001
 Schedule: Increasing [0, 1, 2, 5], N: 8, T: 4
-Average waiting time: 12.451625, average overtime: 29.606
+Average waiting time: 12.578375, average overtime: 29.827
 Schedule: Front-heavy [4, 4, 0, 0], N: 8, T: 4
-Average waiting time: 16.68075, average overtime: 23.864
+Average waiting time: 16.736875, average overtime: 23.941
 Schedule: Back-heavy [0, 0, 4, 4], N: 8, T: 4
-Average waiting time: 16.844125, average overtime: 33.962
+Average waiting time: 17.076625, average overtime: 34.765
 Schedule: Alternating [4, 0, 4, 0], N: 8, T: 4
-Average waiting time: 14.335125, average overtime: 24.237
+Average waiting time: 14.033875, average overtime: 23.87
 Schedule: Bailey-rule [2, 1, 1, 1, 1, 1, 1], N: 8, T: 7
-Average waiting time: 6.61025, average overtime: 9.957</code></pre>
+Average waiting time: 6.300125, average overtime: 9.616</code></pre>
 </div>
 </div>
 </section>
 <section id="step-3-exact-calculation" class="level4" data-number="2.4.6.3">
 <h4 data-number="2.4.6.3" class="anchored" data-anchor-id="step-3-exact-calculation"><span class="header-section-number">2.4.6.3</span> Step 3: Exact calculation</h4>
 <p>For each schedule instance run 10 evaluations of the objective value using the exact method and calculate the average waiting time and overtime.</p>
-<div id="e039044e" class="cell" data-execution_count="4">
+<div id="6e6c89e5" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Loop through the schedules, run 10 evaluations, calculate average waiting time and overtime for each schedule, calculate average computation times and store the results in the results dictionary</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> schedule_name, schedule <span class="kw">in</span> schedules:</span>
@@ -583,7 +595,7 @@ Expected waiting time: 6.439653759761102, Expected overtime: 9.820826086143853</
 <section id="results" class="level2" data-number="2.5">
 <h2 data-number="2.5" class="anchored" data-anchor-id="results"><span class="header-section-number">2.5</span> Results</h2>
 <p>Comparison of the results of the exact calculations with the results of the Monte Carlo simulations.</p>
-<div id="75ef1496" class="cell" data-execution_count="5">
+<div id="eb34ace9" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>df_results <span class="op">=</span> pd.DataFrame.from_dict(results_dict)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>df_results</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
@@ -607,74 +619,74 @@ Expected waiting time: 6.439653759761102, Expected overtime: 9.820826086143853</
 <tr class="odd">
 <td data-quarto-table-cell-role="th">0</td>
 <td>Calibration</td>
-<td>1.844000</td>
-<td>1.392</td>
+<td>1.839667</td>
+<td>1.290</td>
 <td>1.830000</td>
 <td>1.350000</td>
-<td>0.000125</td>
+<td>0.000110</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">1</td>
 <td>Uniform</td>
-<td>11.762375</td>
-<td>23.996</td>
+<td>11.808625</td>
+<td>24.134</td>
 <td>11.816609</td>
 <td>24.064828</td>
-<td>0.000179</td>
+<td>0.000111</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">2</td>
 <td>Decreasing</td>
-<td>16.819500</td>
-<td>23.941</td>
+<td>16.839500</td>
+<td>24.001</td>
 <td>16.715097</td>
 <td>23.923317</td>
-<td>0.000143</td>
+<td>0.000139</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">3</td>
 <td>Increasing</td>
-<td>12.451625</td>
-<td>29.606</td>
+<td>12.578375</td>
+<td>29.827</td>
 <td>12.515063</td>
 <td>29.856121</td>
-<td>0.000109</td>
+<td>0.000110</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">4</td>
 <td>Front-heavy</td>
-<td>16.680750</td>
-<td>23.864</td>
+<td>16.736875</td>
+<td>23.941</td>
 <td>16.715970</td>
 <td>23.924827</td>
-<td>0.000074</td>
+<td>0.000058</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">5</td>
 <td>Back-heavy</td>
-<td>16.844125</td>
-<td>33.962</td>
+<td>17.076625</td>
+<td>34.765</td>
 <td>16.715970</td>
 <td>33.921948</td>
-<td>0.000082</td>
+<td>0.000066</td>
 </tr>
 <tr class="odd">
 <td data-quarto-table-cell-role="th">6</td>
 <td>Alternating</td>
-<td>14.335125</td>
-<td>24.237</td>
+<td>14.033875</td>
+<td>23.870</td>
 <td>14.233406</td>
 <td>23.958410</td>
-<td>0.000068</td>
+<td>0.000059</td>
 </tr>
 <tr class="even">
 <td data-quarto-table-cell-role="th">7</td>
 <td>Bailey-rule</td>
-<td>6.610250</td>
-<td>9.957</td>
+<td>6.300125</td>
+<td>9.616</td>
 <td>6.439654</td>
 <td>9.820826</td>
-<td>0.000157</td>
+<td>0.000126</td>
 </tr>
 </tbody>
 </table>
@@ -683,7 +695,7 @@ Expected waiting time: 6.439653759761102, Expected overtime: 9.820826086143853</
 </div>
 </div>
 </div>
-<div id="8c42e605" class="cell" data-execution_count="6">
+<div id="e505c565" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract schedule names from the dataframe</span></span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>schedule_names <span class="op">=</span> df_results[<span class="st">'schedule_name'</span>].tolist()</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -763,9 +775,9 @@ Expected waiting time: 6.439653759761102, Expected overtime: 9.820826086143853</
 <span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-<div>                            <div id="a816eb00-3ae4-421e-9afe-ee3f31687b86" class="plotly-graph-div" style="height:525px; width:100%;"></div>            <script type="text/javascript">                require(["plotly"], function(Plotly) {                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("a816eb00-3ae4-421e-9afe-ee3f31687b86")) {                    Plotly.newPlot(                        "a816eb00-3ae4-421e-9afe-ee3f31687b86",                        [{"marker":{"color":"blue"},"name":"Waiting Time","x":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation"],"y":[1.8440000000000187,11.762375,16.8195,12.451625,16.68075,16.844125,14.335125,6.61025],"type":"bar"},{"marker":{"color":"red"},"name":"Overtime","x":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation"],"y":[1.392,23.996,23.941,29.606,23.864,33.962,24.237,9.957],"type":"bar"},{"marker":{"color":"blue"},"name":"Waiting Time","showlegend":false,"x":["Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"y":[1.83,11.816608810500004,16.715096633250006,12.5150625,16.715970000000002,16.715970000000002,14.233406400000002,6.439653759761102],"type":"bar"},{"marker":{"color":"red"},"name":"Overtime","showlegend":false,"x":["Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"y":[1.35,24.064827562971374,23.92331748953545,29.856120798600017,23.92482686022145,33.92194762296002,23.95841024194273,9.820826086143853],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"xaxis":{"tickangle":45,"categoryorder":"array","categoryarray":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation","","Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"title":{"text":"Schedule Type"}},"title":{"text":"Comparison of Simulation vs. Exact Results"},"yaxis":{"title":{"text":"Time"}},"barmode":"stack","shapes":[{"line":{"color":"black","dash":"dot","width":2},"type":"line","x0":0.5,"x1":0.5,"xref":"paper","y0":0,"y1":1,"yref":"paper"}]},                        {"responsive": true}                    ).then(function(){
+<div>                            <div id="c8b0f7a7-883f-4f2a-aa8e-9921e3ac64a0" class="plotly-graph-div" style="height:525px; width:100%;"></div>            <script type="text/javascript">                require(["plotly"], function(Plotly) {                    window.PLOTLYENV=window.PLOTLYENV || {};                                    if (document.getElementById("c8b0f7a7-883f-4f2a-aa8e-9921e3ac64a0")) {                    Plotly.newPlot(                        "c8b0f7a7-883f-4f2a-aa8e-9921e3ac64a0",                        [{"marker":{"color":"blue"},"name":"Waiting Time","x":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation"],"y":[1.839666666666684,11.808625,16.8395,12.578375,16.736875,17.076625,14.033875,6.300125],"type":"bar"},{"marker":{"color":"red"},"name":"Overtime","x":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation"],"y":[1.29,24.134,24.001,29.827,23.941,34.765,23.87,9.616],"type":"bar"},{"marker":{"color":"blue"},"name":"Waiting Time","showlegend":false,"x":["Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"y":[1.83,11.816608810500004,16.715096633250006,12.5150625,16.715970000000002,16.715970000000002,14.233406400000002,6.439653759761102],"type":"bar"},{"marker":{"color":"red"},"name":"Overtime","showlegend":false,"x":["Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"y":[1.35,24.064827562971374,23.92331748953545,29.856120798600017,23.92482686022145,33.92194762296002,23.95841024194273,9.820826086143853],"type":"bar"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmapgl":[{"type":"heatmapgl","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"xaxis":{"tickangle":45,"categoryorder":"array","categoryarray":["Calibration\u003cbr\u003eSimulation","Uniform\u003cbr\u003eSimulation","Decreasing\u003cbr\u003eSimulation","Increasing\u003cbr\u003eSimulation","Front-heavy\u003cbr\u003eSimulation","Back-heavy\u003cbr\u003eSimulation","Alternating\u003cbr\u003eSimulation","Bailey-rule\u003cbr\u003eSimulation","","Calibration\u003cbr\u003eExact","Uniform\u003cbr\u003eExact","Decreasing\u003cbr\u003eExact","Increasing\u003cbr\u003eExact","Front-heavy\u003cbr\u003eExact","Back-heavy\u003cbr\u003eExact","Alternating\u003cbr\u003eExact","Bailey-rule\u003cbr\u003eExact"],"title":{"text":"Schedule Type"}},"title":{"text":"Comparison of Simulation vs. Exact Results"},"yaxis":{"title":{"text":"Time"}},"barmode":"stack","shapes":[{"line":{"color":"black","dash":"dot","width":2},"type":"line","x0":0.5,"x1":0.5,"xref":"paper","y0":0,"y1":1,"yref":"paper"}]},                        {"responsive": true}                    ).then(function(){
                             
-var gd = document.getElementById('a816eb00-3ae4-421e-9afe-ee3f31687b86');
+var gd = document.getElementById('c8b0f7a7-883f-4f2a-aa8e-9921e3ac64a0');
 var x = new MutationObserver(function (mutations, observer) {{
         var display = window.getComputedStyle(gd).display;
         if (!display || display === 'none') {{
