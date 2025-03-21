@@ -73,7 +73,7 @@ ul.task-list li input[type="checkbox"] {
 
 </head>
 
-<body class="nav-sidebar floating fullcontent">
+<body class="nav-sidebar floating">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top">
@@ -171,7 +171,15 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#to-do" id="toc-to-do" class="nav-link active" data-scroll-target="#to-do">To Do</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
@@ -206,22 +214,31 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<p>To do:</p>
+<p>These notes provide detailed documentation of the functions and experiments used in our appointment scheduling research. Our approach is built on two key components:</p>
+<ul>
+<li><p><strong>Evaluator Functions:</strong><br>
+A collection of functions responsible for evaluating the objective function for a given schedule. These functions compute essential performance metrics (e.g., expected waiting time, expected spillover) that help assess the quality of a schedule.</p></li>
+<li><p><strong>Searcher Functions:</strong><br>
+A suite of functions designed to generate neighborhoods around a given solution and explore the surrounding search space. These functions use the evaluator functions to guide the search for improved schedules.</p></li>
+</ul>
+<section id="to-do" class="level2 unnumbered">
+<h2 class="unnumbered anchored" data-anchor-id="to-do">To Do</h2>
 <ul class="task-list">
-<li><label><input type="checkbox">Add a brief introduction to the project</label></li>
-<li><label><input type="checkbox" checked="">Add evaluator functions</label>
+<li><label><input type="checkbox" checked=""><strong>Add a brief introduction to the project</strong></label></li>
+<li><label><input type="checkbox" checked=""><strong>Evaluator Functions</strong></label>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="">Document and test the evaluator functions</label></li>
-<li><label><input type="checkbox" checked="">Run experiment with the evaluator functions</label></li>
+<li><label><input type="checkbox" checked="">Run experiments using the evaluator functions</label></li>
 </ul></li>
-<li><label><input type="checkbox" checked="">Add search functions</label>
+<li><label><input type="checkbox" checked=""><strong>Searcher Functions</strong></label>
 <ul class="task-list">
 <li><label><input type="checkbox" checked="">Document and test the search functions</label></li>
-<li><label><input type="checkbox">Run experiment with the search functions</label></li>
+<li><label><input type="checkbox">Run experiments using the search functions</label></li>
 </ul></li>
 </ul>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

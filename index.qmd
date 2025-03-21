@@ -3,12 +3,20 @@ title: "Introduction"
 format: html
 ---
 
-To do:
+These notes provide detailed documentation of the functions and experiments used in our appointment scheduling research. Our approach is built on two key components:
 
--   [ ] Add a brief introduction to the project
--   [x] Add evaluator functions
+-   **Evaluator Functions:**\
+    A collection of functions responsible for evaluating the objective function for a given schedule. These functions compute essential performance metrics (e.g., expected waiting time, expected spillover) that help assess the quality of a schedule.
+
+-   **Searcher Functions:**\
+    A suite of functions designed to generate neighborhoods around a given solution and explore the surrounding search space. These functions use the evaluator functions to guide the search for improved schedules.
+
+## To Do {.unnumbered}
+
+-   [x] **Add a brief introduction to the project**
+-   [x] **Evaluator Functions**
     -   [x] Document and test the evaluator functions
-    -   [x] Run experiment with the evaluator functions
--   [x] Add search functions
+    -   [x] Run experiments using the evaluator functions
+-   [x] **Searcher Functions**
     -   [x] Document and test the search functions
-    -   [ ] Run experiment with the search functions
+    -   [ ] Run experiments using the search functions
