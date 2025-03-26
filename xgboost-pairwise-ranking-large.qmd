@@ -679,6 +679,6 @@ fig.show()
 
 ## Timeline
 
-*This experiment was started on 15-10-2024. The expected completion date is 01-11-2024.*
+*This experiment was started on 26-04-2025. The expected completion date is 26-04-2025.*
 
 ## References

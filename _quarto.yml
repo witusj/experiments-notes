@@ -10,6 +10,7 @@ book:
     - index.qmd
     - function-testing.qmd
     - xgboost-pairwise-ranking-large.qmd
+    - xgboost-pairwise-ranking-large-w-bailey-welch.qmd
     - references.qmd
     - part: "Function documentation"
       chapters:

@@ -25,6 +25,51 @@ def create_random_schedules(T, N, num_schedules):
     schedules.append(schedule)
   return(schedules)
 
+def bailey_welch_schedule(T, d, N, s):
+    """
+    Generates a Bailey-Welch schedule for a clinic session.
+
+    Parameters:
+        T (int): Number of intervals in the clinic session.
+        d (int): Length of each interval.
+        N (int): Total number of patients to schedule.
+        s (list of floats): Consultation time distribution where the index represents 
+                            the consultation time (with 0 meaning no-show) and the value 
+                            at each index is the probability of that consultation time.
+
+    Returns:
+        list: A list of length T where each element is the number of patients scheduled 
+              in that interval.
+    """
+    # Compute the mean consultation time using the dot product.
+    # Here, i represents the consultation time.
+    mean_consultation = np.dot(np.arange(len(s)), s)
+    
+    # Initialize the schedule with T intervals.
+    schedule = [0] * T
+
+    # Schedule the first two patients at the beginning (interval 0)
+    if N >= 1:
+        schedule[0] += 1
+    if N >= 2:
+        schedule[0] += 1
+
+    # For each subsequent patient, schedule them at intervals spaced by the mean consultation time.
+    for i in range(2, N):
+        # Calculate the ideal appointment time.
+        appointment_time = (i - 1) * mean_consultation
+
+        # Map the continuous appointment time to one of the T intervals.
+        interval_index = int(appointment_time // d)
+
+        # If the index exceeds available intervals, assign to the last interval.
+        if interval_index >= T:
+            interval_index = T - 1
+
+        schedule[interval_index] += 1
+
+    return schedule
+
 def calculate_ambiguousness(y_pred_proba: np.ndarray) -> np.ndarray:
     """
     Calculate the ambiguousness (entropy) for each sample's predicted probabilities.
