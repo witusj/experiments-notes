@@ -153,8 +153,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./xgboost-pairwise-ranking-large.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Large instance XGBoost classification model for pairwise ranking</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./references.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">References</span></span></a>
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">References</span></span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -274,7 +280,7 @@ A tuple containing:
 </section>
 <section id="example" class="level4">
 <h4 class="anchored" data-anchor-id="example">Example</h4>
-<div id="c29ca824" class="cell" data-execution_count="1">
+<div id="f866a62b" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> local_search, calculate_objective_serv_time_lookup, compute_convolutions, get_v_star, powerset</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -384,7 +390,7 @@ Best Solution: [2 1 1 2]
 Best Cost: 9.894705450000002</code></pre>
 </div>
 </div>
-<div id="2ebb6875" class="cell" data-execution_count="2">
+<div id="d83da9b1" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> unittest</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> local_search, compute_convolutions, get_v_star</span>
@@ -428,7 +434,7 @@ Best Cost: 9.894705450000002</code></pre>
 <div class="cell-output cell-output-stderr">
 <pre><code>.
 ----------------------------------------------------------------------
-Ran 1 test in 0.012s
+Ran 1 test in 0.013s
 
 OK</code></pre>
 </div>

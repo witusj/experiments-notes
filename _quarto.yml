@@ -9,6 +9,7 @@ book:
   chapters:
     - index.qmd
     - function-testing.qmd
+    - xgboost-pairwise-ranking-large.qmd
     - references.qmd
     - part: "Function documentation"
       chapters:

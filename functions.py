@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from typing import List, Tuple, Dict, Iterable, TypeVar, Union
 import copy
+import random
 from itertools import combinations
 
 """
@@ -11,6 +12,81 @@ For this two building blocks are necessary:
     - A searcher: This set of functions that generate the neighborhood of a given solution and then explore the
       search space around the current solution using the evaluator.
 """
+
+############################
+# Helper functions
+############################
+
+def create_random_schedules(T, N, num_schedules):
+  schedules = []
+  for _ in range(num_schedules):
+    sample = random.choices(range(T), k = N)
+    schedule = np.bincount(sample, minlength=T).tolist()
+    schedules.append(schedule)
+  return(schedules)
+
+def calculate_ambiguousness(y_pred_proba: np.ndarray) -> np.ndarray:
+    """
+    Calculate the ambiguousness (entropy) for each sample's predicted probabilities.
+
+    The ambiguousness is calculated as the entropy of the predicted class probabilities.
+
+    Parameters:
+    y_pred_proba (np.ndarray): Array of shape (n_samples, n_classes) with predicted probabilities for each class.
+
+    Returns:
+    np.ndarray: Array of ambiguousness (entropy) for each sample.
+    """
+    # Ensure probabilities are in numpy array
+    y_pred_proba = np.array(y_pred_proba)
+
+    # Define a small bias term to avoid log(0)
+    epsilon = 1e-10
+
+    # Add small bias term to probabilities that contain zeros
+    y_pred_proba = np.clip(y_pred_proba, epsilon, 1 - epsilon)
+
+    # Calculate ambiguousness (entropy) for each sample
+    ambiguousness = -np.sum(y_pred_proba * np.log2(y_pred_proba), axis=1)
+
+    return ambiguousness
+  
+def compare_json(json1: dict, json2: dict) -> dict:
+    """
+    Compare two JSON objects and return a dictionary with the differences.
+
+    Parameters:
+    json1 (dict): The first JSON object to compare.
+    json2 (dict): The second JSON object to compare.
+
+    Returns:
+    dict: A dictionary showing the differences between the two JSON objects.
+    """
+    differences = {}
+
+    # Check keys in json1
+    for key in json1.keys():
+        if key in json2:
+            if json1[key] != json2[key]:
+                differences[key] = {
+                    "json1_value": json1[key],
+                    "json2_value": json2[key]
+                }
+        else:
+            differences[key] = {
+                "json1_value": json1[key],
+                "json2_value": "Key not found in json2"
+            }
+
+    # Check keys in json2 that are not in json1
+    for key in json2.keys():
+        if key not in json1:
+            differences[key] = {
+                "json1_value": "Key not found in json1",
+                "json2_value": json2[key]
+            }
+
+    return differences
 
 ############################
 # Evaluator functions
