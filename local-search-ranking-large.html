@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.551">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Large instance local search with trained XGBoost regressor model</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="local-search-ranking-large_files/libs/clipboard/clipboard.min.js"></script>
+<script src="local-search-ranking-large_files/libs/quarto-html/quarto.js"></script>
+<script src="local-search-ranking-large_files/libs/quarto-html/popper.min.js"></script>
+<script src="local-search-ranking-large_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="local-search-ranking-large_files/libs/quarto-html/anchor.min.js"></script>
+<link href="local-search-ranking-large_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="local-search-ranking-large_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="local-search-ranking-large_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="local-search-ranking-large_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="local-search-ranking-large_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Large instance local search with trained XGBoost regressor model</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="objective" class="level2">
+<h2 class="anchored" data-anchor-id="objective">Objective</h2>
+<p>Test the working and performance of a <a href="xgboost-pairwise-ranking-large-w-bailey-welch.qmd">previously trained</a> XGBoost Ranking model in a local search application.</p>
+</section>
+<section id="background" class="level2">
+<h2 class="anchored" data-anchor-id="background">Background</h2>
+<p>In previous experiments, we trained an XGBoost Classifier model to predict the objective values of neighboring schedules. In this experiment, we will use the trained models to perform a local search to find the best schedule.</p>
+</section>
+<section id="hypothesis" class="level2">
+<h2 class="anchored" data-anchor-id="hypothesis">Hypothesis</h2>
+<p>The XGBoost Classifier model will be able to efficiently guide the local search algorithm to find a schedule with a lower objective value than the initial schedule.</p>
+</section>
+<section id="methodology" class="level2">
+<h2 class="anchored" data-anchor-id="methodology">Methodology</h2>
+<section id="tools-and-materials" class="level3">
+<h3 class="anchored" data-anchor-id="tools-and-materials">Tools and Materials</h3>
+<div id="b8175f93" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> itertools <span class="im">import</span> chain, combinations</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> math <span class="im">import</span> comb  <span class="co"># Available in Python 3.8 and later</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> xgboost <span class="im">as</span> xgb</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pickle</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple, Dict, Iterable, TypeVar, Union</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="load-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="load-parameters">Load Parameters</h3>
+<div id="1ae30f9f" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">22</span> <span class="co"># Number of patients</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> <span class="dv">20</span> <span class="co"># Number of intervals</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="dv">5</span> <span class="co"># Length of each interval</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>max_s <span class="op">=</span> <span class="dv">20</span> <span class="co"># Maximum service time</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> <span class="fl">0.20</span> <span class="co"># Probability of a scheduled patient not showing up</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> <span class="fl">0.1</span> <span class="co"># Weight for the waiting time in objective function</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>file_path_parameters <span class="op">=</span> <span class="ss">f"datasets/parameters_</span><span class="sc">{</span>N<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>T<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">.pkl"</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the data from the pickle file</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(file_path_parameters, <span class="st">'rb'</span>) <span class="im">as</span> f:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>    data_params <span class="op">=</span> pickle.load(f)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> data_params[<span class="st">'N'</span>] <span class="co"># Number of patients</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> data_params[<span class="st">'T'</span>] <span class="co"># Number of intervals</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> data_params[<span class="st">'d'</span>] <span class="co"># Length of each interval</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>max_s <span class="op">=</span> data_params[<span class="st">'max_s'</span>] <span class="co"># Maximum service time</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> data_params[<span class="st">'q'</span>] <span class="co"># Probability of a scheduled patient not showing up</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> data_params[<span class="st">'w'</span>] <span class="co"># Weight for the waiting time in objective function</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> data_params[<span class="st">'l'</span>]</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>num_schedules <span class="op">=</span> data_params[<span class="st">'num_schedules'</span>] <span class="co"># Number of schedules to sample</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>convolutions <span class="op">=</span> data_params[<span class="st">'convolutions'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="experimental-design" class="level3">
+<h3 class="anchored" data-anchor-id="experimental-design">Experimental Design</h3>
+<p>We will use the trained XGBoost Classifier model to guide a local search algorithm to find the best schedule. The local search algorithm will start with an initial schedule and iteratively explore the neighborhood of the current schedule to find a better one. As an initial schedule, we will use the schedule with the lowest objective value from the training dataset that was used to train the XGBoost Classifier model.</p>
+</section>
+<section id="variables" class="level3">
+<h3 class="anchored" data-anchor-id="variables">Variables</h3>
+<ul>
+<li><strong>Independent Variables</strong>:
+<ul>
+<li>Initial schedule, trained XGBoost Classifier</li>
+</ul></li>
+<li><strong>Dependent Variables</strong>:
+<ul>
+<li>Speed, accuracy, and convergence of the local search algorithm.</li>
+</ul></li>
+</ul>
+</section>
+<section id="data-collection" class="level3">
+<h3 class="anchored" data-anchor-id="data-collection">Data Collection</h3>
+<p>We will use the training dataset to initialize the local search algorithm.</p>
+</section>
+<section id="sample-size-and-selection" class="level3">
+<h3 class="anchored" data-anchor-id="sample-size-and-selection">Sample Size and Selection</h3>
+</section>
+<section id="experimental-procedure" class="level3">
+<h3 class="anchored" data-anchor-id="experimental-procedure">Experimental Procedure</h3>
+<div id="fig-local-search-algorithm" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-local-search-algorithm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="images/local_search_algorithm.png" class="img-fluid figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-local-search-algorithm-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Local search algorithm
+</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="results" class="level2">
+<h2 class="anchored" data-anchor-id="results">Results</h2>
+<section id="load-the-initial-best-schedule." class="level3">
+<h3 class="anchored" data-anchor-id="load-the-initial-best-schedule.">Load the initial best schedule.</h3>
+<p>Start with the best solution found so far <span class="math inline">\(\{x^*, C(x^*)\}\)</span> from the training set.</p>
+<div id="a6eebfa4" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the best solution from the training dataset</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>file_path_schedules <span class="op">=</span> <span class="ss">f"datasets/neighbors_and_objectives_</span><span class="sc">{</span>N<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>T<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">.pkl"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the data from the pickle file</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> <span class="bu">open</span>(file_path_schedules, <span class="st">'rb'</span>) <span class="im">as</span> f:</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    data_sch <span class="op">=</span> pickle.load(f)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The data has following keys: </span><span class="sc">{</span>[key <span class="cf">for</span> key <span class="kw">in</span> data_sch.keys()]<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Flatten the objectives into a 1D array</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>flattened_data <span class="op">=</span> [value <span class="cf">for</span> sublist <span class="kw">in</span> data_sch[<span class="st">'objectives'</span>] <span class="cf">for</span> value <span class="kw">in</span> sublist]</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Find the index of the minimum value</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>min_index <span class="op">=</span> np.argmin(flattened_data)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: Convert that index back to the original 2D structure</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>row_index <span class="op">=</span> min_index <span class="op">//</span> <span class="dv">2</span>  <span class="co"># Assuming each inner list has 2 values</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>col_index <span class="op">=</span> min_index <span class="op">%</span> <span class="dv">2</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The minimum objective value is at index [</span><span class="sc">{</span>row_index<span class="sc">}</span><span class="ss">][</span><span class="sc">{</span>col_index<span class="sc">}</span><span class="ss">].</span><span class="ch">\n</span><span class="ss">This is schedule: </span><span class="sc">{</span>data_sch[<span class="st">'neighbors_list'</span>][row_index][col_index]<span class="sc">}</span><span class="ss"> with objective value </span><span class="sc">{</span>data_sch[<span class="st">'objectives'</span>][row_index][col_index]<span class="sc">}</span><span class="ss">."</span>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Set the initial schedule to the best solution from the training dataset</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>initial_schedule <span class="op">=</span> data_sch[<span class="st">'neighbors_list'</span>][row_index][col_index]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>The data has following keys: ['neighbors_list', 'objectives', 'rankings']
+The minimum objective value is at index [49478][0].
+This is schedule: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6] with objective value 73.03156472572815.</code></pre>
+</div>
+</div>
+</section>
+<section id="generate-the-neighborhood-of-x." class="level3">
+<h3 class="anchored" data-anchor-id="generate-the-neighborhood-of-x.">Generate the neighborhood of <span class="math inline">\(x^*\)</span>.</h3>
+<section id="define-v." class="level4">
+<h4 class="anchored" data-anchor-id="define-v.">Define <span class="math inline">\(V^*\)</span>.</h4>
+<p>Define the vectors <span class="math inline">\(V^*\)</span> as follows:</p>
+<p><span class="math display">\[
+\left\{
+\begin{array}{c}
+\vec{v_1}, \\
+\vec{v_2}, \\
+\vec{v_3}, \\
+\vdots \\
+\vec{v_{T-1}}, \\
+\vec{v_T} \\
+\end{array}
+\right\} =
+\left\{
+\begin{array}{c}
+(-1, 0,...., 0, 1), \\
+(1, -1, 0,...., 0), \\
+(0, 1, -1,...., 0), \\
+\vdots \\
+(0,...., 1, -1, 0), \\
+(0,...., 0, 1, -1) \\
+\end{array}
+\right\}
+\]</span></p>
+</section>
+<section id="define-u_t." class="level4">
+<h4 class="anchored" data-anchor-id="define-u_t.">Define <span class="math inline">\(U_t\)</span>.</h4>
+<p>Define <span class="math inline">\(U_t\)</span> as the set of all possible subsets of <span class="math inline">\(V^*\)</span> such that each subset contains exactly <span class="math inline">\(t\)</span> elements, i.e.,</p>
+<p><span class="math display">\[
+U_t = \{ S \subsetneq V^* \mid |S| = t \}, \quad t \in \{1, 2, \dots, T\}.
+\]</span></p>
+<div id="af599bad" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_v_star</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> powerset(iterable, size<span class="op">=</span><span class="dv">1</span>):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"powerset([1,2,3], 2) --&gt; (1,2) (1,3) (2,3)"</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [[i <span class="cf">for</span> i <span class="kw">in</span> item] <span class="cf">for</span> item <span class="kw">in</span> combinations(iterable, size)]</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> initial_schedule</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate a matrix 'v_star' using the 'get_v_star' function</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>v_star <span class="op">=</span> get_v_star(T)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate all possible non-empty subsets (powerset) of the set {0, 1, 2, ..., t-1}</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># 'ids' will be a list of tuples, where each tuple is a subset of indices</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>size <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>ids <span class="op">=</span> powerset(<span class="bu">range</span>(T), size)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(ids)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>ids[:T]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="4">
+<pre><code>[[0, 1],
+ [0, 2],
+ [0, 3],
+ [0, 4],
+ [0, 5],
+ [0, 6],
+ [0, 7],
+ [0, 8],
+ [0, 9],
+ [0, 10],
+ [0, 11],
+ [0, 12],
+ [0, 13],
+ [0, 14],
+ [0, 15],
+ [0, 16],
+ [0, 17],
+ [0, 18],
+ [0, 19],
+ [1, 2]]</code></pre>
+</div>
+</div>
+</section>
+<section id="define-the-neighborhood-of-x" class="level4">
+<h4 class="anchored" data-anchor-id="define-the-neighborhood-of-x">Define the neighborhood of <span class="math inline">\(x\)</span></h4>
+<p>Define the neighborhood of <span class="math inline">\(x\)</span> as all vectors of the form <span class="math inline">\(x + u_{tk}\)</span> with <span class="math inline">\(\forall \, u_{tk} \in U_t\)</span>.</p>
+<div id="1b678179" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_neighborhood(x, v_star, ids, verbose<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> np.array(x)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    p <span class="op">=</span> <span class="dv">50</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> verbose:</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Printing every </span><span class="sc">{</span>p<span class="sc">}</span><span class="ss">th result"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initialize the list 'neighborhood' to store the vectors in the neighborhood of 'x'</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    neighborhood <span class="op">=</span> []</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Loop over all possible non-empty subsets of indices</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(ids)):</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Initialize the vector 'neighbor' to store the sum of vectors in 'v_star' corresponding to the indices in 'ids[i]'</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        neighbor <span class="op">=</span> np.zeros(<span class="bu">len</span>(x), dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Loop over all indices in 'ids[i]'</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(ids[i])):</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> verbose:</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"v_star</span><span class="sc">{</span>[ids[i][j]]<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>v_star[ids[i][j]]<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Add the vector in 'v_star' corresponding to the index 'ids[i][j]' to 'neighbor'</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>            neighbor <span class="op">+=</span> v_star[ids[i][j]]</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Append the vector 'x' plus 'neighbor' to the list 'neighborhood'</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>        x_n <span class="op">=</span> x <span class="op">+</span> neighbor</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> i<span class="op">%</span>p<span class="op">==</span><span class="dv">0</span>:</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> verbose:</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"x, x', delta:</span><span class="ch">\n</span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">,</span><span class="ch">\n</span><span class="sc">{</span>x_n<span class="sc">}</span><span class="ss">,</span><span class="ch">\n</span><span class="sc">{</span>neighbor<span class="sc">}</span><span class="ch">\n</span><span class="ss">----------------- "</span>)</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>        neighborhood.append(x_n)</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Convert the list 'neighborhood' into a NumPy array</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    neighborhood <span class="op">=</span> np.array(neighborhood)</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> verbose:</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Size of raw neighborhood: </span><span class="sc">{</span><span class="bu">len</span>(neighborhood)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create a mask for rows with negative values</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    mask <span class="op">=</span> <span class="op">~</span>np.<span class="bu">any</span>(neighborhood <span class="op">&lt;</span> <span class="dv">0</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Filter out rows with negative values using the mask</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> verbose:</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"filtered out: </span><span class="sc">{</span><span class="bu">len</span>(neighborhood)<span class="op">-</span>mask<span class="sc">.</span><span class="bu">sum</span>()<span class="sc">}</span><span class="ss"> schedules with negative values."</span>)</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>    filtered_neighborhood <span class="op">=</span> neighborhood[mask]</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> verbose:</span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Size of filtered neighborhood: </span><span class="sc">{</span><span class="bu">len</span>(filtered_neighborhood)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> filtered_neighborhood</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Example of function call:</span></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a><span class="co"># This will generate the neighborhood of the vector 'x' using the vectors in 'v_star' and the indices in 'ids'</span></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>test_nh <span class="op">=</span> get_neighborhood(x, v_star, ids)</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"All neighborhoods with </span><span class="sc">{</span>size<span class="sc">}</span><span class="ss"> patients switched:</span><span class="ch">\n</span><span class="ss"> x = </span><span class="sc">{</span>np<span class="sc">.</span>array(x)<span class="sc">}</span><span class="ss">: </span><span class="ch">\n</span><span class="ss"> </span><span class="sc">{</span>test_nh<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>All neighborhoods with 2 patients switched:
+ x = [2 1 1 1 0 1 1 0 1 1 0 1 1 1 1 1 0 1 1 6]: 
+ [[2 0 1 ... 1 1 7]
+ [1 2 0 ... 1 1 7]
+ [1 1 2 ... 1 1 7]
+ ...
+ [2 1 1 ... 1 0 6]
+ [2 1 1 ... 0 2 5]
+ [2 1 1 ... 2 1 5]]</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="local-search-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="local-search-algorithm">Local search algorithm</h3>
+<div id="5f66dc3d" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> local_search_predicted(x: List[<span class="bu">int</span>], v_star: np.ndarray, clf: xgb.XGBClassifier, size: <span class="bu">int</span> <span class="op">=</span> <span class="dv">2</span>) <span class="op">-&gt;</span> Tuple[np.ndarray, <span class="bu">int</span>]:</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Performs a local search around a given point in the feature space</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co">    and predicts the class label using an XGBClassifier model.</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">        x (List[int]): The starting point for the local search, represented as a list of integers.</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">        v_star (np.ndarray): The current best solution (e.g., a NumPy array representing a feature vector).</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">        clf (XGBClassifier): An XGBoost Classifier model that will be used for prediction.</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">        size (int, optional): The size of the neighborhood to explore around the starting point. Defaults to 2.</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">        Tuple[np.ndarray, int]: A tuple containing the best neighbor found (as a NumPy array)</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co">                                 and its predicted class label (as an integer).</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Outer loop for the number of patients to switch</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    max_restarts <span class="op">=</span> size  <span class="co"># Or some other reasonable limit to prevent infinite loops when searching</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    restart_count <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    x_star <span class="op">=</span> x</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>    w <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> t <span class="op">&lt;</span> size <span class="kw">and</span> restart_count <span class="op">&lt;</span> max_restarts:</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'Running local search </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        ids_gen <span class="op">=</span> powerset(<span class="bu">range</span>(T), t)</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        neighborhood <span class="op">=</span> get_neighborhood(x_star, v_star, ids_gen)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Switching </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss"> patient(s). Size of neighborhood: </span><span class="sc">{</span><span class="bu">len</span>(<span class="bu">list</span>(ids_gen))<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>        found_better_solution <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> neighbor <span class="kw">in</span> neighborhood:</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>            objectives_list <span class="op">=</span> [calculate_objective_serv_time_lookup(x, d, convolutions) <span class="cf">for</span> x <span class="kw">in</span> [x_star, neighbor]]</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>            costs_list <span class="op">=</span> [w <span class="op">*</span> objectives[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> objectives[<span class="dv">1</span>] <span class="cf">for</span> objectives <span class="kw">in</span> objectives_list]</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>            schedule_pairs <span class="op">=</span> x_star <span class="op">+</span> neighbor.tolist()</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f"Schedule pairs: </span><span class="sc">{</span>schedule_pairs<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f"Costs: </span><span class="sc">{</span>costs_list<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>            rank <span class="op">=</span> clf.predict([schedule_pairs])</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>            ambiguousness <span class="op">=</span> clf.predict_proba([schedule_pairs])</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a>            <span class="bu">print</span>(<span class="ss">f"Predicted rank: </span><span class="sc">{</span>rank<span class="sc">}</span><span class="ss">, ambiguousness: </span><span class="sc">{</span>ambiguousness<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> rank[<span class="dv">0</span>] <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>                x_star <span class="op">=</span> neighbor.tolist()</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Found better solution: </span><span class="sc">{</span>x_star<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>                found_better_solution <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> found_better_solution:</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>            t <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>            restart_count <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>            t <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x_star</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="6b93d0a6" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> calculate_objective_serv_time_lookup</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path to the saved model</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>model_path <span class="op">=</span> <span class="st">"models/classifier_large_instance.json"</span> <span class="co"># Make sure this path is correct</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialize an XGBoost Classifier instance</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> xgb.XGBClassifier()</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the model directly from the file path</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>clf.load_model(model_path)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>intial_objectives <span class="op">=</span> calculate_objective_serv_time_lookup(x, d, convolutions)</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>initial_c_star <span class="op">=</span> w <span class="op">*</span> intial_objectives[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> intial_objectives[<span class="dv">1</span>]</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>x_star <span class="op">=</span> local_search_predicted(x, v_star, clf, size<span class="op">=</span>T)</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>final_objectives <span class="op">=</span> calculate_objective_serv_time_lookup(x_star, d, convolutions)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>final_c_star <span class="op">=</span> w <span class="op">*</span> final_objectives[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> final_objectives[<span class="dv">1</span>]</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, with objective value: </span><span class="sc">{</span>initial_c_star<span class="sc">}</span><span class="ss">.</span><span class="ch">\n</span><span class="ss">Final schedule: </span><span class="sc">{</span>x_star<span class="sc">}</span><span class="ss">, with objective value: </span><span class="sc">{</span>final_c_star<span class="sc">}</span><span class="ss">."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 7]
+Costs: [73.03156472572815, 76.04758261595143]
+Predicted rank: [0], ambiguousness: [[0.91602606 0.08397394]]
+Schedule pairs: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.03156472572815, 73.43037273576797]
+Predicted rank: [1], ambiguousness: [[0.42490548 0.5750945 ]]
+Found better solution: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 7]
+Costs: [73.43037273576797, 76.10357397102815]
+Predicted rank: [0], ambiguousness: [[0.8692778  0.13072224]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.43037273576797, 73.81665760425685]
+Predicted rank: [0], ambiguousness: [[0.5367576  0.46324238]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 2, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.43037273576797, 73.8819209569601]
+Predicted rank: [0], ambiguousness: [[0.54269046 0.45730954]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.43037273576797, 73.65055452463699]
+Predicted rank: [0], ambiguousness: [[0.50471616 0.4952838 ]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 2, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.43037273576797, 73.84769888249683]
+Predicted rank: [0], ambiguousness: [[0.5233314  0.47666857]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.43037273576797, 73.51043942408023]
+Predicted rank: [1], ambiguousness: [[0.49589527 0.50410473]]
+Found better solution: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 2, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 7]
+Costs: [73.51043942408023, 75.9796924297939]
+Predicted rank: [0], ambiguousness: [[0.8692778  0.13072224]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.89177723298423]
+Predicted rank: [0], ambiguousness: [[0.5367576  0.46324238]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 2, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.95939866839379]
+Predicted rank: [0], ambiguousness: [[0.54269046 0.45730954]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.687812254565]
+Predicted rank: [0], ambiguousness: [[0.50471616 0.4952838 ]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 2, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.89374939844784]
+Predicted rank: [0], ambiguousness: [[0.543292 0.456708]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 2, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.95653942148456]
+Predicted rank: [0], ambiguousness: [[0.58248824 0.41751176]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.51043942408023, 73.7857151849687]
+Predicted rank: [1], ambiguousness: [[0.49589527 0.50410473]]
+Found better solution: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 7]
+Costs: [73.7857151849687, 76.15666356889989]
+Predicted rank: [0], ambiguousness: [[0.8692778  0.13072224]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.16485948139768]
+Predicted rank: [0], ambiguousness: [[0.5367576  0.46324238]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 2, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.23356786157552]
+Predicted rank: [0], ambiguousness: [[0.54269046 0.45730954]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 73.94613185506186]
+Predicted rank: [0], ambiguousness: [[0.50471616 0.4952838 ]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 2, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.15587994522978]
+Predicted rank: [0], ambiguousness: [[0.543292 0.456708]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 2, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.21442711131124]
+Predicted rank: [0], ambiguousness: [[0.58248824 0.41751176]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 2, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.25400407412624]
+Predicted rank: [0], ambiguousness: [[0.51087606 0.4891239 ]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 73.40708611041777]
+Predicted rank: [0], ambiguousness: [[0.52203035 0.47796965]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 2, 0, 1, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 73.99835476242224]
+Predicted rank: [0], ambiguousness: [[0.5381587 0.4618413]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 2, 0, 1, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.10084403819471]
+Predicted rank: [0], ambiguousness: [[0.6510252  0.34897482]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 2, 0, 1, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.1679061008202]
+Predicted rank: [0], ambiguousness: [[0.5742011 0.4257989]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 2, 0, 0, 1, 1, 6]
+Costs: [73.7857151849687, 74.22318336902197]
+Predicted rank: [0], ambiguousness: [[0.7789453  0.22105464]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6, 3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [73.7857151849687, 73.79487940113552]
+Predicted rank: [1], ambiguousness: [[0.4291365 0.5708635]]
+Found better solution: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [73.79487940113552, 76.05188998065675]
+Predicted rank: [0], ambiguousness: [[0.85375065 0.14624935]]
+Schedule pairs: [3, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [73.79487940113552, 74.17282659662641]
+Predicted rank: [1], ambiguousness: [[0.47278643 0.5272136 ]]
+Found better solution: [3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 2, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [74.17282659662641, 76.15248743201911]
+Predicted rank: [0], ambiguousness: [[0.59941316 0.40058687]]
+Schedule pairs: [3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [74.17282659662641, 74.66343824503056]
+Predicted rank: [0], ambiguousness: [[0.504199 0.495801]]
+Schedule pairs: [3, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 3, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [74.17282659662641, 74.58984134590997]
+Predicted rank: [1], ambiguousness: [[0.49401832 0.5059817 ]]
+Found better solution: [3, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 2, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [74.58984134590997, 76.42660998881306]
+Predicted rank: [0], ambiguousness: [[0.57805413 0.42194587]]
+Schedule pairs: [3, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [74.58984134590997, 75.0775791776739]
+Predicted rank: [1], ambiguousness: [[0.43702215 0.56297785]]
+Found better solution: [4, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 3, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [75.0775791776739, 76.87202723057422]
+Predicted rank: [0], ambiguousness: [[0.5044818 0.4955182]]
+Schedule pairs: [4, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.0775791776739, 75.56501112192014]
+Predicted rank: [1], ambiguousness: [[0.48177606 0.51822394]]
+Found better solution: [4, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 3, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [75.56501112192014, 77.32716010242504]
+Predicted rank: [0], ambiguousness: [[0.5609937 0.4390063]]
+Schedule pairs: [4, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 5, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.56501112192014, 76.06373896304294]
+Predicted rank: [0], ambiguousness: [[0.5120543  0.48794568]]
+Schedule pairs: [4, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.56501112192014, 75.65809819360143]
+Predicted rank: [1], ambiguousness: [[0.49966854 0.50033146]]
+Found better solution: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 7]
+Costs: [75.65809819360143, 76.99537751983138]
+Predicted rank: [0], ambiguousness: [[0.5901661  0.40983394]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 5, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.15670393986402]
+Predicted rank: [0], ambiguousness: [[0.54182273 0.45817727]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.07780576806721]
+Predicted rank: [0], ambiguousness: [[0.5069536  0.49304637]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 75.88418531615427]
+Predicted rank: [0], ambiguousness: [[0.5069536  0.49304637]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 2, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.06963507092152]
+Predicted rank: [0], ambiguousness: [[0.5325514 0.4674486]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.12122839242772]
+Predicted rank: [0], ambiguousness: [[0.53332627 0.46667373]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 75.19123838227884]
+Predicted rank: [0], ambiguousness: [[0.53835654 0.4616435 ]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 75.84227412425653]
+Predicted rank: [0], ambiguousness: [[0.52173376 0.47826624]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 75.94771409952082]
+Predicted rank: [0], ambiguousness: [[0.63292253 0.36707744]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.01187987420619]
+Predicted rank: [0], ambiguousness: [[0.58007824 0.4199218 ]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 0, 1, 6]
+Costs: [75.65809819360143, 76.05967007233534]
+Predicted rank: [0], ambiguousness: [[0.7660483 0.2339517]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 0, 1, 6]
+Costs: [75.65809819360143, 76.10367329360545]
+Predicted rank: [0], ambiguousness: [[0.68965876 0.31034124]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.65809819360143, 75.68664015115924]
+Predicted rank: [1], ambiguousness: [[0.473251 0.526749]]
+Found better solution: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 76.90739400567028]
+Predicted rank: [0], ambiguousness: [[0.5935248  0.40647516]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 5, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.18524445742227]
+Predicted rank: [0], ambiguousness: [[0.57133937 0.42866066]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.10570777292834]
+Predicted rank: [0], ambiguousness: [[0.5193275 0.4806725]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 75.90902923675111]
+Predicted rank: [0], ambiguousness: [[0.5193275 0.4806725]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 2, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.09703446670059]
+Predicted rank: [0], ambiguousness: [[0.54485965 0.45514035]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.14945640783512]
+Predicted rank: [0], ambiguousness: [[0.5456314  0.45436856]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 75.1867859058448]
+Predicted rank: [0], ambiguousness: [[0.5487546  0.45124546]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 75.85568118712771]
+Predicted rank: [0], ambiguousness: [[0.5340776  0.46592242]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 75.96115727427116]
+Predicted rank: [0], ambiguousness: [[0.67312163 0.32687837]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.0230468060427]
+Predicted rank: [0], ambiguousness: [[0.631649   0.36835098]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 0, 6]
+Costs: [75.68664015115924, 76.06548434623842]
+Predicted rank: [0], ambiguousness: [[0.79138213 0.20861785]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 0, 6]
+Costs: [75.68664015115924, 76.10080596143236]
+Predicted rank: [0], ambiguousness: [[0.66505    0.33494997]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 0, 6]
+Costs: [75.68664015115924, 76.13681768581303]
+Predicted rank: [0], ambiguousness: [[0.6554587  0.34454128]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 5]
+Costs: [75.68664015115924, 75.46114416917843]
+Predicted rank: [0], ambiguousness: [[0.5124995 0.4875005]]
+Running local search 2
+Switching 2 patient(s). Size of neighborhood: 190
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 4, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.40109632808768]
+Predicted rank: [0], ambiguousness: [[0.6430267 0.3569733]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.20443808128742]
+Predicted rank: [0], ambiguousness: [[0.5935248  0.40647516]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 76.88226491686613]
+Predicted rank: [0], ambiguousness: [[0.5935248  0.40647516]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 2, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.25912567016721]
+Predicted rank: [0], ambiguousness: [[0.6180147 0.3819853]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.34942635969645]
+Predicted rank: [0], ambiguousness: [[0.61874926 0.38125074]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 75.99915650305275]
+Predicted rank: [0], ambiguousness: [[0.61327803 0.386722  ]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 76.96779536537096]
+Predicted rank: [0], ambiguousness: [[0.607718   0.39228204]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.11387903617914]
+Predicted rank: [0], ambiguousness: [[0.7239566  0.27604342]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.19778982376297]
+Predicted rank: [0], ambiguousness: [[0.7150725 0.2849275]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 0, 7]
+Costs: [75.68664015115924, 77.25402770994437]
+Predicted rank: [0], ambiguousness: [[0.7975803  0.20241968]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 0, 7]
+Costs: [75.68664015115924, 77.29980681695417]
+Predicted rank: [0], ambiguousness: [[0.7353322 0.2646678]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 0, 7]
+Costs: [75.68664015115924, 77.34556712580076]
+Predicted rank: [0], ambiguousness: [[0.7199733  0.28002664]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 6, 3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [75.68664015115924, 76.50046405212144]
+Predicted rank: [1], ambiguousness: [[0.48384333 0.5161567 ]]
+Found better solution: [3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 2, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [76.50046405212144, 81.54384058426274]
+Predicted rank: [0], ambiguousness: [[0.63084805 0.36915195]]
+Schedule pairs: [3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [76.50046405212144, 76.99415677464961]
+Predicted rank: [0], ambiguousness: [[0.5407982  0.45920178]]
+Schedule pairs: [3, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [76.50046405212144, 76.79509540135655]
+Predicted rank: [1], ambiguousness: [[0.4658475 0.5341525]]
+Found better solution: [3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 2, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [76.79509540135655, 81.60482471286372]
+Predicted rank: [0], ambiguousness: [[0.64091253 0.35908744]]
+Schedule pairs: [3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [76.79509540135655, 77.28786409735608]
+Predicted rank: [0], ambiguousness: [[0.51699317 0.48300686]]
+Schedule pairs: [3, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [76.79509540135655, 77.24816806688901]
+Predicted rank: [1], ambiguousness: [[0.49535483 0.50464517]]
+Found better solution: [3, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [3, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 2, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [77.24816806688901, 81.97792510861207]
+Predicted rank: [0], ambiguousness: [[0.60933536 0.39066464]]
+Schedule pairs: [3, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [77.24816806688901, 77.73920873270163]
+Predicted rank: [1], ambiguousness: [[0.44965768 0.5503423 ]]
+Found better solution: [4, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [77.73920873270163, 82.43809891705237]
+Predicted rank: [0], ambiguousness: [[0.5234554  0.47654462]]
+Schedule pairs: [4, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [77.73920873270163, 78.22896783886895]
+Predicted rank: [1], ambiguousness: [[0.49456882 0.5054312 ]]
+Found better solution: [4, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.22896783886895, 82.90149655940326]
+Predicted rank: [0], ambiguousness: [[0.57978255 0.42021745]]
+Schedule pairs: [4, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.22896783886895, 78.72769567999177]
+Predicted rank: [0], ambiguousness: [[0.5248369  0.47516313]]
+Schedule pairs: [4, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.22896783886895, 78.09857565564401]
+Predicted rank: [1], ambiguousness: [[0.4784401 0.5215599]]
+Found better solution: [4, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.09857565564401, 82.34333637754467]
+Predicted rank: [0], ambiguousness: [[0.56682503 0.433175  ]]
+Schedule pairs: [4, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.09857565564401, 78.59730349676684]
+Predicted rank: [0], ambiguousness: [[0.5116123 0.4883877]]
+Schedule pairs: [4, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.09857565564401, 78.43026086873962]
+Predicted rank: [1], ambiguousness: [[0.4777246 0.5222754]]
+Found better solution: [4, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.43026086873962, 82.50042358051539]
+Predicted rank: [0], ambiguousness: [[0.59532136 0.40467864]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.43026086873962, 78.92893257412446]
+Predicted rank: [0], ambiguousness: [[0.5407982  0.45920178]]
+Schedule pairs: [4, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.43026086873962, 78.88205706992348]
+Predicted rank: [1], ambiguousness: [[0.4944588 0.5055412]]
+Found better solution: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 82.88017425777437]
+Predicted rank: [0], ambiguousness: [[0.60574913 0.39425087]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.3806025650473]
+Predicted rank: [0], ambiguousness: [[0.51699317 0.48300686]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.36909876200832]
+Predicted rank: [0], ambiguousness: [[0.52400064 0.47599936]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.96838655222768]
+Predicted rank: [0], ambiguousness: [[0.50532603 0.49467397]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.3042572367155]
+Predicted rank: [0], ambiguousness: [[0.5317052 0.4682948]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 77.77715328917797]
+Predicted rank: [0], ambiguousness: [[0.5348424  0.46515763]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.89359971461391]
+Predicted rank: [0], ambiguousness: [[0.5388548  0.46114522]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.0509026277957]
+Predicted rank: [0], ambiguousness: [[0.6523372  0.34766284]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.13764009024455]
+Predicted rank: [0], ambiguousness: [[0.60975635 0.39024368]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.19045800882547]
+Predicted rank: [0], ambiguousness: [[0.7916317  0.20836829]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 6]
+Costs: [78.88205706992348, 79.2246340696367]
+Predicted rank: [0], ambiguousness: [[0.6524526 0.3475474]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 6]
+Costs: [78.88205706992348, 79.24596968754881]
+Predicted rank: [0], ambiguousness: [[0.62387794 0.37612206]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 6]
+Costs: [78.88205706992348, 79.25459893296943]
+Predicted rank: [0], ambiguousness: [[0.72114813 0.27885184]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 5]
+Costs: [78.88205706992348, 79.19123292129775]
+Predicted rank: [0], ambiguousness: [[0.67518365 0.32481635]]
+Running local search 2
+Switching 2 patient(s). Size of neighborhood: 190
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 83.37361236914691]
+Predicted rank: [0], ambiguousness: [[0.6168437  0.38315633]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 83.34070404921995]
+Predicted rank: [0], ambiguousness: [[0.6234577  0.37654236]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 82.6930869425432]
+Predicted rank: [0], ambiguousness: [[0.60574913 0.39425087]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 83.26835822249132]
+Predicted rank: [0], ambiguousness: [[0.63068694 0.36931306]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 81.3093449575698]
+Predicted rank: [0], ambiguousness: [[0.62528324 0.37471673]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 82.78372322028058]
+Predicted rank: [0], ambiguousness: [[0.63735604 0.362644  ]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 82.98200042960966]
+Predicted rank: [0], ambiguousness: [[0.71467006 0.28532994]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 7]
+Costs: [78.88205706992348, 83.08965387328054]
+Predicted rank: [0], ambiguousness: [[0.70560867 0.29439133]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 7]
+Costs: [78.88205706992348, 83.15421757380534]
+Predicted rank: [0], ambiguousness: [[0.805677   0.19432299]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 7]
+Costs: [78.88205706992348, 83.19545283901407]
+Predicted rank: [0], ambiguousness: [[0.74512315 0.25487688]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 7]
+Costs: [78.88205706992348, 83.22091931788009]
+Predicted rank: [0], ambiguousness: [[0.7018054 0.2981946]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 7]
+Costs: [78.88205706992348, 83.23109600643075]
+Predicted rank: [0], ambiguousness: [[0.76356876 0.23643121]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 6]
+Costs: [78.88205706992348, 83.15612192815799]
+Predicted rank: [0], ambiguousness: [[0.6495513  0.35044876]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.86729014024027]
+Predicted rank: [0], ambiguousness: [[0.5189802 0.4810198]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.46689565561103]
+Predicted rank: [0], ambiguousness: [[0.51699317 0.48300686]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.80280116627858]
+Predicted rank: [0], ambiguousness: [[0.5433125 0.4566875]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.27569132002307]
+Predicted rank: [0], ambiguousness: [[0.5463654  0.45363462]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.39214420397576]
+Predicted rank: [0], ambiguousness: [[0.5504347 0.4495653]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.54944758037817]
+Predicted rank: [0], ambiguousness: [[0.65681946 0.34318054]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.63618525546482]
+Predicted rank: [0], ambiguousness: [[0.59927106 0.40072897]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.68900328242663]
+Predicted rank: [0], ambiguousness: [[0.7992291  0.20077091]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 6]
+Costs: [78.88205706992348, 79.72317940394716]
+Predicted rank: [0], ambiguousness: [[0.6639256 0.3360744]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 6]
+Costs: [78.88205706992348, 79.7445150571249]
+Predicted rank: [0], ambiguousness: [[0.6240746  0.37592545]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 6]
+Costs: [78.88205706992348, 79.75314432021042]
+Predicted rank: [0], ambiguousness: [[0.71928394 0.28071606]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 5]
+Costs: [78.88205706992348, 79.68977826554459]
+Predicted rank: [0], ambiguousness: [[0.67907465 0.32092538]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 2, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.86687146875582]
+Predicted rank: [0], ambiguousness: [[0.5316192  0.46838084]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.45464223873537]
+Predicted rank: [0], ambiguousness: [[0.52400064 0.47599936]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.79129892880034]
+Predicted rank: [0], ambiguousness: [[0.55027026 0.44972974]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.26419498126282]
+Predicted rank: [0], ambiguousness: [[0.5533875  0.44661245]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.38064140669876]
+Predicted rank: [0], ambiguousness: [[0.55737233 0.44262764]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.53794431988054]
+Predicted rank: [0], ambiguousness: [[0.6690961  0.33090386]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.62468178232939]
+Predicted rank: [0], ambiguousness: [[0.597129   0.40287104]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.67749970091032]
+Predicted rank: [0], ambiguousness: [[0.80369663 0.19630334]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 6]
+Costs: [78.88205706992348, 79.71167576172155]
+Predicted rank: [0], ambiguousness: [[0.673586 0.326414]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 6]
+Costs: [78.88205706992348, 79.73301137963367]
+Predicted rank: [0], ambiguousness: [[0.65403783 0.34596214]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 6]
+Costs: [78.88205706992348, 79.74164062505429]
+Predicted rank: [0], ambiguousness: [[0.70547104 0.29452896]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 5]
+Costs: [78.88205706992348, 79.6782746133826]
+Predicted rank: [0], ambiguousness: [[0.68355465 0.31644538]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.34106581899374]
+Predicted rank: [0], ambiguousness: [[0.50532603 0.49467397]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.29587676648508]
+Predicted rank: [0], ambiguousness: [[0.50532603 0.49467397]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 77.76898263287131]
+Predicted rank: [0], ambiguousness: [[0.5348424  0.46515763]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.96796112172436]
+Predicted rank: [0], ambiguousness: [[0.5388548  0.46114522]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.13103264298135]
+Predicted rank: [0], ambiguousness: [[0.6523372  0.34766284]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.22032743967878]
+Predicted rank: [0], ambiguousness: [[0.60975635 0.39024368]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.27439409995064]
+Predicted rank: [0], ambiguousness: [[0.7916317  0.20836829]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 6]
+Costs: [78.88205706992348, 79.30924962875824]
+Predicted rank: [0], ambiguousness: [[0.6524526 0.3475474]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 6]
+Costs: [78.88205706992348, 79.33097393719422]
+Predicted rank: [0], ambiguousness: [[0.62387794 0.37612206]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 6]
+Costs: [78.88205706992348, 79.33979793281944]
+Predicted rank: [0], ambiguousness: [[0.72114813 0.27885184]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 5]
+Costs: [78.88205706992348, 79.27598969271637]
+Predicted rank: [0], ambiguousness: [[0.67518365 0.32481635]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 78.17030347477292]
+Predicted rank: [0], ambiguousness: [[0.561015   0.43898502]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.3137179688697]
+Predicted rank: [0], ambiguousness: [[0.56498516 0.4350148 ]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 2, 0, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.47210039439395]
+Predicted rank: [0], ambiguousness: [[0.6968937  0.30310628]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 2, 0, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.55930756254828]
+Predicted rank: [0], ambiguousness: [[0.63459355 0.36540645]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 2, 0, 1, 1, 1, 6]
+Costs: [78.88205706992348, 79.61233512063296]
+Predicted rank: [0], ambiguousness: [[0.8085283  0.19147168]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 2, 0, 1, 1, 6]
+Costs: [78.88205706992348, 79.64661403141125]
+Predicted rank: [0], ambiguousness: [[0.6760163  0.32398373]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 2, 0, 1, 6]
+Costs: [78.88205706992348, 79.6680048257149]
+Predicted rank: [0], ambiguousness: [[0.64833474 0.35166523]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 0, 6]
+Costs: [78.88205706992348, 79.67666138967269]
+Predicted rank: [0], ambiguousness: [[0.74189675 0.25810322]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 5]
+Costs: [78.88205706992348, 79.61324442775661]
+Predicted rank: [0], ambiguousness: [[0.6979197  0.30208024]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 77.90269280291993]
+Predicted rank: [0], ambiguousness: [[0.5348424  0.46515763]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [78.88205706992348, 77.1129036902473]
+Predicted rank: [1], ambiguousness: [[0.49810213 0.5018979 ]]
+Found better solution: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6, 3, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 7]
+Costs: [77.1129036902473, 80.33312282502924]
+Predicted rank: [0], ambiguousness: [[0.5988275 0.4011725]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6, 5, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [77.1129036902473, 77.61143725593602]
+Predicted rank: [0], ambiguousness: [[0.5097743  0.49022564]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6, 4, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [77.1129036902473, 77.59994538233215]
+Predicted rank: [0], ambiguousness: [[0.5167887 0.4832113]]
+Schedule pairs: [4, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6, 4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+Costs: [77.1129036902473, 77.04869507292385]
+Predicted rank: [1], ambiguousness: [[0.49810213 0.5018979 ]]
+Found better solution: [4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6]
+
+Initial schedule: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6], with objective value: 73.03156472572815.
+Final schedule: [4, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 6], with objective value: 77.04869507292385.</code></pre>
+</div>
+</div>
+<div id="188c3030" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> local_search(x, d, convolutions, w, v_star, size<span class="op">=</span><span class="dv">2</span>):</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initialize the best solution found so far 'x_star' to the input vector 'x'</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    x_star <span class="op">=</span> np.array(x).flatten()  <span class="co"># Keep as 1D array</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate initial objectives and cost</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    objectives_star <span class="op">=</span> calculate_objective_serv_time_lookup(x_star, d, convolutions)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    c_star <span class="op">=</span> w <span class="op">*</span> objectives_star[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> objectives_star[<span class="dv">1</span>]</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Set the value of 'T' to the length of the input vector 'x'</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    T <span class="op">=</span> <span class="bu">len</span>(x_star)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Outer loop for the number of patients to switch</span></span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    t <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> t <span class="op">&lt;</span> size:</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f'Running local search </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Generate the neighborhood of the current best solution 'x_star' with 't' patients switched</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>        ids_gen <span class="op">=</span> powerset(<span class="bu">range</span>(T), t)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>        neighborhood <span class="op">=</span> get_neighborhood(x_star, v_star, ids_gen)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Switching </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss"> patient(s). Size of neighborhood: </span><span class="sc">{</span><span class="bu">len</span>(<span class="bu">list</span>(ids_gen))<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Flag to track if a better solution is found</span></span>
+<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a>        found_better_solution <span class="op">=</span> <span class="va">False</span></span>
+<span id="cb12-24"><a href="#cb12-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-25"><a href="#cb12-25" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> neighbor <span class="kw">in</span> neighborhood:</span>
+<span id="cb12-26"><a href="#cb12-26" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Calculate objectives for the neighbor</span></span>
+<span id="cb12-27"><a href="#cb12-27" aria-hidden="true" tabindex="-1"></a>            objectives <span class="op">=</span> calculate_objective_serv_time_lookup(neighbor, d, convolutions)</span>
+<span id="cb12-28"><a href="#cb12-28" aria-hidden="true" tabindex="-1"></a>            cost <span class="op">=</span> w <span class="op">*</span> objectives[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> objectives[<span class="dv">1</span>]</span>
+<span id="cb12-29"><a href="#cb12-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-30"><a href="#cb12-30" aria-hidden="true" tabindex="-1"></a>            <span class="co"># Compare scalar costs</span></span>
+<span id="cb12-31"><a href="#cb12-31" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> cost <span class="op">&lt;</span> c_star:</span>
+<span id="cb12-32"><a href="#cb12-32" aria-hidden="true" tabindex="-1"></a>                x_star <span class="op">=</span> neighbor</span>
+<span id="cb12-33"><a href="#cb12-33" aria-hidden="true" tabindex="-1"></a>                c_star <span class="op">=</span> cost</span>
+<span id="cb12-34"><a href="#cb12-34" aria-hidden="true" tabindex="-1"></a>                <span class="bu">print</span>(<span class="ss">f"Found better solution: </span><span class="sc">{</span>x_star<span class="sc">}</span><span class="ss">, cost: </span><span class="sc">{</span>c_star<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb12-35"><a href="#cb12-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-36"><a href="#cb12-36" aria-hidden="true" tabindex="-1"></a>                <span class="co"># Set the flag to restart the outer loop</span></span>
+<span id="cb12-37"><a href="#cb12-37" aria-hidden="true" tabindex="-1"></a>                found_better_solution <span class="op">=</span> <span class="va">True</span></span>
+<span id="cb12-38"><a href="#cb12-38" aria-hidden="true" tabindex="-1"></a>                <span class="cf">break</span>  <span class="co"># Break out of the inner loop</span></span>
+<span id="cb12-39"><a href="#cb12-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-40"><a href="#cb12-40" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If a better solution was found, restart the search from t = 1</span></span>
+<span id="cb12-41"><a href="#cb12-41" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> found_better_solution:</span>
+<span id="cb12-42"><a href="#cb12-42" aria-hidden="true" tabindex="-1"></a>            t <span class="op">=</span> <span class="dv">1</span>  <span class="co"># Restart search with t = 1</span></span>
+<span id="cb12-43"><a href="#cb12-43" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb12-44"><a href="#cb12-44" aria-hidden="true" tabindex="-1"></a>            t <span class="op">+=</span> <span class="dv">1</span>  <span class="co"># Move to the next neighborhood size if no better solution was found</span></span>
+<span id="cb12-45"><a href="#cb12-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-46"><a href="#cb12-46" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return the best solution found 'x_star' and its cost</span></span>
+<span id="cb12-47"><a href="#cb12-47" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x_star, c_star</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="run-the-local-search-algorithm" class="level3">
+<h3 class="anchored" data-anchor-id="run-the-local-search-algorithm">Run the local search algorithm</h3>
+<div id="328e9870" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Computing optimal solution with real cost</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>test_x <span class="op">=</span> local_search(x, d, convolutions, w, v_star, T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Initial schedule: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 0 1 1 1 0 1 1 1 1 0 1 1 6], cost: 72.84807251300592
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 0 1 1 1 1 0 1 1 1 0 1 1 6], cost: 72.82526899809375
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 6], cost: 72.78339450689549
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 0 1 6], cost: 72.72888319506143
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 1 0 6], cost: 72.71345892710838
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 0 6], cost: 72.7108413989751
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5], cost: 72.38257511503204
+Running local search 1
+Switching 1 patient(s). Size of neighborhood: 20
+Running local search 2
+Switching 2 patient(s). Size of neighborhood: 190
+Running local search 3
+Switching 3 patient(s). Size of neighborhood: 1140
+Running local search 4
+Switching 4 patient(s). Size of neighborhood: 4845
+Running local search 5
+Switching 5 patient(s). Size of neighborhood: 15504
+Running local search 6
+Switching 6 patient(s). Size of neighborhood: 38760
+Running local search 7
+Switching 7 patient(s). Size of neighborhood: 77520
+Running local search 8
+Switching 8 patient(s). Size of neighborhood: 125970
+Running local search 9
+Switching 9 patient(s). Size of neighborhood: 167960
+Running local search 10
+Switching 10 patient(s). Size of neighborhood: 184756
+Running local search 11
+Switching 11 patient(s). Size of neighborhood: 167960
+Running local search 12
+Switching 12 patient(s). Size of neighborhood: 125970
+Running local search 13
+Switching 13 patient(s). Size of neighborhood: 77520
+Running local search 14
+Switching 14 patient(s). Size of neighborhood: 38760
+Running local search 15
+Switching 15 patient(s). Size of neighborhood: 15504
+Running local search 16
+Switching 16 patient(s). Size of neighborhood: 4845
+Running local search 17
+Switching 17 patient(s). Size of neighborhood: 1140
+Running local search 18
+Switching 18 patient(s). Size of neighborhood: 190
+Running local search 19
+Switching 19 patient(s). Size of neighborhood: 20</code></pre>
+</div>
+</div>
+<div id="f92aa787" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ch">\n</span><span class="ss">Final schedule: </span><span class="sc">{</span>test_x[<span class="dv">0</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">Difference: </span><span class="sc">{</span>test_x[<span class="dv">0</span>] <span class="op">-</span> x<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Initial schedule: [2, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 6]
+Final schedule: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5]
+Difference: [ 0  0  0  0  0  0  0  1 -1  0  1  0  0 -1  0  0  1  0  0 -1]</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="discussion" class="level2">
+<h2 class="anchored" data-anchor-id="discussion">Discussion</h2>
+<p>Analyze your results in this section. Discuss whether your hypothesis was supported, what the results mean, and the implications for future work. Address any anomalies or unexpected findings, and consider the broader impact of your results.</p>
+</section>
+<section id="timeline" class="level2">
+<h2 class="anchored" data-anchor-id="timeline">Timeline</h2>
+<p>Document the duration and key dates of the experiment. This helps in project management and reproducibility.</p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>Cite all sources that informed your experiment, including research papers, datasets, and tools. This section ensures that your work is properly grounded in existing research and that others can trace the origins of your methods and data.s</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

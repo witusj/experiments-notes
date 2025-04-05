@@ -159,6 +159,7 @@ graph TD
 ```
 
 **Step 1**: *Create pairs of neighboring schedules.*
+A set of `{python} num_schedules` schedules will be sampled from the neighborhood of the initial schedule. For each schedule a pair of neighbors will be created. The order of the neighbors will be randomly switched to create a more diverse training set. The time taken to sample the schedules and create the neighbors will be recorded.
 
 ```{python}
 from functions import get_v_star
@@ -198,10 +199,14 @@ def create_neighbors_list(x: list[int], v_star: np.ndarray, all = True) -> (list
 
 start = time.time()
 v_star = get_v_star(T)
+# Sample a set of schedules from the neighborhood of the initial schedule
 neighbors_selection = [create_neighbors_list(initial_x, v_star, all = False) for i in range(num_schedules)] # This can be done in parallel to improve speed
 print(len(neighbors_selection))
 end = time.time()
+# For the sampled schedules, create the neighbors
 neighbors_list = [create_neighbors_list(schedule, v_star) for schedule in neighbors_selection]
+# Randomly switch the order of the neighbors
+neighbors_list = [neighbor if random.random() < 0.5 else neighbor[::-1] for neighbor in neighbors_list]
 end = time.time()
 h = random.choices(range(num_schedules), k=7)
 print(f"Sampled schedules: {h}")

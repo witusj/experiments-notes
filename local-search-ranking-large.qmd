@@ -1,0 +1,317 @@
+---
+title: "Large instance local search with trained XGBoost regressor model"
+jupyter: python3
+---
+
+## Objective
+
+Test the working and performance of a [previously trained](xgboost-pairwise-ranking-large-w-bailey-welch.qmd) XGBoost Ranking model in a local search application.
+
+## Background
+
+In previous experiments, we trained an XGBoost Classifier model to predict the objective values of neighboring schedules. In this experiment, we will use the trained models to perform a local search to find the best schedule.
+
+## Hypothesis
+
+The XGBoost Classifier model will be able to efficiently guide the local search algorithm to find a schedule with a lower objective value than the initial schedule.
+
+## Methodology
+
+### Tools and Materials
+
+```{python}
+import numpy as np
+import json
+from itertools import chain, combinations
+import sys
+from math import comb  # Available in Python 3.8 and later
+import xgboost as xgb
+import pickle
+from typing import List, Tuple, Dict, Iterable, TypeVar, Union
+```
+
+### Load Parameters
+
+```{python}
+N = 22 # Number of patients
+T = 20 # Number of intervals
+d = 5 # Length of each interval
+max_s = 20 # Maximum service time
+q = 0.20 # Probability of a scheduled patient not showing up
+w = 0.1 # Weight for the waiting time in objective function
+l = 10
+
+file_path_parameters = f"datasets/parameters_{N}_{T}_{l}.pkl"
+# Load the data from the pickle file
+with open(file_path_parameters, 'rb') as f:
+    data_params = pickle.load(f)
+
+N = data_params['N'] # Number of patients
+T = data_params['T'] # Number of intervals
+d = data_params['d'] # Length of each interval
+max_s = data_params['max_s'] # Maximum service time
+q = data_params['q'] # Probability of a scheduled patient not showing up
+w = data_params['w'] # Weight for the waiting time in objective function
+l = data_params['l']
+  
+num_schedules = data_params['num_schedules'] # Number of schedules to sample
+convolutions = data_params['convolutions']
+```
+
+### Experimental Design
+
+We will use the trained XGBoost Classifier model to guide a local search algorithm to find the best schedule. The local search algorithm will start with an initial schedule and iteratively explore the neighborhood of the current schedule to find a better one. As an initial schedule, we will use the schedule with the lowest objective value from the training dataset that was used to train the XGBoost Classifier model.
+
+### Variables
+
+-   **Independent Variables**:
+    -   Initial schedule, trained XGBoost Classifier
+-   **Dependent Variables**:
+    -   Speed, accuracy, and convergence of the local search algorithm.
+
+### Data Collection
+
+We will use the training dataset to initialize the local search algorithm.
+
+### Sample Size and Selection
+
+### Experimental Procedure
+
+![Local search algorithm](images/local_search_algorithm.png){#fig-local-search-algorithm}
+
+## Results
+
+### Load the initial best schedule.
+
+Start with the best solution found so far $\{x^*, C(x^*)\}$ from the training set.
+
+```{python}
+# Load the best solution from the training dataset
+file_path_schedules = f"datasets/neighbors_and_objectives_{N}_{T}_{l}.pkl"
+# Load the data from the pickle file
+with open(file_path_schedules, 'rb') as f:
+    data_sch = pickle.load(f)
+    
+print(f"The data has following keys: {[key for key in data_sch.keys()]}")
+
+# Step 1: Flatten the objectives into a 1D array
+flattened_data = [value for sublist in data_sch['objectives'] for value in sublist]
+
+# Step 2: Find the index of the minimum value
+min_index = np.argmin(flattened_data)
+
+# Step 3: Convert that index back to the original 2D structure
+row_index = min_index // 2  # Assuming each inner list has 2 values
+col_index = min_index % 2
+
+print(f"The minimum objective value is at index [{row_index}][{col_index}].\nThis is schedule: {data_sch['neighbors_list'][row_index][col_index]} with objective value {data_sch['objectives'][row_index][col_index]}.")
+
+# Set the initial schedule to the best solution from the training dataset
+initial_schedule = data_sch['neighbors_list'][row_index][col_index]
+```
+
+### Generate the neighborhood of $x^*$.
+
+#### Define $V^*$.
+
+Define the vectors $V^*$ as follows:
+
+$$
+\left\{
+\begin{array}{c}
+\vec{v_1}, \\
+\vec{v_2}, \\
+\vec{v_3}, \\
+\vdots \\
+\vec{v_{T-1}}, \\
+\vec{v_T} \\
+\end{array}
+\right\} = 
+\left\{
+\begin{array}{c}
+(-1, 0,...., 0, 1), \\
+(1, -1, 0,...., 0), \\
+(0, 1, -1,...., 0), \\
+\vdots \\
+(0,...., 1, -1, 0), \\
+(0,...., 0, 1, -1) \\
+\end{array}
+\right\}
+$$
+
+#### Define $U_t$.
+
+Define $U_t$ as the set of all possible subsets of $V^*$ such that each subset contains exactly $t$ elements, i.e.,
+
+$$
+U_t = \{ S \subsetneq V^* \mid |S| = t \}, \quad t \in \{1, 2, \dots, T\}.
+$$
+
+```{python}
+from functions import get_v_star
+
+def powerset(iterable, size=1):
+    "powerset([1,2,3], 2) --> (1,2) (1,3) (2,3)"
+    return [[i for i in item] for item in combinations(iterable, size)]
+  
+x = initial_schedule
+
+# Generate a matrix 'v_star' using the 'get_v_star' function
+v_star = get_v_star(T)
+
+# Generate all possible non-empty subsets (powerset) of the set {0, 1, 2, ..., t-1}
+# 'ids' will be a list of tuples, where each tuple is a subset of indices
+size = 2
+ids = powerset(range(T), size)
+len(ids)
+ids[:T]
+```
+
+#### Define the neighborhood of $x$
+
+Define the neighborhood of $x$ as all vectors of the form $x + u_{tk}$ with $\forall \, u_{tk} \in U_t$.
+
+```{python}
+def get_neighborhood(x, v_star, ids, verbose=False):
+    x = np.array(x)
+    p = 50
+    if verbose:
+        print(f"Printing every {p}th result")
+    # Initialize the list 'neighborhood' to store the vectors in the neighborhood of 'x'
+    neighborhood = []
+    # Loop over all possible non-empty subsets of indices
+    for i in range(len(ids)):
+        # Initialize the vector 'neighbor' to store the sum of vectors in 'v_star' corresponding to the indices in 'ids[i]'
+        neighbor = np.zeros(len(x), dtype=int)
+        # Loop over all indices in 'ids[i]'
+        for j in range(len(ids[i])):
+            if verbose:
+                print(f"v_star{[ids[i][j]]}: {v_star[ids[i][j]]}")
+            # Add the vector in 'v_star' corresponding to the index 'ids[i][j]' to 'neighbor'
+            neighbor += v_star[ids[i][j]]
+        # Append the vector 'x' plus 'neighbor' to the list 'neighborhood'
+        x_n = x + neighbor
+        if i%p==0:
+            if verbose:
+                print(f"x, x', delta:\n{x},\n{x_n},\n{neighbor}\n----------------- ")
+        neighborhood.append(x_n)
+    
+    # Convert the list 'neighborhood' into a NumPy array
+    neighborhood = np.array(neighborhood)
+    if verbose:
+        print(f"Size of raw neighborhood: {len(neighborhood)}")
+    # Create a mask for rows with negative values
+    mask = ~np.any(neighborhood < 0, axis=1)
+    # Filter out rows with negative values using the mask
+    if verbose:
+        print(f"filtered out: {len(neighborhood)-mask.sum()} schedules with negative values.")
+    filtered_neighborhood = neighborhood[mask]
+    if verbose:
+        print(f"Size of filtered neighborhood: {len(filtered_neighborhood)}")
+    return filtered_neighborhood
+
+# Example of function call:
+# This will generate the neighborhood of the vector 'x' using the vectors in 'v_star' and the indices in 'ids'
+test_nh = get_neighborhood(x, v_star, ids)
+print(f"All neighborhoods with {size} patients switched:\n x = {np.array(x)}: \n {test_nh}")
+```
+
+### Local search algorithm
+
+```{python}
+
+def local_search_predicted(x: List[int], v_star: np.ndarray, clf: xgb.XGBClassifier, size: int = 2) -> Tuple[np.ndarray, int]:
+    """
+    Performs a local search around a given point in the feature space
+    and predicts the class label using an XGBClassifier model.
+
+    Args:
+        x (List[int]): The starting point for the local search, represented as a list of integers.
+        v_star (np.ndarray): The current best solution (e.g., a NumPy array representing a feature vector).
+        clf (XGBClassifier): An XGBoost Classifier model that will be used for prediction.
+        size (int, optional): The size of the neighborhood to explore around the starting point. Defaults to 2.
+
+    Returns:
+        Tuple[np.ndarray, int]: A tuple containing the best neighbor found (as a NumPy array)
+                                 and its predicted class label (as an integer).
+    """
+    
+    # Outer loop for the number of patients to switch
+    max_restarts = size  # Or some other reasonable limit to prevent infinite loops when searching
+    restart_count = 0
+    x_star = x
+    t = 1
+    w = 0.1
+    while t < size and restart_count < max_restarts:
+        print(f'Running local search {t}')
+        ids_gen = powerset(range(T), t)
+        neighborhood = get_neighborhood(x_star, v_star, ids_gen)
+        print(f"Switching {t} patient(s). Size of neighborhood: {len(list(ids_gen))}")
+        found_better_solution = False
+        for neighbor in neighborhood:
+            objectives_list = [calculate_objective_serv_time_lookup(x, d, convolutions) for x in [x_star, neighbor]]
+            costs_list = [w * objectives[0] + (1 - w) * objectives[1] for objectives in objectives_list]
+            schedule_pairs = x_star + neighbor.tolist()
+            print(f"Schedule pairs: {schedule_pairs}")
+            print(f"Costs: {costs_list}")
+            rank = clf.predict([schedule_pairs])
+            ambiguousness = clf.predict_proba([schedule_pairs])
+            print(f"Predicted rank: {rank}, ambiguousness: {ambiguousness}")
+            if rank[0] == 1:
+                x_star = neighbor.tolist()
+                print(f"Found better solution: {x_star}")
+                found_better_solution = True
+                break
+        if found_better_solution:
+            t = 1
+            restart_count += 1
+        else:
+            t += 1
+    return x_star
+```
+
+```{python}
+from functions import calculate_objective_serv_time_lookup
+
+# Define the path to the saved model
+model_path = "models/classifier_large_instance.json" # Make sure this path is correct
+
+# Initialize an XGBoost Classifier instance
+clf = xgb.XGBClassifier()
+
+# Load the model directly from the file path
+clf.load_model(model_path)
+
+intial_objectives = calculate_objective_serv_time_lookup(x, d, convolutions)
+initial_c_star = w * intial_objectives[0] + (1 - w) * intial_objectives[1]
+x_star = local_search_predicted(x, v_star, clf, size=T)
+final_objectives = calculate_objective_serv_time_lookup(x_star, d, convolutions)
+final_c_star = w * final_objectives[0] + (1 - w) * final_objectives[1]
+print(f"\nInitial schedule: {x}, with objective value: {initial_c_star}.\nFinal schedule: {x_star}, with objective value: {final_c_star}.")
+```
+
+### Run the local search algorithm
+
+```{python}
+from functions import local_search
+# Computing optimal solution with real cost
+print(f"Initial schedule: {x}")
+test_x = local_search(x, d, convolutions, w, v_star, T)
+```
+
+```{python}
+print(f"Initial schedule: {x}\nFinal schedule: {test_x[0]}\nDifference: {test_x[0] - x}")
+```
+
+
+## Discussion
+
+Analyze your results in this section. Discuss whether your hypothesis was supported, what the results mean, and the implications for future work. Address any anomalies or unexpected findings, and consider the broader impact of your results.
+
+## Timeline
+
+Document the duration and key dates of the experiment. This helps in project management and reproducibility.
+
+## References
+
+Cite all sources that informed your experiment, including research papers, datasets, and tools. This section ensures that your work is properly grounded in existing research and that others can trace the origins of your methods and data.s
