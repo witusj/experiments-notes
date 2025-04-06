@@ -435,6 +435,7 @@ def local_search(x: Union[List[int], np.ndarray],
     x_star = np.array(x).flatten()  # Best solution (1D array)
     objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
     c_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
+    print(f"Initial solution: {x_star}, cost: {c_star}")
     T = len(x_star)  # Length of the solution vector
     N = np.sum(x_star)  # Total number of patients
 
@@ -453,7 +454,7 @@ def local_search(x: Union[List[int], np.ndarray],
 
         for neighbor in neighborhood:
             waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
-            cost = w * waiting_time / N + (1 - w) * spillover
+            cost = w * waiting_time + (1 - w) * spillover
             if cost < c_star:
                 x_star = neighbor
                 c_star = cost
