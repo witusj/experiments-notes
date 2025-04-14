@@ -54,44 +54,106 @@ max_s = 20 # Maximum service time
 q = 0.20 # Probability of a scheduled patient not showing up
 w = 0.1 # Weight for the waiting time in objective function
 l = 10
-num_schedules = 100000 # Number of schedules to sample
+num_schedules = 300000 # Number of schedules to sample
 
 # Create service time distribution
 def generate_weighted_list(max_s, l, i):
+    """
+    Generates a service time probability distribution using optimization.
+
+    This function creates a discrete probability distribution over T possible
+    service times (from 1 to T). It uses optimization (SLSQP) to find a
+    distribution whose weighted average service time is as close as possible
+    to a target value 'l', subject to the constraint that the probabilities
+    sum to 1 and each probability is between 0 and 1.
+
+    After finding the distribution, it sorts the probabilities: the first 'i'
+    probabilities (corresponding to service times 1 to i) are sorted in
+    ascending order, and the remaining probabilities (service times i+1 to T)
+    are sorted in descending order.
+
+    Note:
+        - This function relies on a globally defined integer 'T', representing
+          the maximum service time considered (or number of probability bins).
+        - The parameter 'max_s' is accepted but not used directly within this
+          function's optimization or sorting logic as shown. It might be
+          related to how 'T' is determined externally.
+        - Requires NumPy and SciPy libraries (specifically scipy.optimize.minimize).
+
+    Args:
+        max_s (any): Maximum service time parameter (currently unused in the
+                     provided function body's core logic).
+        l (float): The target weighted average service time for the distribution.
+        i (int): The index determining the sorting split point. Probabilities
+                 for service times 1 to 'i' are sorted ascendingly, and
+                 probabilities for service times 'i+1' to 'T' are sorted
+                 descendingly. Must be between 1 and T-1 for meaningful sorting.
+
+    Returns:
+        numpy.ndarray: An array of size T+1. The first element (index 0) is 0.
+                       Elements from index 1 to T represent the calculated
+                       and sorted probability distribution, summing to 1.
+                       Returns None if optimization fails.
+    """
     # Initialize an array of T+1 values, starting with zero
+    # Index 0 is unused for probability, indices 1 to T hold the distribution
     values = np.zeros(T + 1)
-    
-    # Objective function: Sum of squared differences between current weighted average and the desired l
+
+    # --- Inner helper function for optimization ---
     def objective(x):
-        weighted_avg = np.dot(np.arange(1, T + 1), x) / np.sum(x)
+        """Objective function: Squared difference between weighted average and target l."""
+        # Calculate weighted average: sum(index * probability) / sum(probability)
+        # Since sum(probability) is constrained to 1, it simplifies.
+        weighted_avg = np.dot(np.arange(1, T + 1), x) # Corresponds to sum(k * P(ServiceTime=k))
         return (weighted_avg - l) ** 2
 
-    # Constraint: The sum of the values from index 1 to T must be 1
+    # --- Constraints for optimization ---
+    # Constraint 1: The sum of the probabilities (x[0] to x[T-1]) must be 1
     constraints = ({
         'type': 'eq',
         'fun': lambda x: np.sum(x) - 1
     })
-    
-    # Bounds: Each value should be between 0 and 1
+
+    # Bounds: Each probability value x[k] must be between 0 and 1
+    # Creates a list of T tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]
     bounds = [(0, 1)] * T
 
-    # Initial guess: Random distribution that sums to 1
+    # Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1
+    # Provides a starting point for the optimizer. np.ones(T) gives equal weights initially.
     initial_guess = np.random.dirichlet(np.ones(T))
 
-    # Optimization: Minimize the objective function subject to the sum and bounds constraints
+    # --- Perform Optimization ---
+    # Minimize the objective function subject to the sum and bounds constraints
+    # using the Sequential Least Squares Programming (SLSQP) method.
     result = minimize(objective, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
 
-    # Set the values in the array (index 0 remains 0)
+    # Check if optimization was successful
+    if not result.success:
+        print(f"Warning: Optimization failed! Message: {result.message}")
+        # Handle failure case, e.g., return None or raise an error
+        return None # Or potentially return a default distribution
+
+    # Assign the optimized probabilities (result.x) to the correct slice of the values array
+    # result.x contains the T probabilities for service times 1 to T.
     values[1:] = result.x
 
-    # Now we need to reorder the values as per the new requirement
-    first_part = np.sort(values[1:i+1])  # Sort the first 'i' values in ascending order
-    second_part = np.sort(values[i+1:])[::-1]  # Sort the remaining 'T-i' values in descending order
-    
-    # Combine the sorted parts back together
+    # --- Reorder the values based on the index 'i' ---
+    # Ensure 'i' is within a valid range for slicing and sorting
+    if not (0 < i < T):
+       print(f"Warning: Index 'i' ({i}) is outside the valid range (1 to {T-1}). Sorting might be trivial.")
+       # Adjust i or handle as an error depending on requirements
+       i = max(1, min(i, T - 1)) # Clamp i to a safe range for demonstration
+
+    # Sort the first 'i' probabilities (indices 1 to i) in ascending order
+    first_part = np.sort(values[1:i+1])
+    # Sort the remaining 'T-i' probabilities (indices i+1 to T) in descending order
+    second_part = np.sort(values[i+1:])[::-1] # [::-1] reverses the sorted array
+
+    # Combine the sorted parts back into the 'values' array
     values[1:i+1] = first_part
     values[i+1:] = second_part
-    
+
+    # Return the final array with the sorted probability distribution
     return values
 
 i = 5  # First 5 highest values in ascending order, rest in descending order

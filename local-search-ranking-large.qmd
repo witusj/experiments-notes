@@ -22,12 +22,28 @@ The XGBoost Classifier model will be able to efficiently guide the local search 
 ```{python}
 import numpy as np
 import json
+import time
 from itertools import chain, combinations
 import sys
 from math import comb  # Available in Python 3.8 and later
 import xgboost as xgb
 import pickle
 from typing import List, Tuple, Dict, Iterable, TypeVar, Union, Any
+
+import logging
+import sys # Needed for StreamHandler if you want explicit console output
+
+# Configure logging (do this once at the start of your script)
+log_level = logging.DEBUG # Change to logging.DEBUG for more verbose output
+log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# logging.basicConfig(level=log_level, format=log_format, stream=sys.stdout)
+
+# You can also log to a file instead of/in addition to the console:
+logging.basicConfig(level=log_level, format=log_format, filename='search.log', filemode='w')
+
+# Get a logger instance (optional, basicConfig configures the root logger)
+logger = logging.getLogger(__name__) # Or specific name like 'search_logger'
 ```
 
 ### Load Parameters
@@ -74,7 +90,20 @@ We will use the training dataset to initialize the local search algorithm.
 
 ### Experimental Procedure
 
-![Local search algorithm](images/local_search_algorithm.png){#fig-local-search-algorithm}
+```{mermaid}
+graph TD
+                A[Start] --> B("Initialize schedule x");
+                B --> C{"Iterate through all subsets U of V*"};
+                C -- "For each U" --> D{"Compute y = x + sum(v in U)"};
+                D -- "Check y >= 0" --> E{"Compute cost C(y)"};
+                E --> F{"Is C(y) < C(x)?"};
+                F -- "Yes" --> G["Update x := y"];
+                G --> C;
+                F -- "No" --> H{"Finished iterating all U?"};
+                H -- "Yes" --> I["End: x is optimal schedule"];
+                H -- "No" --> C;
+                D -- "If y < 0" --> C;
+```
 
 ## Results
 
@@ -109,7 +138,7 @@ initial_schedule = data_sch['neighbors_list'][row_index][col_index]
 
 ### Generate the neighborhood of $x^*$.
 
-#### Define $V^*$.
+#### Define $V^*$ and $U_t$.
 
 Define the vectors $V^*$ as follows:
 
@@ -135,8 +164,6 @@ $$
 \end{array}
 \right\}
 $$
-
-#### Define $U_t$.
 
 Define $U_t$ as the set of all possible subsets of $V^*$ such that each subset contains exactly $t$ elements, i.e.,
 
@@ -166,7 +193,7 @@ ids[:T]
 
 #### Define the neighborhood of $x$
 
-Define the neighborhood of $x$ as all vectors of the form $x + u_{tk}$ with $\forall \, u_{tk} \in U_t$.
+Define the neighborhood of $x$ as all vectors of the form $x + u_{tk}, \forall \, u_{tk} \in U_t$.
 
 ```{python}
 from functions import get_neighborhood
@@ -174,93 +201,7 @@ test_nh = get_neighborhood(x, v_star, ids)
 print(f"All neighborhoods with {size} patients switched:\n x = {np.array(x)}: \n {test_nh}")
 ```
 
-### Local search algorithm
-
-```{python}
-def local_search_predicted(x: List[int],w: float, v_star: np.ndarray, clf: xgb.XGBClassifier, size: int = 2, restarts: int = 3) -> Tuple[np.ndarray, int]:
-    """
-    Performs a local search around a given point in the feature space
-    and predicts the class label using an XGBClassifier model.
-
-    Args:
-        x (List[int]): The starting point for the local search, represented as a list of integers.
-        v_star (np.ndarray): The current best solution (e.g., a NumPy array representing a feature vector).
-        clf (XGBClassifier): An XGBoost Classifier model that will be used for prediction.
-        size (int, optional): The size of the neighborhood to explore around the starting point. Defaults to 2.
-        restarts (int, optional): The number of restarts for the local search. Defaults to 3. This prevents infinite loops.
-
-    Returns:
-        Tuple[np.ndarray, int]: A tuple containing the best neighbor found (as a NumPy array)
-                                 and its predicted class label (as an integer).
-    """
-    
-    # Outer loop for the number of patients to switch
-    max_restarts = restarts  # Or some other reasonable limit to prevent infinite loops when searching
-    restart_count = 0
-    x_star = x
-    objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
-    cost_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
-    t = 1
-    w = 0.1
-    while t < size and restart_count < max_restarts:
-        print(f'Running local search {t}')
-        neighbor_temp = []
-        ids_gen = powerset(range(T), t)
-        neighborhood = get_neighborhood(x_star, v_star, ids_gen)
-        print(f"Switching {t} patient(s). Size of neighborhood: {len(list(ids_gen))}")
-        found_better_solution = False
-        for neighbor in neighborhood:
-            # This is just for debugging. The actual new method for local search will not use this, because the whole purpose is to improve computational efficiency.
-            objectives_tuple = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
-            costs_list = [cost_star, w * objectives_tuple[0] + (1 - w) * objectives_tuple[1]]
-            # Append the neighbor to the list of neighbors
-            neighbor_temp.append(neighbor)
-            schedule_pairs = x_star + neighbor.tolist()
-            print(f"Schedule pairs: {schedule_pairs}")
-            print(f"Costs: {costs_list}")
-            # Predict the rank and ambiguousness using the trained model
-            rank = clf.predict([schedule_pairs])
-            ambiguousness = clf.predict_proba([schedule_pairs])
-            print(f"Predicted rank: {rank}, ambiguousness: {ambiguousness}")
-            if rank[0] == 1:
-                # If the predicted rank is 1, it means the neighbor seems better
-                # Check actual rank by calculating the objective value for neighbor and comparing it with x_star
-                true_objectives = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
-                print(f"True objectives: {true_objectives}")
-                true_cost = w * true_objectives[0] + (1 - w) * true_objectives[1]
-                if true_cost > cost_star:
-                    # If the true cost is greater, the model misranked and needs retraining
-                    print(f"Model needs retraining. True cost: {true_cost}, Current cost: {cost_star}")
-                    # Update the training data
-                    true_cost_list = [
-                        w * result[0] + (1 - w) * result[1]
-                        for neighbor in neighbors_temp
-                        for result in [calculate_objective_serv_time_lookup(neighbor, d, convolutions)]
-                    ]
-                    y_update = [0 if test_cost < cost_star else 1 for test_cost in true_cost_list]
-                    X_update = []
-                    for neighbor in neighbors_temp:
-                        X_new.append(x_star + neighbor.tolist())
-                    
-                    # Increase n_estimators
-                    clf.n_estimators += 5
-                    # Fit with previous model
-                    
-                    print(f"Retraining on {len(neighbors_temp)} new schedules")
-                    clf.fit(X_update, y_update, xgb_model=clf)
-                x_star = neighbor.tolist()
-                print(f"Found better solution: {x_star}")
-                found_better_solution = True
-                break
-        if found_better_solution:
-            t = 1
-            restart_count += 1
-            print(f"Restarting local search. Restart count: {restart_count}")
-        else:
-            t += 1
-    return x_star
-```
-
+### Local search algorithm with prediction
 
 ```{python}
 def local_search_predict_update(
@@ -271,38 +212,37 @@ def local_search_predict_update(
     obj_func_params: Dict[str, Any],
     size: int = 2,
     restarts: int = 3,
-    check_proba_threshold: float = 0.7 # Check P(0) against this threshold
+    check_proba_threshold: float = 0.7
 ) -> Tuple[List[int], xgb.XGBClassifier]:
     """
     Performs local search guided by an XGBClassifier, minimizing expensive
     objective calls. Verifies prediction=0 if P(class=0) is below threshold.
     Updates the classifier incrementally when mispredictions (P=1/A=0) occur.
-    T is inferred from len(x).
+    Uses logging instead of print statements. T is inferred from len(x).
 
     Args:
-        x (List[int]): Starting point (list representing a schedule/solution).
-        w (float): Weight for combining objectives into a single cost.
-        v_star (np.ndarray): Current best overall solution (usage depends on get_neighborhood).
-        clf (xgb.XGBClassifier): Pre-trained XGBoost Classifier to be updated.
-        obj_func_params (Dict[str, Any]): Dictionary containing parameters needed by
-                                         calculate_objective_serv_time_lookup.
+        x (List[int]): Starting point.
+        w (float): Weight for combining objectives.
+        v_star (np.ndarray): Current best overall solution.
+        clf (xgb.XGBClassifier): Pre-trained XGBoost Classifier.
+        obj_func_params (Dict[str, Any]): Parameters for objective function.
         size (int, optional): Max neighborhood size. Defaults to 2.
-        restarts (int, optional): Max restarts if an improving move is found. Defaults to 3.
-        check_proba_threshold (float, optional): Probability threshold for P(class=0).
-                                                 If prediction is 0 and
-                                                 P(class=0) < threshold, the prediction
-                                                 will be verified. Defaults to 0.7.
+        restarts (int, optional): Max restarts. Defaults to 3.
+        check_proba_threshold (float, optional): Threshold for P(class=0) verification. Defaults to 0.7.
 
     Returns:
         Tuple[List[int], xgb.XGBClassifier]: Best solution found and updated classifier.
     """
     if not isinstance(getattr(clf, 'n_estimators', None), int):
+        # Log error and raise
+        logger.error("clf.n_estimators must be an integer, but found %s", getattr(clf, 'n_estimators', None))
         raise ValueError(f"clf.n_estimators must be an integer, but found {getattr(clf, 'n_estimators', None)}")
 
     x_star = list(x) # Work with a copy
     T = len(x_star) # Infer T from the length
 
     if T <= 0:
+        logger.error("Input schedule x cannot be empty (length must be positive).")
         raise ValueError("Input schedule x cannot be empty (length must be positive).")
 
     restart_count = 0
@@ -310,177 +250,185 @@ def local_search_predict_update(
 
     # Calculate initial cost
     try:
-        print("Calculating initial cost...")
+        logger.info("Calculating initial cost...")
         objectives_star = calculate_objective_serv_time_lookup(x_star, **obj_func_params)
         cost_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
-        print(f"Initial solution cost: {cost_star:.4f}")
+        logger.info("Initial solution cost: %.4f", cost_star)
     except Exception as e:
-        print(f"Error calculating initial cost: {e}")
+        logger.exception("Error calculating initial cost: %s", e) # Use exception to include traceback
         return x_star, clf
 
     while t <= size and restart_count < restarts:
-        print(f"\n--- Running local search level t={t} (Restart {restart_count}/{restarts}) ---")
+        logger.info("--- Running local search level t=%d (Restart %d/%d) ---", t, restart_count, restarts)
 
         ids_gen_iterable = powerset(range(T), t)
         neighborhood_iter = get_neighborhood(x_star, v_star, ids_gen_iterable)
 
         found_better_solution_at_level_t = False
-        neighbors_at_level_t: List[List[int]] = [] # Store neighbors explored at this level
+        neighbors_data_at_level_t: List[Dict[str, Any]] = []
         neighbors_processed_count = 0
 
         for neighbor_np in neighborhood_iter:
             neighbors_processed_count +=1
             neighbor = neighbor_np.tolist()
-            neighbors_at_level_t.append(neighbor)
+            neighbor_info = {"schedule": neighbor, "cost": None, "true_label": None}
+            neighbors_data_at_level_t.append(neighbor_info)
 
-            # --- Check for consistent feature length before prediction ---
             expected_feature_len = getattr(clf, 'n_features_in_', None)
             current_feature_len = len(x_star) + len(neighbor)
             if expected_feature_len is not None and current_feature_len != expected_feature_len:
-                 print(f"  Warn: Feature length mismatch for neighbor {neighbors_processed_count}. Expected {expected_feature_len}, got {current_feature_len}. Skipping.")
+                 logger.warning("Feature length mismatch for neighbor %d. Expected %d, got %d. Skipping.",
+                                neighbors_processed_count, expected_feature_len, current_feature_len)
                  continue
 
             feature_pair = x_star + neighbor
 
-            # 1. Predict using the CHEAP classifier (get both class and probability)
+            # 1. Predict using the CHEAP classifier
             try:
                 prediction = clf.predict([feature_pair])[0]
-                proba = clf.predict_proba([feature_pair])[0] # Get probabilities for [class 0, class 1]
-                proba_class_0 = proba[0] # Probability of class 0 (not better)
+                proba = clf.predict_proba([feature_pair])[0]
+                proba_class_0 = proba[0]
             except Exception as e:
-                print(f"  Warn: Error predicting for neighbor {neighbors_processed_count}: {e}. Assuming prediction=0.")
+                logger.warning("Error predicting for neighbor %d: %s. Assuming prediction=0.", neighbors_processed_count, e)
                 prediction = 0
-                proba_class_0 = 1.0 # Assume high confidence in prediction=0 if error occurs
+                proba_class_0 = 1.0
 
-            print(f"  Neighbor {neighbors_processed_count}: Predicted={prediction} (P(0)={proba_class_0:.3f}) ", end="")
+            logger.debug("  Neighbor %d: Predicted=%d (P(0)=%.3f)", neighbors_processed_count, prediction, proba_class_0)
 
             # 2. Decide whether to perform expensive check
             perform_expensive_check = False
             check_reason = ""
 
             if prediction == 1:
-                # Always check if model predicts improvement
                 perform_expensive_check = True
                 check_reason = "Predicted 1"
-            # *** Reverted Logic Below ***
-            elif proba_class_0 < check_proba_threshold: # Check if P(0) is below threshold
-                 # Verify even if prediction is 0, because confidence in P=0 is low
+            elif proba_class_0 < check_proba_threshold:
                  perform_expensive_check = True
                  check_reason = f"Borderline P(0) < {check_proba_threshold}"
             else: # prediction == 0 and proba_class_0 >= threshold
-                 print("-> Skipping objective function call (Confident P=0).")
+                 logger.debug("  -> Skipping objective function call (Confident P=0).")
 
             # 3. Perform EXPENSIVE check if needed
             if perform_expensive_check:
-                print(f"-> Verifying ({check_reason})...")
+                logger.debug("  -> Verifying (%s)...", check_reason)
                 try:
                     objectives_neighbor = calculate_objective_serv_time_lookup(neighbor, **obj_func_params)
                     cost_neighbor = w * objectives_neighbor[0] + (1 - w) * objectives_neighbor[1]
                     is_truly_better = cost_neighbor < cost_star
                     true_label = 1 if is_truly_better else 0
-                    print(f"    True Cost={cost_neighbor:.4f} (Current Best={cost_star:.4f}) -> Actual Better={is_truly_better}")
+                    neighbor_info["cost"] = cost_neighbor
+                    neighbor_info["true_label"] = true_label
+                    logger.debug("    True Cost=%.4f (Current Best=%.4f) -> Actual Better=%s",
+                                 cost_neighbor, cost_star, is_truly_better)
 
                     # 4. Handle outcome of expensive check
                     if is_truly_better:
-                        # Found an actual improvement (P=1/A=1 or P=0/A=1)
-                        print(f"    Confirmed better solution. Updating x_star.")
+                        logger.info(f"    Confirmed better solution. Updating x_star to {neighbor} with cost = {cost_neighbor}.")
                         x_star = list(neighbor)
                         cost_star = cost_neighbor
-                        T = len(x_star) # Recalculate T
+                        T = len(x_star)
                         found_better_solution_at_level_t = True
-                        t = 1 # Reset level
+                        t = 1
                         restart_count += 1
-                        print(f"    Restarting search from t=1. Restart count: {restart_count}")
-                        break # Exit inner loop (neighbors at level t) - First Improvement Strategy
+                        logger.info("    Restarting search from t=1. Restart count: %d", restart_count)
+                        break # Exit inner loop
                     else:
-                        # No improvement found (P=1/A=0 or P=0/A=0 after check)
                         if prediction == 1 and not is_truly_better:
-                            # Misprediction! (P=1/A=0) -> Trigger retraining
-                            print(f"    Misprediction! (Predicted 1, Actual 0). Triggering retraining process.")
+                            logger.warning("    Misprediction! (Predicted 1, Actual 0). Triggering retraining process.")
 
-                            # --- Retraining Sub-routine (Remains the same) ---
+                            # --- Retraining Sub-routine ---
                             features_for_update: List[List[int]] = []
                             labels_for_update: List[int] = []
                             found_better_during_retrain_calc = False
 
-                            print(f"    Calculating true costs for {len(neighbors_at_level_t)} neighbors at level {t} for retraining...")
-                            for n_idx, n_schedule in enumerate(neighbors_at_level_t):
-                                try:
-                                    # Check length consistency before calculating objective/features
-                                    if expected_feature_len is not None and len(x_star) + len(n_schedule) != expected_feature_len:
-                                        print(f"    Warn: Skipping neighbor {n_idx+1} during retraining due to length mismatch.")
+                            logger.info("    Calculating true costs for %d neighbors at level %d for retraining...",
+                                         len(neighbors_data_at_level_t), t)
+                            for n_idx, n_info in enumerate(neighbors_data_at_level_t):
+                                n_schedule = n_info["schedule"]
+                                n_cost = n_info["cost"]
+                                n_true_label = n_info["true_label"]
+
+                                if expected_feature_len is not None and len(x_star) + len(n_schedule) != expected_feature_len:
+                                    logger.warning("      Skipping neighbor %d during retraining prep due to length mismatch.", n_idx+1)
+                                    continue
+
+                                if n_cost is None or n_true_label is None:
+                                    try:
+                                        logger.debug("      Calculating missing cost for neighbor %d...", n_idx+1)
+                                        n_objectives = calculate_objective_serv_time_lookup(n_schedule, **obj_func_params)
+                                        n_cost = w * n_objectives[0] + (1 - w) * n_objectives[1]
+                                        n_is_better = n_cost < cost_star
+                                        n_true_label = 1 if n_is_better else 0
+                                        n_info["cost"] = n_cost
+                                        n_info["true_label"] = n_true_label
+                                    except Exception as e:
+                                        logger.warning("      Error calculating cost for neighbor %d (%s) during retraining: %s. Skipping.",
+                                                     n_idx+1, n_schedule, e)
                                         continue
 
-                                    n_objectives = calculate_objective_serv_time_lookup(n_schedule, **obj_func_params)
-                                    n_cost = w * n_objectives[0] + (1 - w) * n_objectives[1]
-                                    n_is_better = n_cost < cost_star
-                                    n_true_label = 1 if n_is_better else 0
+                                n_feature_pair = x_star + n_schedule
+                                features_for_update.append(n_feature_pair)
+                                labels_for_update.append(n_true_label)
+                                logger.debug("      Neighbor %d: Cost=%.4f, True Label=%d (Used for training)",
+                                             n_idx+1, n_cost, n_true_label)
 
-                                    n_feature_pair = x_star + n_schedule
-                                    features_for_update.append(n_feature_pair)
-                                    labels_for_update.append(n_true_label)
-                                    print(f"      Neighbor {n_idx+1}: Cost={n_cost:.4f}, True Label={n_true_label}")
-
-                                    # OPPORTUNISTIC UPDATE check:
-                                    if n_is_better:
-                                        print(f"      Opportunistic Update! Found better neighbor ({n_idx+1}) during cost calculation.")
+                                if n_true_label == 1:
+                                    if not found_better_during_retrain_calc or n_cost < cost_star :
+                                        logger.info("      Opportunistic Update! Found/Confirmed better neighbor (%d) during cost calculation.", n_idx+1)
                                         x_star = list(n_schedule)
                                         cost_star = n_cost
-                                        T = len(x_star) # Recalculate T
+                                        T = len(x_star)
                                         found_better_during_retrain_calc = True
-                                except Exception as e:
-                                    print(f"      Warn: Error calculating cost for neighbor {n_idx+1} ({n_schedule}) during retraining: {e}. Skipping for training.")
-                                    continue
 
                             # Perform incremental fit
                             if features_for_update:
-                                print(f"    Fitting model incrementally with {len(labels_for_update)} data points...")
+                                logger.info("    Fitting model incrementally with %d data points...", len(labels_for_update))
                                 try:
                                     X_update = np.array(features_for_update)
                                     y_update = np.array(labels_for_update)
                                     clf.fit(X_update, y_update, xgb_model=clf)
-                                    print("    Model update complete.")
+                                    logger.info("    Model update complete.")
                                 except Exception as e:
-                                    print(f"    Error during incremental model update: {e}")
+                                    logger.exception("    Error during incremental model update: %s", e) # Log exception with traceback
                             else:
-                                print("    No valid data gathered for retraining.")
+                                logger.warning("    No valid data gathered for retraining.")
 
                             # Handle opportunistic update
                             if found_better_during_retrain_calc:
                                  found_better_solution_at_level_t = True
                                  t = 1
                                  restart_count += 1
-                                 print(f"    Restarting search from t=1 due to opportunistic update. Restart count: {restart_count}")
+                                 logger.info("    Restarting search from t=1 due to opportunistic update. Restart count: %d", restart_count)
                                  break # Exit inner loop
                             # --- End Retraining Sub-routine ---
                         # else: (P=0 check showed actual 0)
-                        #    print("    Borderline check confirmed no improvement.")
-                        #    pass # Just continue to next neighbor
+                        #    logger.debug("    Borderline check confirmed no improvement.")
+                        #    pass
 
                 except Exception as e:
-                    print(f"  Warn: Error calculating objective for neighbor {neighbors_processed_count} ({neighbor}) during verification: {e}.")
+                    logger.warning("  Error calculating objective for neighbor %d (%s) during verification: %s.",
+                                 neighbors_processed_count, neighbor, e)
 
         # --- End of neighbor loop for level t ---
 
-        # Increment Level if No Better Solution was Found and Loop Didn't Break
         if not found_better_solution_at_level_t:
             if neighbors_processed_count > 0:
-                 print(f"No improving solution found or confirmed at level t={t}.")
+                 logger.info("No improving solution found or confirmed at level t=%d.", t)
             else:
-                 print(f"No neighbors generated or processed at level t={t}.")
+                 logger.info("No neighbors generated or processed at level t=%d.", t)
             t += 1 # Move to the next neighborhood size level
 
     # --- End of outer while loop ---
-    print(f"\nLocal search finished after {restart_count} restarts or reaching max size {size}.")
-    print(f"Final solution: {x_star}")
-    print(f"Final cost: {cost_star:.4f}")
+    logger.info("Local search finished after %d restarts or reaching max size %d.", restart_count, size)
+    logger.info("Final solution: %s", x_star)
+    logger.info("Final cost: %.4f", cost_star)
 
     return x_star, clf
 ```
 
 ```{python}
 from functions import calculate_objective_serv_time_lookup
-
+start = time.time()
 # Define the path to the saved model
 model_path = "models/classifier_large_instance.json" # Make sure this path is correct
 
@@ -506,20 +454,23 @@ initial_c_star = w * intial_objectives[0] + (1 - w) * intial_objectives[1]
 x_star = local_search_predict_update(x, w, v_star, clf, {'d': d, 'convolutions': convolutions}, size=T, restarts=T)[0]
 final_objectives = calculate_objective_serv_time_lookup(x_star, d, convolutions)
 final_c_star = w * final_objectives[0] + (1 - w) * final_objectives[1]
-print(f"\nInitial schedule: {x}, with objective value: {initial_c_star}.\nFinal schedule: {x_star}, with objective value: {final_c_star}.")
+end = time.time()
+print(f"\nInitial schedule: {x}, with objective value: {initial_c_star}.\nFinal schedule: {x_star}, with objective value: {final_c_star}. Search time {end - start:.2f} seconds.")
 ```
 
-### Run the local search algorithm
+### Run the conventional local search algorithm for validation
 
 ```{python}
 from functions import local_search
 # Computing optimal solution with real cost
 print(f"Initial schedule: {x}")
-test_x = local_search(x_star, d, convolutions, w, v_star, T, echo=True)
+start = time.time()
+test_x = local_search(x, d, convolutions, w, v_star, T, echo=True)
+end = time.time()
 ```
 
 ```{python}
-print(f"Initial schedule: {x}\nFinal schedule: {test_x[0]}\nDifference: {test_x[0] - x}\nObjective value: {test_x[1]}")
+print(f"Initial schedule: {x}\nFinal schedule: {test_x[0]}\nDifference: {test_x[0] - x}\nObjective value: {test_x[1]}. Search time: {end - start:.2f} seconds.")
 test_res = calculate_objective_serv_time_lookup(test_x[0], d, convolutions)
 ```
 
