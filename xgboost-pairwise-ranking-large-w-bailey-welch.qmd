@@ -54,7 +54,7 @@ max_s = 20 # Maximum service time
 q = 0.20 # Probability of a scheduled patient not showing up
 w = 0.1 # Weight for the waiting time in objective function
 l = 10
-num_schedules = 300000 # Number of schedules to sample
+num_schedules = 10000 # Number of schedules to sample
 
 # Create service time distribution
 def generate_weighted_list(max_s, l, i):
@@ -317,6 +317,11 @@ row_index = min_index // 2  # Assuming each inner list has 2 values
 col_index = min_index % 2
 
 print(f"The minimum objective value is at index [{row_index}][{col_index}].\nThis is schedule: {neighbors_list[row_index][col_index]} with objective value {objectives[row_index][col_index]}.")
+
+file_path_best_schedule = f"datasets/best_schedule_{N}_{T}_{l}.pkl"
+with open(file_path_best_schedule, 'wb') as f:
+    pickle.dump({'best_schedule':neighbors_list[row_index][col_index], 'objective': objectives[row_index][col_index]}, f)
+    print(f"Data saved successfully to '{file_path_best_schedule}'")
 
 print(f"\nAverage ranking: {np.mean(rankings)}\n")
 

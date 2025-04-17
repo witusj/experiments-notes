@@ -11,6 +11,7 @@ book:
     - function-testing.qmd
     - xgboost-pairwise-ranking-large.qmd
     - xgboost-pairwise-ranking-large-w-bailey-welch.qmd
+    - local-search-ranking-large.qmd
     - references.qmd
     - part: "Function documentation"
       chapters:
