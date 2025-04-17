@@ -323,7 +323,7 @@ window.Quarto = {
 <h2 data-number="5.4" class="anchored" data-anchor-id="methodology"><span class="header-section-number">5.4</span> Methodology</h2>
 <section id="tools-and-materials" class="level3" data-number="5.4.1">
 <h3 data-number="5.4.1" class="anchored" data-anchor-id="tools-and-materials"><span class="header-section-number">5.4.1</span> Tools and Materials</h3>
-<div id="52886f21" class="cell" data-execution_count="1">
+<div id="26eb807c" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> json</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
@@ -350,7 +350,7 @@ window.Quarto = {
 </section>
 <section id="load-parameters" class="level3" data-number="5.4.2">
 <h3 data-number="5.4.2" class="anchored" data-anchor-id="load-parameters"><span class="header-section-number">5.4.2</span> Load Parameters</h3>
-<div id="18e3db4d" class="cell" data-execution_count="2">
+<div id="75cb8108" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">22</span> <span class="co"># Number of patients</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> <span class="dv">20</span> <span class="co"># Number of intervals</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> <span class="dv">10</span> <span class="co"># Target service time length</span></span>
@@ -372,7 +372,7 @@ window.Quarto = {
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>convolutions <span class="op">=</span> data_params[<span class="st">'convolutions'</span>] <span class="co"># Service time distributions used in training phase adjusted for no-shows</span></span>
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Parameters loaded: N=</span><span class="sc">{</span>N<span class="sc">}</span><span class="ss">, T=</span><span class="sc">{</span>T<span class="sc">}</span><span class="ss">, l=</span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">, d=</span><span class="sc">{</span>d<span class="sc">}</span><span class="ss">, max_s=</span><span class="sc">{</span>max_s<span class="sc">}</span><span class="ss">, q=</span><span class="sc">{</span>q<span class="sc">}</span><span class="ss">, w=</span><span class="sc">{</span>w<span class="sc">}</span><span class="ss">, num_schedules=</span><span class="sc">{</span>num_schedules<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Parameters loaded: N=22, T=20, l=10, d=5, max_s=20, q=0.2, w=0.1, num_schedules=10000</code></pre>
+<pre><code>Parameters loaded: N=22, T=20, l=10, d=5, max_s=20, q=0.2, w=0.1, num_schedules=100000</code></pre>
 </div>
 </div>
 </section>
@@ -432,7 +432,7 @@ window.Quarto = {
 <section id="load-the-initial-best-schedule." class="level3" data-number="5.5.1">
 <h3 data-number="5.5.1" class="anchored" data-anchor-id="load-the-initial-best-schedule."><span class="header-section-number">5.5.1</span> Load the initial best schedule.</h3>
 <p>Start with the best solution found so far <span class="math inline">\(\{x^*, C(x^*)\}\)</span> from the training set.</p>
-<div id="d7813165" class="cell" data-execution_count="3">
+<div id="8f4110e3" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the best solution from the training dataset</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>file_path_schedules <span class="op">=</span> <span class="ss">f"datasets/best_schedule_</span><span class="sc">{</span>N<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>T<span class="sc">}</span><span class="ss">_</span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">.pkl"</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the data from the pickle file</span></span>
@@ -447,7 +447,7 @@ window.Quarto = {
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>initial_schedule <span class="op">=</span> best_schedule_data[<span class="st">'best_schedule'</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The data has following keys: ['best_schedule', 'objective']
-The current best schedule is: [2, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 6] with objective value 64.83458608166865.</code></pre>
+The current best schedule is: [3, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 6] with objective value 72.06648924027994.</code></pre>
 </div>
 </div>
 </section>
@@ -482,7 +482,7 @@ The current best schedule is: [2, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1
 <p><span class="math display">\[
 U_t = \{ S \subsetneq V^* \mid |S| = t \}, \quad t \in \{1, 2, \dots, T\}.
 \]</span></p>
-<div id="637c13ca" class="cell" data-execution_count="4">
+<div id="4a4d787a" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_v_star</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> powerset(iterable, size<span class="op">=</span><span class="dv">1</span>):</span>
@@ -527,20 +527,20 @@ U_t = \{ S \subsetneq V^* \mid |S| = t \}, \quad t \in \{1, 2, \dots, T\}.
 <section id="define-the-neighborhood-of-x" class="level4" data-number="5.5.2.2">
 <h4 data-number="5.5.2.2" class="anchored" data-anchor-id="define-the-neighborhood-of-x"><span class="header-section-number">5.5.2.2</span> Define the neighborhood of <span class="math inline">\(x\)</span></h4>
 <p>Define the neighborhood of <span class="math inline">\(x\)</span> as all vectors of the form <span class="math inline">\(x + u_{tk}, \forall \, u_{tk} \in U_t\)</span>.</p>
-<div id="9f075525" class="cell" data-execution_count="5">
+<div id="64a6ae5f" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_neighborhood</span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>test_nh <span class="op">=</span> get_neighborhood(x, v_star, ids)</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"All neighborhoods with </span><span class="sc">{</span>size<span class="sc">}</span><span class="ss"> patients switched:</span><span class="ch">\n</span><span class="ss"> x = </span><span class="sc">{</span>np<span class="sc">.</span>array(x)<span class="sc">}</span><span class="ss">: </span><span class="ch">\n</span><span class="ss"> </span><span class="sc">{</span>test_nh<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>All neighborhoods with 2 patients switched:
- x = [2 2 0 1 1 0 1 1 0 1 1 1 0 1 1 0 1 1 1 6]: 
+ x = [3 0 1 0 1 1 1 1 0 1 1 0 1 1 1 0 1 1 1 6]: 
  [[2 1 0 ... 1 1 7]
- [1 2 1 ... 1 1 7]
- [1 2 0 ... 1 1 7]
+ [2 0 1 ... 1 1 7]
+ [2 0 1 ... 1 1 7]
  ...
- [2 2 0 ... 1 0 6]
- [2 2 0 ... 0 2 5]
- [2 2 0 ... 2 1 5]]</code></pre>
+ [3 0 1 ... 1 0 6]
+ [3 0 1 ... 0 2 5]
+ [3 0 1 ... 2 1 5]]</code></pre>
 </div>
 </div>
 </section>
@@ -554,7 +554,6 @@ U_t = \{ S \subsetneq V^* \mid |S| = t \}, \quad t \in \{1, 2, \dots, T\}.
 <p></p><figure class="figure"><p></p>
 <div>
 <pre class="mermaid mermaid-js">graph TD
-graph TD
     %% --- Part 1: Initialization &amp; Outer Loop ---
 
     A[Start: local_search_predict_update] --&gt; B{Inputs: x, w, v_star, clf, params, size, restarts, threshold};
@@ -665,7 +664,7 @@ graph TD
 </div>
 </div>
 </div>
-<div id="f4c59d6a" class="cell" data-execution_count="6">
+<div id="092d5a26" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> local_search_predict_update(</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    x: List[<span class="bu">int</span>],</span>
 <span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    w: <span class="bu">float</span>,</span>
@@ -922,7 +921,7 @@ graph TD
 <span id="cb10-254"><a href="#cb10-254" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb10-255"><a href="#cb10-255" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> x_star, clf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="f8022386" class="cell" data-execution_count="7">
+<div id="f31cbd72" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> calculate_objective_serv_time_lookup</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> time.time()</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the path to the saved model</span></span>
@@ -954,15 +953,15 @@ graph TD
 <span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">, with objective value: </span><span class="sc">{</span>initial_c_star<span class="sc">}</span><span class="ss">.</span><span class="ch">\n</span><span class="ss">Final schedule: </span><span class="sc">{</span>x_star<span class="sc">}</span><span class="ss">, with objective value: </span><span class="sc">{</span>final_c_star<span class="sc">}</span><span class="ss">. Search time </span><span class="sc">{</span>end <span class="op">-</span> start<span class="sc">:.2f}</span><span class="ss"> seconds."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
-Initial schedule: [2, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 6], with objective value: 64.83458608166865.
-Final schedule: [2, 2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 5], with objective value: 63.43200140304575. Search time 2211.55 seconds.</code></pre>
+Initial schedule: [3, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 6], with objective value: 72.06648924027994.
+Final schedule: [3, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 5], with objective value: 71.44063501950922. Search time 463.91 seconds.</code></pre>
 </div>
 </div>
 </section>
 <section id="run-the-conventional-local-search-algorithm-for-validation" class="level3" data-number="5.5.4">
 <h3 data-number="5.5.4" class="anchored" data-anchor-id="run-the-conventional-local-search-algorithm-for-validation"><span class="header-section-number">5.5.4</span> Run the conventional local search algorithm for validation</h3>
 <p>We will run a conventional local search algorithm to evaluate the new method, assessing both the quality of the results and its computational efficiency.</p>
-<div id="92618a00" class="cell" data-execution_count="8">
+<div id="abfd565d" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> local_search</span>
 <span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Computing optimal solution with real cost</span></span>
 <span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ss">"</span>)</span>
@@ -970,35 +969,29 @@ Final schedule: [2, 2, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 5], wi
 <span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>test_x <span class="op">=</span> local_search(x, d, convolutions, w, v_star, T, echo<span class="op">=</span><span class="va">True</span>)</span>
 <span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>end <span class="op">=</span> time.time()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Initial schedule: [2, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 6]
-Initial solution: [2 2 0 1 1 0 1 1 0 1 1 1 0 1 1 0 1 1 1 6], cost: 64.83458608166865
+<pre><code>Initial schedule: [3, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 6]
+Initial solution: [3 0 1 0 1 1 1 1 0 1 1 0 1 1 1 0 1 1 1 6], cost: 72.06648924027994
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 0 1 1 1 0 1 1 1 0 1 1 6], cost: 64.56883201908003
+Found better solution: [3 0 1 0 1 1 1 1 0 1 1 1 0 1 1 0 1 1 1 6], cost: 72.05397911405149
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 0 1 1 1 0 1 1 1 1 0 1 6], cost: 64.39334812398276
+Found better solution: [3 0 1 0 1 1 1 1 0 1 1 1 0 1 1 1 0 1 1 6], cost: 71.89864633967379
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 0 1 1 1 1 0 1 1 1 0 1 6], cost: 64.35219786741538
+Found better solution: [3 0 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 1 6], cost: 71.89529812336691
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 1 0 1 1 1 0 1 1 1 0 1 6], cost: 64.33490128790191
+Found better solution: [3 0 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 0 1 6], cost: 71.82107961062698
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 0 6], cost: 64.11537071061852
+Found better solution: [3 0 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 1 0 6], cost: 71.77211054845532
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 0 6], cost: 64.1053974571602
+Found better solution: [3 0 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 0 6], cost: 71.75446345503127
 Running local search with switching 1 patient(s)
 Size of neighborhood: 15
-Found better solution: [2 2 0 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 5], cost: 63.436520318515356
-Running local search with switching 1 patient(s)
-Size of neighborhood: 16
-Found better solution: [2 2 0 1 1 0 1 1 1 0 1 1 1 1 1 0 1 1 1 5], cost: 63.43602115382764
-Running local search with switching 1 patient(s)
-Size of neighborhood: 16
-Found better solution: [2 2 0 1 1 0 1 1 1 1 0 1 1 1 1 0 1 1 1 5], cost: 63.43200140304575
+Found better solution: [3 0 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5], cost: 71.44063501950922
 Running local search with switching 1 patient(s)
 Size of neighborhood: 16
 Running local search with switching 2 patient(s)
@@ -1007,38 +1000,42 @@ Running local search with switching 3 patient(s)
 Size of neighborhood: 620
 Running local search with switching 4 patient(s)
 Size of neighborhood: 2246
-Found better solution: [2 2 0 1 1 0 1 1 1 1 0 1 1 1 1 1 1 1 1 4], cost: 63.42676885427677
-Running local search with switching 1 patient(s)
-Size of neighborhood: 17
-Running local search with switching 2 patient(s)
-Size of neighborhood: 139
-Running local search with switching 3 patient(s)
-Size of neighborhood: 728
-Running local search with switching 4 patient(s)
-Size of neighborhood: 2743
 Running local search with switching 5 patient(s)
-Size of neighborhood: 7913
+Size of neighborhood: 6272
 Running local search with switching 6 patient(s)
-Size of neighborhood: 18152
-Found better solution: [2 1 0 1 1 1 1 0 1 1 1 1 0 1 1 1 1 1 1 5], cost: 63.339831550963
+Size of neighborhood: 14018
+Running local search with switching 7 patient(s)
+Size of neighborhood: 25688
+Running local search with switching 8 patient(s)
+Size of neighborhood: 39209
+Running local search with switching 9 patient(s)
+Size of neighborhood: 50348
+Running local search with switching 10 patient(s)
+Size of neighborhood: 54692
+Running local search with switching 11 patient(s)
+Size of neighborhood: 50348
+Running local search with switching 12 patient(s)
+Size of neighborhood: 39209
+Running local search with switching 13 patient(s)
+Size of neighborhood: 25688
+Running local search with switching 14 patient(s)
+Size of neighborhood: 14018
+Found better solution: [2 1 0 1 1 1 1 0 1 1 1 0 1 1 1 1 1 1 1 5], cost: 71.41729696172152
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
-Found better solution: [2 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 1 5], cost: 63.2727574433935
+Found better solution: [2 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 1 1 1 5], cost: 71.3263484363905
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
-Found better solution: [2 1 1 0 1 1 1 1 0 1 1 1 0 1 1 1 1 1 1 5], cost: 63.19888151172958
+Found better solution: [2 1 1 0 1 1 1 1 0 1 1 0 1 1 1 1 1 1 1 5], cost: 71.32108910644956
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
-Found better solution: [2 1 1 0 1 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5], cost: 63.090101276269216
+Found better solution: [2 1 1 0 1 1 1 1 0 1 1 1 0 1 1 1 1 1 1 5], cost: 71.15932446024479
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
-Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5], cost: 63.08911300983342
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 0 1 1 1 1 1 1 5], cost: 71.15324024190812
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
-Found better solution: [2 1 1 1 0 1 1 1 1 0 1 1 1 0 1 1 1 1 1 5], cost: 63.07069973623229
-Running local search with switching 1 patient(s)
-Size of neighborhood: 17
-Found better solution: [2 1 1 1 0 1 1 1 1 0 1 1 1 1 0 1 1 1 1 5], cost: 63.005652393044016
+Found better solution: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5], cost: 71.0973710860295
 Running local search with switching 1 patient(s)
 Size of neighborhood: 17
 Running local search with switching 2 patient(s)
@@ -1079,14 +1076,14 @@ Running local search with switching 19 patient(s)
 Size of neighborhood: 17</code></pre>
 </div>
 </div>
-<div id="810d3c27" class="cell" data-execution_count="9">
+<div id="bfe5af07" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial schedule: </span><span class="sc">{</span>x<span class="sc">}</span><span class="ch">\n</span><span class="ss">Final schedule: </span><span class="sc">{</span>test_x[<span class="dv">0</span>]<span class="sc">}</span><span class="ch">\n</span><span class="ss">Difference: </span><span class="sc">{</span>test_x[<span class="dv">0</span>] <span class="op">-</span> x<span class="sc">}</span><span class="ch">\n</span><span class="ss">Objective value: </span><span class="sc">{</span>test_x[<span class="dv">1</span>]<span class="sc">}</span><span class="ss">. Search time: </span><span class="sc">{</span>end <span class="op">-</span> start<span class="sc">:.2f}</span><span class="ss"> seconds."</span>)</span>
 <span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>test_res <span class="op">=</span> calculate_objective_serv_time_lookup(test_x[<span class="dv">0</span>], d, convolutions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Initial schedule: [2, 2, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 6]
-Final schedule: [2 1 1 1 0 1 1 1 1 0 1 1 1 1 0 1 1 1 1 5]
-Difference: [ 0 -1  1  0 -1  1  0  0  1 -1  0  0  1  0 -1  1  0  0  0 -1]
-Objective value: 63.005652393044016. Search time: 230.91 seconds.</code></pre>
+<pre><code>Initial schedule: [3, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 6]
+Final schedule: [2 1 1 1 0 1 1 1 0 1 1 1 1 0 1 1 1 1 1 5]
+Difference: [-1  1  0  1 -1  0  0  0  0  0  0  1  0 -1  0  1  0  0  0 -1]
+Objective value: 71.0973710860295. Search time: 348.37 seconds.</code></pre>
 </div>
 </div>
 </section>

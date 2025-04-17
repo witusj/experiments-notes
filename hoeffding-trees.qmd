@@ -1,6 +1,5 @@
 ---
 title: "Hoeffding Trees for Scheduling Rank"
-editor: visual
 jupyter: python3
 ---
 

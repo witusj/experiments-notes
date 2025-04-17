@@ -195,7 +195,6 @@ Load the pre-trained model and use it for evaluating schedules within a local se
 
 ```{mermaid}
 graph TD
-graph TD
     %% --- Part 1: Initialization & Outer Loop ---
 
     A[Start: local_search_predict_update] --> B{Inputs: x, w, v_star, clf, params, size, restarts, threshold};
