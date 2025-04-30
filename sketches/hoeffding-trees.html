@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.551">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Hoeffding Trees for Scheduling Rank</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="hoeffding-trees_files/libs/clipboard/clipboard.min.js"></script>
+<script src="hoeffding-trees_files/libs/quarto-html/quarto.js"></script>
+<script src="hoeffding-trees_files/libs/quarto-html/popper.min.js"></script>
+<script src="hoeffding-trees_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="hoeffding-trees_files/libs/quarto-html/anchor.min.js"></script>
+<link href="hoeffding-trees_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="hoeffding-trees_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="hoeffding-trees_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="hoeffding-trees_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="hoeffding-trees_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Hoeffding Trees for Scheduling Rank</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="tutorial-hoeffding-trees-for-efficient-appointment-scheduling" class="level1">
+<h1>Tutorial: Hoeffding Trees for Efficient Appointment Scheduling</h1>
+<section id="introduction-the-appointment-scheduling-challenge" class="level2">
+<h2 class="anchored" data-anchor-id="introduction-the-appointment-scheduling-challenge">1. Introduction: The Appointment Scheduling Challenge</h2>
+<p>Optimizing appointment schedules is a complex task. We aim to minimize patient waiting times and provider idle times, often involving computationally expensive evaluations of potential schedules. Evaluating every possible schedule modification is usually infeasible, especially if the evaluation function (like simulating patient flow) is slow.</p>
+<p>Machine learning, particularly <strong>stream learning</strong>, offers a promising approach. Instead of recalculating expensive objective functions repeatedly, we can train a model to <em>predict</em> which schedule modifications are likely to be beneficial. This tutorial explores using <strong>Hoeffding Trees</strong>, a type of stream learning algorithm, to learn a ranking function for appointment schedules incrementally.</p>
+<p>This document builds upon the provided Python code, explaining the concepts and how the code implements them.</p>
+</section>
+<section id="foundations-of-hoeffding-trees" class="level2">
+<h2 class="anchored" data-anchor-id="foundations-of-hoeffding-trees">2. Foundations of Hoeffding Trees</h2>
+<section id="what-is-stream-learning" class="level3">
+<h3 class="anchored" data-anchor-id="what-is-stream-learning">2.1. What is Stream Learning?</h3>
+<p>Stream learning deals with data that arrives sequentially and potentially infinitely. Key characteristics include:</p>
+<ul>
+<li><strong>Single Pass:</strong> Models often process data only once (or a limited number of times).</li>
+<li><strong>Limited Memory:</strong> Models cannot store the entire dataset.</li>
+<li><strong>Adaptability:</strong> Models may need to adapt to changes in the data distribution over time (concept drift).</li>
+<li><strong>Real-time Processing:</strong> Decisions and learning must often happen quickly.</li>
+</ul>
+</section>
+<section id="the-challenge-for-decision-trees-in-streams" class="level3">
+<h3 class="anchored" data-anchor-id="the-challenge-for-decision-trees-in-streams">2.2. The Challenge for Decision Trees in Streams</h3>
+<p>Traditional decision tree algorithms (like C4.5 or CART) typically require the entire dataset to be available to evaluate potential splits at each node. This is impractical for data streams.</p>
+</section>
+<section id="the-hoeffding-bound-learning-from-partial-data" class="level3">
+<h3 class="anchored" data-anchor-id="the-hoeffding-bound-learning-from-partial-data">2.3. The Hoeffding Bound: Learning from Partial Data</h3>
+<p>Hoeffding Trees leverage a statistical principle called the <strong>Hoeffding Bound</strong> (or Additive Chernoff Bound). It provides a guarantee about how close the <em>sample mean</em> of a random variable is to its <em>true mean</em> after observing a certain number of samples, with a given probability.</p>
+<p>In the context of decision trees, we want to choose the best attribute to split a node on. We can estimate the “goodness” of a split (e.g., using Information Gain or Gini Impurity) based on the data samples seen <em>so far</em> at that node. The Hoeffding bound tells us how many samples (<code>n</code>) we need to observe to be confident (with probability <code>1 - delta</code>) that our observed best split attribute is the <em>true</em> best split attribute, within a certain margin.</p>
+</section>
+<section id="how-hoeffding-trees-work" class="level3">
+<h3 class="anchored" data-anchor-id="how-hoeffding-trees-work">2.4. How Hoeffding Trees Work</h3>
+<p>Hoeffding Trees grow incrementally as data arrives:</p>
+<ol type="1">
+<li><strong>Initialization:</strong> Start with a single leaf node.</li>
+<li><strong>Data Arrival:</strong> When a data instance arrives, it’s sorted down the tree to the appropriate leaf node based on existing split tests.</li>
+<li><strong>Learning at Leaves:</strong> Sufficient statistics (e.g., counts for class labels, statistics for numerical attributes) are updated at the leaf node.</li>
+<li><strong>Split Attempt:</strong> After observing a certain number of samples (the <code>grace_period</code>), the algorithm evaluates potential splits based on the accumulated statistics.</li>
+<li><strong>Hoeffding Bound Check:</strong> It calculates the “goodness” (e.g., Information Gain) for the best split (<code>G(X_a)</code>) and the second-best split (<code>G(X_b)</code>). If the difference <code>G(X_a) - G(X_b)</code> is greater than the Hoeffding bound <code>epsilon</code> for the desired confidence <code>delta</code> and the number of samples <code>n</code> seen at the node, the algorithm is confident that <code>X_a</code> is truly the best split.</li>
+<li><strong>Splitting:</strong> If the bound condition is met, the leaf is converted into an internal node that splits on attribute <code>X_a</code>, and new leaves are created for each branch.</li>
+<li><strong>No Split:</strong> If the bound condition isn’t met (or if the difference is very small, below a <code>tie_threshold</code>), the tree doesn’t split yet and waits for more data.</li>
+</ol>
+</section>
+<section id="key-parameters-refer-to-code-block-2" class="level3">
+<h3 class="anchored" data-anchor-id="key-parameters-refer-to-code-block-2">2.5. Key Parameters (Refer to Code Block 2)</h3>
+<ul>
+<li><code>grace_period</code>: The minimum number of samples a leaf must observe before attempting a split. Prevents splitting based on too little data.</li>
+<li><code>split_criterion</code>: The metric used to evaluate the quality of a split (e.g., <code>'info_gain'</code>, <code>'gini'</code>).</li>
+<li><code>delta</code>: The confidence parameter for the Hoeffding bound (typically a small value like 1e-7). <code>1 - delta</code> is the probability that the chosen split is the correct one.</li>
+<li><code>nominal_attributes</code>: A list specifying which features should be treated as categorical.</li>
+<li><code>tie_threshold</code>: A threshold below which the difference between the best and second-best split is considered negligible, preventing splits in ambiguous cases.</li>
+</ul>
+</section>
+<section id="advantages" class="level3">
+<h3 class="anchored" data-anchor-id="advantages">2.6. Advantages</h3>
+<ul>
+<li><strong>Incremental:</strong> Learns instance by instance.</li>
+<li><strong>Fast:</strong> Typically faster than traditional batch learners.</li>
+<li><strong>Memory Efficient:</strong> Doesn’t store the entire dataset.</li>
+<li><strong>Theoretical Guarantees:</strong> Produces a tree asymptotically close to the one built by a batch learner.</li>
+</ul>
+</section>
+<section id="limitations" class="level3">
+<h3 class="anchored" data-anchor-id="limitations">2.7. Limitations</h3>
+<ul>
+<li><strong>Parameter Sensitivity:</strong> Performance can depend on parameters like <code>grace_period</code> and <code>delta</code>.</li>
+<li><strong>Suboptimal Splits:</strong> May make less optimal splits early on if the Hoeffding bound condition is met with minimal data just past the grace period.</li>
+</ul>
+</section>
+</section>
+<section id="applying-hoeffding-trees-to-appointment-scheduling-ranking" class="level2">
+<h2 class="anchored" data-anchor-id="applying-hoeffding-trees-to-appointment-scheduling-ranking">3. Applying Hoeffding Trees to Appointment Scheduling Ranking</h2>
+<p>Now, let’s see how the concepts above are applied in the provided code.</p>
+<section id="problem-formulation-learning-to-rank-schedule-pairs" class="level3">
+<h3 class="anchored" data-anchor-id="problem-formulation-learning-to-rank-schedule-pairs">3.1. Problem Formulation: Learning to Rank Schedule Pairs</h3>
+<p>Instead of predicting a direct outcome, we frame the problem as ranking. Given two schedules, typically a current schedule (<code>schedule1</code>) and a potential neighbor schedule derived from it (<code>schedule2</code>), we want the model to predict which one has a better (lower) objective function value.</p>
+<p>In the code, we generate pairs where <code>schedule2</code> is a neighbor of <code>schedule1</code>. The target variable <code>rank</code> is 0 if <code>schedule1</code> is better and 1 if <code>schedule2</code> is better.</p>
+</section>
+<section id="feature-engineering-refer-to-code-block-4-6" class="level3">
+<h3 class="anchored" data-anchor-id="feature-engineering-refer-to-code-block-4-6">3.2. Feature Engineering (Refer to Code Block 4 &amp; 6)</h3>
+<ul>
+<li><strong>Input:</strong> The model needs features to distinguish between schedules. The code uses a specific strategy:
+<ul>
+<li><code>schedule1</code>: The first schedule in the pair.</li>
+<li><code>diff</code>: The <em>difference</em> between <code>schedule1</code> and <code>schedule2</code>.</li>
+</ul></li>
+<li><strong>Concatenation:</strong> The <code>prepare_features</code> function concatenates <code>schedule1</code> and <code>diff</code> into a single feature vector.</li>
+<li><strong>Rationale:</strong> This representation implicitly provides information about both the starting point (<code>schedule1</code>) and the modification applied (<code>diff</code>) that resulted in <code>schedule2</code>. The model learns how different modifications affect schedules based on their starting configuration.</li>
+<li><strong>Format:</strong> The features are converted into a dictionary <code>{index: value}</code>, which is the standard input format for <code>river</code> models.</li>
+</ul>
+</section>
+<section id="target-variable-generation-refer-to-code-block-5" class="level3">
+<h3 class="anchored" data-anchor-id="target-variable-generation-refer-to-code-block-5">3.3. Target Variable Generation (Refer to Code Block 5)</h3>
+<ul>
+<li><strong>Expensive Calculation:</strong> The <code>calculate_objective_serv_time_lookup</code> function (assumed to be computationally expensive) is called for both schedules in each pair (<code>neighbor[0]</code> and <code>neighbor[1]</code>).</li>
+<li><strong>Comparison:</strong> The weighted objective function values are calculated and compared.</li>
+<li><strong>Ranking:</strong> The <code>rankings</code> list stores the index (0 or 1) of the schedule with the <em>minimum</em> objective value within each pair. This becomes the target label (<code>y</code>) for the Hoeffding Tree.</li>
+</ul>
+</section>
+<section id="data-generation-simulation-refer-to-code-block-4" class="level3">
+<h3 class="anchored" data-anchor-id="data-generation-simulation-refer-to-code-block-4">3.4. Data Generation Simulation (Refer to Code Block 4)</h3>
+<ul>
+<li><strong>Initialization:</strong> An initial schedule (<code>initial_x</code>) is created using <code>bailey_welch_schedule</code>.</li>
+<li><strong>Neighborhood Sampling:</strong> The code simulates generating potential schedule modifications (<code>neighbors_selection</code>) based on the initial schedule and precomputed vectors (<code>v_star</code>). It then creates pairs (<code>neighbors_list</code>) where each element contains <code>[schedule1, schedule2, difference]</code>.</li>
+<li><strong>Purpose:</strong> This simulates the kind of data stream that might be generated by an optimization algorithm like the <code>local_search_predict_update</code> function discussed previously. In a real scenario, the pairs would likely be (current_best_schedule, proposed_neighbor_schedule).</li>
+</ul>
+</section>
+<section id="model-instantiation-refer-to-code-block-2" class="level3">
+<h3 class="anchored" data-anchor-id="model-instantiation-refer-to-code-block-2">3.5. Model Instantiation (Refer to Code Block 2)</h3>
+<ul>
+<li>The code instantiates <code>tree.HoeffdingTreeClassifier</code> with specific parameters (<code>grace_period=200</code>, <code>delta=1e-7</code>, etc.). These choices reflect a balance between reacting quickly to data and ensuring statistical significance before splitting.</li>
+</ul>
+</section>
+<section id="incremental-training-evaluation-refer-to-code-block-6" class="level3">
+<h3 class="anchored" data-anchor-id="incremental-training-evaluation-refer-to-code-block-6">3.6. Incremental Training &amp; Evaluation (Refer to Code Block 6)</h3>
+<ul>
+<li><strong>Looping:</strong> The code iterates through the generated <code>neighbors_list</code> and <code>rankings</code>.</li>
+<li><strong>Feature Prep:</strong> For each pair, features are prepared using <code>prepare_features</code>.</li>
+<li><strong>Prequential Evaluation:</strong>
+<ul>
+<li><code>ht_model.predict_one(x=features)</code>: The model predicts the rank <em>before</em> seeing the true label.</li>
+<li><code>metric.update(target, y_pred)</code>: The prediction is compared to the true <code>rank</code> (target) to update the accuracy metric. This simulates real-world performance where predictions are made on unseen data.</li>
+</ul></li>
+<li><strong>Learning:</strong> <code>ht_model.learn_one(x=features, y=target)</code>: The model updates its structure and statistics based on the instance (features and true rank).</li>
+<li><strong>Progress:</strong> Accuracy is printed periodically to monitor learning.</li>
+</ul>
+</section>
+</section>
+<section id="handling-concept-drift-adaptive-hoeffding-trees" class="level2">
+<h2 class="anchored" data-anchor-id="handling-concept-drift-adaptive-hoeffding-trees">4. Handling Concept Drift: Adaptive Hoeffding Trees</h2>
+<section id="what-is-concept-drift" class="level3">
+<h3 class="anchored" data-anchor-id="what-is-concept-drift">4.1. What is Concept Drift?</h3>
+<p>In real-world streams, the underlying patterns can change. For appointment scheduling, this could mean:</p>
+<ul>
+<li>Changes in patient no-show rates (<code>q</code>).</li>
+<li>Shifts in average service times (<code>s</code>).</li>
+<li>Changes in the relative importance of waiting vs.&nbsp;idle time (<code>w</code>).</li>
+</ul>
+<p>A standard Hoeffding Tree assumes a stationary distribution and might become outdated if the underlying concepts drift significantly.</p>
+</section>
+<section id="hoeffding-adaptive-trees-hat-arf-refer-to-code-block-2-7" class="level3">
+<h3 class="anchored" data-anchor-id="hoeffding-adaptive-trees-hat-arf-refer-to-code-block-2-7">4.2. Hoeffding Adaptive Trees (HAT / ARF) (Refer to Code Block 2 &amp; 7)</h3>
+<ul>
+<li><strong>Mechanism:</strong> Adaptive variants like <code>HoeffdingAdaptiveTreeClassifier</code> (HAT) or ensemble methods like Adaptive Random Forests (ARF, which often uses HAT as a base learner) incorporate <strong>drift detectors</strong>.</li>
+<li><strong>Drift Detection:</strong> Algorithms like ADWIN (<code>drift.ADWIN</code>) monitor the model’s performance (e.g., error rate). If a statistically significant change is detected, it signals a drift.</li>
+<li><strong>Adaptation:</strong> When drift is detected, the model adapts. HAT, for instance, might start growing a “background” tree. If the background tree becomes more accurate than the original, it replaces the original tree at the affected node. ARF manages an ensemble of trees, replacing drifting trees with new ones.</li>
+<li><strong>Instantiation:</strong> The code shows instantiating <code>HoeffdingAdaptiveTreeClassifier</code> with <code>drift_detector=drift.ADWIN(...)</code>. Note that the drift detector itself has parameters (like its own <code>delta</code>) controlling its sensitivity.</li>
+<li><strong>Training:</strong> The training loop (Code Block 7) is identical to the standard Hoeffding Tree loop, as the drift detection and adaptation happen internally within the <code>learn_one</code> method of the adaptive model.</li>
+</ul>
+</section>
+</section>
+<section id="integration-with-optimization-conceptual" class="level2">
+<h2 class="anchored" data-anchor-id="integration-with-optimization-conceptual">5. Integration with Optimization (Conceptual)</h2>
+<p>The trained Hoeffding Tree (standard or adaptive) serves as a fast proxy for the expensive objective function. In the <code>local_search_predict_update</code> function (from the Canvas), instead of always calling <code>calculate_objective_serv_time_lookup</code>, we could:</p>
+<ol type="1">
+<li>Generate a <code>feature_pair</code> (e.g., <code>x_star + neighbor</code>).</li>
+<li>Prepare features: <code>features = prepare_features(x_star, neighbor - x_star)</code> (assuming <code>prepare_features</code> is adapted).</li>
+<li>Predict ranking: <code>predicted_rank = ht_model.predict_one(features)</code>.</li>
+<li>Use the prediction: If <code>predicted_rank</code> suggests the neighbor is better (e.g., <code>predicted_rank == 1</code> if 1 means neighbor is better), prioritize this neighbor for the <em>expensive</em> check, or even tentatively accept it if confidence is high. If it predicts the neighbor is worse, potentially skip the expensive check entirely.</li>
+</ol>
+<p>This hybrid approach aims to drastically reduce the number of expensive objective calls, speeding up the search process. The Hoeffding Tree continuously learns and adapts from the <em>results</em> of the expensive checks that <em>are</em> performed (especially when mispredictions occur).</p>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">6. Conclusion</h2>
+<p>Hoeffding Trees provide a powerful framework for building decision trees on streaming data, making them suitable for applications like learning heuristics within complex optimization processes like appointment scheduling. By learning to rank potential schedule modifications incrementally, they can help guide search algorithms towards better solutions more efficiently than relying solely on expensive evaluations. Adaptive variants further enhance their robustness by handling changes in the underlying scheduling environment over time.</p>
+<p><strong>Next Steps:</strong></p>
+<ul>
+<li>Experiment with different Hoeffding Tree parameters (<code>grace_period</code>, <code>delta</code>, <code>split_criterion</code>).</li>
+<li>Explore alternative feature representations for the schedule pairs.</li>
+<li>Compare the performance of standard vs.&nbsp;adaptive trees.</li>
+<li>Implement the integration of the trained tree into the <code>local_search_predict_update</code> function.</li>
+<li>Investigate other stream learning models available in libraries like <code>river</code>.</li>
+</ul>
+<div id="416c6fc3" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Import necessary river components</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> math</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.graph_objects <span class="im">as</span> go</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pickle</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.optimize <span class="im">import</span> minimize</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> river <span class="im">import</span> tree, metrics, evaluate, stream, drift</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="aba5d849" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiate the Hoeffding Tree Classifier</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># These parameters are illustrative; optimal values depend on the specific data stream</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>ht_model <span class="op">=</span> tree.HoeffdingTreeClassifier(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    grace_period<span class="op">=</span><span class="dv">200</span>,           <span class="co"># Number of samples to observe before considering a split</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    split_criterion<span class="op">=</span><span class="st">'info_gain'</span>,<span class="co"># Criterion for choosing splits (Information Gain)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    delta<span class="op">=</span><span class="fl">1e-7</span>,                 <span class="co"># Hoeffding bound confidence parameter (1 - delta)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    nominal_attributes<span class="op">=</span><span class="va">None</span>     <span class="co"># Specify if any features are nominal (categorical)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Other parameters like split_confidence, tie_threshold can also be set</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Hoeffding Tree Classifier instantiated."</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>arf_model <span class="op">=</span> tree.HoeffdingAdaptiveTreeClassifier(</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    grace_period<span class="op">=</span><span class="dv">200</span>,         <span class="co"># Hoeffding Tree: Wait for 100 samples before first split check</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    delta<span class="op">=</span><span class="fl">1e-7</span>,               <span class="co"># Hoeffding Tree: Confidence level for Hoeffding bound</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    drift_detector<span class="op">=</span>drift.ADWIN(delta<span class="op">=</span><span class="fl">0.0001</span>), <span class="co"># Use ADWIN detector with its own delta (sensitivity)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    switch_significance<span class="op">=</span><span class="fl">0.05</span>, <span class="co"># Significance level (beta) to switch trees after drift</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Other relevant HT parameters (e.g., split_criterion, max_depth) can be set here</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    seed<span class="op">=</span><span class="dv">42</span>                   <span class="co"># For reproducibility</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Adaptive Random Forest Classifier instantiated."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Hoeffding Tree Classifier instantiated.
+Adaptive Random Forest Classifier instantiated.</code></pre>
+</div>
+</div>
+<div id="b5d28a1b" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> compute_convolutions, bailey_welch_schedule</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> <span class="dv">22</span> <span class="co"># Number of patients</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>T <span class="op">=</span> <span class="dv">20</span> <span class="co"># Number of intervals</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> <span class="dv">5</span> <span class="co"># Length of each interval</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>max_s <span class="op">=</span> <span class="dv">20</span> <span class="co"># Maximum service time</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>q <span class="op">=</span> <span class="fl">0.20</span> <span class="co"># Probability of a scheduled patient not showing up</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> <span class="fl">0.1</span> <span class="co"># Weight for the waiting time in objective function</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>l <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>num_schedules <span class="op">=</span> <span class="dv">40000</span> <span class="co"># Number of schedules to sample</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Create service time distribution</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_weighted_list(max_s, l, i):</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co">    Generates a service time probability distribution using optimization.</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co">    This function creates a discrete probability distribution over T possible</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="co">    service times (from 1 to T). It uses optimization (SLSQP) to find a</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a><span class="co">    distribution whose weighted average service time is as close as possible</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a><span class="co">    to a target value 'l', subject to the constraint that the probabilities</span></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a><span class="co">    sum to 1 and each probability is between 0 and 1.</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co">    After finding the distribution, it sorts the probabilities: the first 'i'</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="co">    probabilities (corresponding to service times 1 to i) are sorted in</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a><span class="co">    ascending order, and the remaining probabilities (service times i+1 to T)</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a><span class="co">    are sorted in descending order.</span></span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a><span class="co">    Note:</span></span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a><span class="co">        - This function relies on a globally defined integer 'T', representing</span></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="co">          the maximum service time considered (or number of probability bins).</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a><span class="co">        - The parameter 'max_s' is accepted but not used directly within this</span></span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a><span class="co">          function's optimization or sorting logic as shown. It might be</span></span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a><span class="co">          related to how 'T' is determined externally.</span></span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a><span class="co">        - Requires NumPy and SciPy libraries (specifically scipy.optimize.minimize).</span></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a><span class="co">        max_s (any): Maximum service time parameter (currently unused in the</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a><span class="co">                     provided function body's core logic).</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a><span class="co">        l (float): The target weighted average service time for the distribution.</span></span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a><span class="co">        i (int): The index determining the sorting split point. Probabilities</span></span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a><span class="co">                 for service times 1 to 'i' are sorted ascendingly, and</span></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="co">                 probabilities for service times 'i+1' to 'T' are sorted</span></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="co">                 descendingly. Must be between 1 and T-1 for meaningful sorting.</span></span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a><span class="co">        numpy.ndarray: An array of size T+1. The first element (index 0) is 0.</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="co">                       Elements from index 1 to T represent the calculated</span></span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a><span class="co">                       and sorted probability distribution, summing to 1.</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="co">                       Returns None if optimization fails.</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initialize an array of T+1 values, starting with zero</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Index 0 is unused for probability, indices 1 to T hold the distribution</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>    values <span class="op">=</span> np.zeros(T <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Inner helper function for optimization ---</span></span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> objective(x):</span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>        <span class="co">"""Objective function: Squared difference between weighted average and target l."""</span></span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Calculate weighted average: sum(index * probability) / sum(probability)</span></span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Since sum(probability) is constrained to 1, it simplifies.</span></span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        weighted_avg <span class="op">=</span> np.dot(np.arange(<span class="dv">1</span>, T <span class="op">+</span> <span class="dv">1</span>), x) <span class="co"># Corresponds to sum(k * P(ServiceTime=k))</span></span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (weighted_avg <span class="op">-</span> l) <span class="op">**</span> <span class="dv">2</span></span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Constraints for optimization ---</span></span>
+<span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Constraint 1: The sum of the probabilities (x[0] to x[T-1]) must be 1</span></span>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    constraints <span class="op">=</span> ({</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>        <span class="st">'type'</span>: <span class="st">'eq'</span>,</span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a>        <span class="st">'fun'</span>: <span class="kw">lambda</span> x: np.<span class="bu">sum</span>(x) <span class="op">-</span> <span class="dv">1</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Bounds: Each probability value x[k] must be between 0 and 1</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Creates a list of T tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a>    bounds <span class="op">=</span> [(<span class="dv">0</span>, <span class="dv">1</span>)] <span class="op">*</span> T</span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Provides a starting point for the optimizer. np.ones(T) gives equal weights initially.</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    initial_guess <span class="op">=</span> np.random.dirichlet(np.ones(T))</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Perform Optimization ---</span></span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Minimize the objective function subject to the sum and bounds constraints</span></span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a>    <span class="co"># using the Sequential Least Squares Programming (SLSQP) method.</span></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>    result <span class="op">=</span> minimize(objective, initial_guess, method<span class="op">=</span><span class="st">'SLSQP'</span>, bounds<span class="op">=</span>bounds, constraints<span class="op">=</span>constraints)</span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Check if optimization was successful</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> result.success:</span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Warning: Optimization failed! Message: </span><span class="sc">{</span>result<span class="sc">.</span>message<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Handle failure case, e.g., return None or raise an error</span></span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">None</span> <span class="co"># Or potentially return a default distribution</span></span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Assign the optimized probabilities (result.x) to the correct slice of the values array</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>    <span class="co"># result.x contains the T probabilities for service times 1 to T.</span></span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>    values[<span class="dv">1</span>:] <span class="op">=</span> result.x</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>    <span class="co"># --- Reorder the values based on the index 'i' ---</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ensure 'i' is within a valid range for slicing and sorting</span></span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> (<span class="dv">0</span> <span class="op">&lt;</span> i <span class="op">&lt;</span> T):</span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>       <span class="bu">print</span>(<span class="ss">f"Warning: Index 'i' (</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">) is outside the valid range (1 to </span><span class="sc">{</span>T<span class="op">-</span><span class="dv">1</span><span class="sc">}</span><span class="ss">). Sorting might be trivial."</span>)</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>       <span class="co"># Adjust i or handle as an error depending on requirements</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>       i <span class="op">=</span> <span class="bu">max</span>(<span class="dv">1</span>, <span class="bu">min</span>(i, T <span class="op">-</span> <span class="dv">1</span>)) <span class="co"># Clamp i to a safe range for demonstration</span></span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sort the first 'i' probabilities (indices 1 to i) in ascending order</span></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a>    first_part <span class="op">=</span> np.sort(values[<span class="dv">1</span>:i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sort the remaining 'T-i' probabilities (indices i+1 to T) in descending order</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>    second_part <span class="op">=</span> np.sort(values[i<span class="op">+</span><span class="dv">1</span>:])[::<span class="op">-</span><span class="dv">1</span>] <span class="co"># [::-1] reverses the sorted array</span></span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Combine the sorted parts back into the 'values' array</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>    values[<span class="dv">1</span>:i<span class="op">+</span><span class="dv">1</span>] <span class="op">=</span> first_part</span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>    values[i<span class="op">+</span><span class="dv">1</span>:] <span class="op">=</span> second_part</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return the final array with the sorted probability distribution</span></span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> values</span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>i <span class="op">=</span> <span class="dv">5</span>  <span class="co"># First 5 highest values in ascending order, rest in descending order</span></span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> generate_weighted_list(max_s, l, i)</span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s)</span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Sum:"</span>, np.<span class="bu">sum</span>(s[<span class="dv">1</span>:]))  <span class="co"># This should be 1</span></span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Weighted service time:"</span>, np.dot(np.arange(<span class="bu">len</span>(s)), s))  <span class="co"># This should be close to l</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>initial_x <span class="op">=</span> bailey_welch_schedule(T, d, N, s)</span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial schedule: </span><span class="sc">{</span>initial_x<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>convolutions <span class="op">=</span> compute_convolutions(s, N, q)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[0.         0.00998581 0.01520155 0.01914529 0.04230275 0.26080326
+ 0.15638402 0.14533383 0.10052055 0.05506406 0.05442957 0.0452393
+ 0.0319825  0.02590351 0.01421581 0.00870013 0.00703159 0.00321945
+ 0.00321516 0.00077437 0.0005475 ]
+Sum: 1.000000000101741
+Weighted service time: 7.169192895035759
+Initial schedule: [2, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 7]</code></pre>
+</div>
+</div>
+<div id="9f61a2e9" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> get_v_star, get_neighborhood</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sample_neighbors_list(x: <span class="bu">list</span>[<span class="bu">int</span>], v_star: np.ndarray, <span class="bu">all</span> <span class="op">=</span> <span class="va">True</span>) <span class="op">-&gt;</span> (<span class="bu">list</span>[<span class="bu">int</span>], <span class="bu">list</span>[<span class="bu">int</span>]):</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co">    Create a set of pairs of schedules that are from the same neighborhood.</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co">    </span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co">    Parameters:</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="co">      x (list[int]): A list of integers with |s| = T and sum N.</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="co">      v_star (np.ndarray): Precomputed vectors V* of length T.</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co">      </span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="co">      tuple(list[int], list[int]): A pair of schedules.</span></span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    T <span class="op">=</span> <span class="bu">len</span>(x)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Precompute binomial coefficients (weights for random.choices)</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    binom_coeff <span class="op">=</span> [math.comb(T, i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, T)]</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Choose a random value of i with the corresponding probability</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>    i <span class="op">=</span> random.choices(<span class="bu">range</span>(<span class="dv">1</span>, T), weights<span class="op">=</span>binom_coeff)[<span class="dv">0</span>]</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Instead of generating the full list of combinations, sample one directly</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    j <span class="op">=</span> random.sample(<span class="bu">range</span>(T), i)</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    x_p <span class="op">=</span> x.copy()</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> k <span class="kw">in</span> j:</span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        x_temp <span class="op">=</span> np.array(x_p) <span class="op">+</span> v_star[k]</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>        x_temp <span class="op">=</span> x_temp.astype(<span class="bu">int</span>)</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.<span class="bu">all</span>(x_temp <span class="op">&gt;=</span> <span class="dv">0</span>):</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>            x_p <span class="op">=</span> x_temp.astype(<span class="bu">int</span>).tolist()</span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">all</span>:</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>        diff <span class="op">=</span> [<span class="bu">int</span>(x <span class="op">-</span> y) <span class="cf">for</span> x, y <span class="kw">in</span> <span class="bu">zip</span>(x, x_p)]</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x, x_p, diff</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:    </span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> x_p</span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> time.time()</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>v_star <span class="op">=</span> get_v_star(T)</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a><span class="co"># Sample a set of schedules from the neighborhood of the initial schedule</span></span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>neighbors_selection <span class="op">=</span> [sample_neighbors_list(initial_x, v_star, <span class="bu">all</span> <span class="op">=</span> <span class="va">False</span>) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_schedules)] <span class="co"># This can be done in parallel to improve speed</span></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">len</span>(neighbors_selection))</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>end <span class="op">=</span> time.time()</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a><span class="co"># For the sampled schedules, create the neighbors</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>neighbors_list <span class="op">=</span> [sample_neighbors_list(schedule, v_star) <span class="cf">for</span> schedule <span class="kw">in</span> neighbors_selection]</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Randomly switch the order of the neighbors</span></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="co"># neighbors_list = [neighbor if random.random() &lt; 0.5 else neighbor[::-1] for neighbor in neighbors_list]</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>end <span class="op">=</span> time.time()</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>h <span class="op">=</span> random.choices(<span class="bu">range</span>(num_schedules), k<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sampled schedules: </span><span class="sc">{</span>h<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> h:</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>    original_schedule <span class="op">=</span> neighbors_list[i][<span class="dv">0</span>]</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>    neighbor_schedule <span class="op">=</span> neighbors_list[i][<span class="dv">1</span>]</span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>    difference <span class="op">=</span>neighbors_list[i][<span class="dv">2</span>]</span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Neighbors</span><span class="ch">\n</span><span class="sc">{</span>original_schedule<span class="sc">}</span><span class="ch">\n</span><span class="sc">{</span>neighbor_schedule<span class="sc">}</span><span class="ch">\n</span><span class="sc">{</span>difference<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>training_set_feat_time <span class="op">=</span> end <span class="op">-</span> start</span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Processing time: </span><span class="sc">{</span>training_set_feat_time<span class="sc">}</span><span class="ss"> seconds</span><span class="ch">\n</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>40000
+Sampled schedules: [6600, 1024, 38126, 11123, 17126, 30246, 8031]
+Neighbors
+[2, 2, 0, 0, 2, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 2, 6]
+[1, 2, 0, 0, 2, 0, 1, 1, 0, 2, 0, 0, 1, 1, 0, 2, 0, 1, 2, 6]
+[1, 0, 0, 0, 0, 0, 0, -1, 1, -1, 1, 0, 0, -1, 1, -1, 0, 0, 0, 0]
+Neighbors
+[2, 1, 0, 0, 1, 2, 0, 1, 0, 0, 2, 0, 1, 0, 1, 1, 0, 2, 0, 8]
+[1, 1, 1, 0, 0, 2, 1, 0, 0, 0, 2, 0, 1, 0, 1, 2, 0, 2, 0, 8]
+[1, 0, -1, 0, 1, 0, -1, 1, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0]
+Neighbors
+[2, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 2, 1, 0, 0, 1, 8]
+[1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 2, 0, 1, 0, 3, 0, 0, 0, 1, 9]
+[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0, -1, 1, 0, 0, 0, -1]
+Neighbors
+[2, 2, 0, 0, 2, 0, 1, 0, 1, 0, 1, 2, 1, 0, 1, 0, 1, 0, 2, 6]
+[2, 3, 0, 0, 1, 1, 0, 1, 0, 0, 2, 2, 0, 1, 0, 1, 0, 0, 2, 6]
+[0, -1, 0, 0, 1, -1, 1, -1, 1, 0, -1, 0, 1, -1, 1, -1, 1, 0, 0, 0]
+Neighbors
+[3, 1, 0, 0, 1, 2, 0, 0, 2, 0, 1, 0, 1, 0, 1, 1, 0, 1, 2, 6]
+[4, 0, 0, 1, 1, 2, 0, 0, 2, 0, 0, 0, 1, 0, 2, 0, 0, 1, 2, 6]
+[-1, 1, 0, -1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, -1, 1, 0, 0, 0, 0]
+Neighbors
+[1, 2, 0, 1, 1, 0, 0, 2, 0, 0, 1, 2, 0, 0, 1, 1, 1, 0, 2, 7]
+[1, 1, 1, 0, 1, 0, 0, 2, 0, 0, 1, 2, 0, 1, 0, 1, 1, 0, 3, 7]
+[0, 1, -1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 1, 0, 0, 0, -1, 0]
+Neighbors
+[1, 2, 0, 1, 1, 0, 1, 0, 1, 0, 2, 0, 2, 0, 1, 0, 1, 1, 0, 8]
+[0, 2, 1, 1, 0, 1, 0, 1, 0, 0, 2, 0, 2, 1, 0, 1, 1, 1, 0, 8]
+[1, 0, -1, 0, 1, -1, 1, -1, 1, 0, 0, 0, 0, -1, 1, -1, 0, 0, 0, 0]
+
+Processing time: 8.18165373802185 seconds
+</code></pre>
+</div>
+</div>
+<div id="0a3eef02" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> calculate_objective_serv_time_lookup</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>objectives_schedule_1 <span class="op">=</span> [</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    w <span class="op">*</span> result[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> result[<span class="dv">1</span>]</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> neighbor <span class="kw">in</span> neighbors_list</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> result <span class="kw">in</span> [calculate_objective_serv_time_lookup(neighbor[<span class="dv">0</span>], d, convolutions)]</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>start <span class="op">=</span> time.time()</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>objectives_schedule_2 <span class="op">=</span> [</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    w <span class="op">*</span> result[<span class="dv">0</span>] <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> result[<span class="dv">1</span>]</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> neighbor <span class="kw">in</span> neighbors_list</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> result <span class="kw">in</span> [calculate_objective_serv_time_lookup(neighbor[<span class="dv">1</span>], d, convolutions)]</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>end <span class="op">=</span> time.time()</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>training_set_lab_time <span class="op">=</span> end <span class="op">-</span> start</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>objectives <span class="op">=</span> [[obj, objectives_schedule_2[i]] <span class="cf">for</span> i, obj <span class="kw">in</span> <span class="bu">enumerate</span>(objectives_schedule_1)]</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>rankings <span class="op">=</span> np.argmin(objectives, axis<span class="op">=</span><span class="dv">1</span>).tolist()</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">5</span>):</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Objectives: </span><span class="sc">{</span>objectives[i]<span class="sc">}</span><span class="ss">, Ranking: </span><span class="sc">{</span>rankings[i]<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Processing time: </span><span class="sc">{</span>training_set_lab_time<span class="sc">}</span><span class="ss"> seconds</span><span class="ch">\n</span><span class="ss">"</span>)</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1: Flatten the objectives into a 1D array</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>flattened_data <span class="op">=</span> [value <span class="cf">for</span> sublist <span class="kw">in</span> objectives <span class="cf">for</span> value <span class="kw">in</span> sublist]</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 2: Find the index of the minimum value</span></span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>min_index <span class="op">=</span> np.argmin(flattened_data)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: Convert that index back to the original 2D structure</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>row_index <span class="op">=</span> min_index <span class="op">//</span> <span class="dv">2</span>  <span class="co"># Assuming each inner list has 2 values</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>col_index <span class="op">=</span> min_index <span class="op">%</span> <span class="dv">2</span></span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"The minimum objective value is at index [</span><span class="sc">{</span>row_index<span class="sc">}</span><span class="ss">][</span><span class="sc">{</span>col_index<span class="sc">}</span><span class="ss">].</span><span class="ch">\n</span><span class="ss">This is schedule: </span><span class="sc">{</span>neighbors_list[row_index][col_index]<span class="sc">}</span><span class="ss"> with objective value </span><span class="sc">{</span>objectives[row_index][col_index]<span class="sc">}</span><span class="ss">."</span>)</span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Average ranking: </span><span class="sc">{</span>np<span class="sc">.</span>mean(rankings)<span class="sc">}</span><span class="ch">\n</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Objectives: [65.12752211235936, 65.895670228933], Ranking: 0
+Objectives: [64.15977713569121, 61.40823145964572], Ranking: 1
+Objectives: [65.34557169465954, 64.92966235541512], Ranking: 1
+Objectives: [65.97134970545498, 63.49238838581816], Ranking: 1
+Objectives: [61.471686011819266, 63.66769165722329], Ranking: 0
+
+Processing time: 16.17603302001953 seconds
+
+The minimum objective value is at index [5631][1].
+This is schedule: [2, 1, 1, 1, 1, 0, 1, 1, 0, 2, 0, 1, 1, 1, 0, 1, 1, 1, 0, 6] with objective value 56.34050761351467.
+
+Average ranking: 0.2664
+</code></pre>
+</div>
+</div>
+<div id="67947682" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> prepare_features(schedule1, diff):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Concatenates two schedule vectors and converts them into a</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co">    dictionary format suitable for river models.</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ensure schedules are numpy arrays for easier concatenation if needed</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    s1 <span class="op">=</span> np.asarray(schedule1)</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    diff <span class="op">=</span> np.asarray(diff)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Concatenate the two schedule vectors</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    concatenated_schedule <span class="op">=</span> np.concatenate((s1, diff))</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create feature dictionary using indices as keys</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Example: {0: val_s1_0, 1: val_s1_1,..., N: val_s2_0,...}</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    features <span class="op">=</span> {i: <span class="bu">float</span>(val) <span class="cf">for</span> i, val <span class="kw">in</span> <span class="bu">enumerate</span>(concatenated_schedule)}</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> features</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">Starting incremental training simulation..."</span>)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Use river's stream utilities for evaluation (optional but good practice)</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>metric <span class="op">=</span> metrics.Accuracy()</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (sched_pair, rank) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(neighbors_list, rankings)):</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    schedule1 <span class="op">=</span> sched_pair[<span class="dv">0</span>]</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>    diff <span class="op">=</span> sched_pair[<span class="dv">2</span>]</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>    features <span class="op">=</span> prepare_features(schedule1, diff)</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    target <span class="op">=</span> rank</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Optional: Make a prediction before learning (for prequential evaluation)</span></span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">=</span> ht_model.predict_one(x<span class="op">=</span>features)</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> y_pred <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>: <span class="co"># Model might not be ready to predict initially</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>        metric.update(target, y_pred)</span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Learn from the current instance (pair + rank)</span></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>    ht_model.learn_one(x<span class="op">=</span>features, y<span class="op">=</span>target)</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">%</span> <span class="dv">1000</span> <span class="op">==</span> <span class="dv">0</span>: <span class="co"># Print progress for every 100th pair in this small example</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Processed pair </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">. Current Accuracy: </span><span class="sc">{</span>metric<span class="sc">.</span>get()<span class="sc">:.4f}</span><span class="ss">"</span>) <span class="co"># If using prequential evaluation</span></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Processed pair </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">. Model updated."</span>)</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Incremental training simulation finished."</span>)</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final Accuracy (Prequential): </span><span class="sc">{</span>metric<span class="sc">.</span>get()<span class="sc">:.4f}</span><span class="ss">"</span>) <span class="co"># If using prequential evaluation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Starting incremental training simulation...
+Processed pair 1000. Current Accuracy: 0.7528
+Processed pair 1000. Model updated.
+Processed pair 2000. Current Accuracy: 0.7814
+Processed pair 2000. Model updated.
+Processed pair 3000. Current Accuracy: 0.7949
+Processed pair 3000. Model updated.
+Processed pair 4000. Current Accuracy: 0.8050
+Processed pair 4000. Model updated.
+Processed pair 5000. Current Accuracy: 0.8068
+Processed pair 5000. Model updated.
+Processed pair 6000. Current Accuracy: 0.8088
+Processed pair 6000. Model updated.
+Processed pair 7000. Current Accuracy: 0.8151
+Processed pair 7000. Model updated.
+Processed pair 8000. Current Accuracy: 0.8177
+Processed pair 8000. Model updated.
+Processed pair 9000. Current Accuracy: 0.8203
+Processed pair 9000. Model updated.
+Processed pair 10000. Current Accuracy: 0.8232
+Processed pair 10000. Model updated.
+Processed pair 11000. Current Accuracy: 0.8262
+Processed pair 11000. Model updated.
+Processed pair 12000. Current Accuracy: 0.8285
+Processed pair 12000. Model updated.
+Processed pair 13000. Current Accuracy: 0.8300
+Processed pair 13000. Model updated.
+Processed pair 14000. Current Accuracy: 0.8312
+Processed pair 14000. Model updated.
+Processed pair 15000. Current Accuracy: 0.8328
+Processed pair 15000. Model updated.
+Processed pair 16000. Current Accuracy: 0.8346
+Processed pair 16000. Model updated.
+Processed pair 17000. Current Accuracy: 0.8359
+Processed pair 17000. Model updated.
+Processed pair 18000. Current Accuracy: 0.8371
+Processed pair 18000. Model updated.
+Processed pair 19000. Current Accuracy: 0.8384
+Processed pair 19000. Model updated.
+Processed pair 20000. Current Accuracy: 0.8410
+Processed pair 20000. Model updated.
+Processed pair 21000. Current Accuracy: 0.8430
+Processed pair 21000. Model updated.
+Processed pair 22000. Current Accuracy: 0.8445
+Processed pair 22000. Model updated.
+Processed pair 23000. Current Accuracy: 0.8460
+Processed pair 23000. Model updated.
+Processed pair 24000. Current Accuracy: 0.8477
+Processed pair 24000. Model updated.
+Processed pair 25000. Current Accuracy: 0.8482
+Processed pair 25000. Model updated.
+Processed pair 26000. Current Accuracy: 0.8486
+Processed pair 26000. Model updated.
+Processed pair 27000. Current Accuracy: 0.8500
+Processed pair 27000. Model updated.
+Processed pair 28000. Current Accuracy: 0.8509
+Processed pair 28000. Model updated.
+Processed pair 29000. Current Accuracy: 0.8518
+Processed pair 29000. Model updated.
+Processed pair 30000. Current Accuracy: 0.8525
+Processed pair 30000. Model updated.
+Processed pair 31000. Current Accuracy: 0.8531
+Processed pair 31000. Model updated.
+Processed pair 32000. Current Accuracy: 0.8536
+Processed pair 32000. Model updated.
+Processed pair 33000. Current Accuracy: 0.8545
+Processed pair 33000. Model updated.
+Processed pair 34000. Current Accuracy: 0.8556
+Processed pair 34000. Model updated.
+Processed pair 35000. Current Accuracy: 0.8561
+Processed pair 35000. Model updated.
+Processed pair 36000. Current Accuracy: 0.8571
+Processed pair 36000. Model updated.
+Processed pair 37000. Current Accuracy: 0.8577
+Processed pair 37000. Model updated.
+Processed pair 38000. Current Accuracy: 0.8583
+Processed pair 38000. Model updated.
+Processed pair 39000. Current Accuracy: 0.8586
+Processed pair 39000. Model updated.
+Processed pair 40000. Current Accuracy: 0.8587
+Processed pair 40000. Model updated.
+Incremental training simulation finished.
+Final Accuracy (Prequential): 0.8587</code></pre>
+</div>
+</div>
+<div id="3854d3f8" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>metric_arf <span class="op">=</span> metrics.Accuracy()</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, (sched_pair, rank) <span class="kw">in</span> <span class="bu">enumerate</span>(<span class="bu">zip</span>(neighbors_list, rankings)):</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    schedule1 <span class="op">=</span> sched_pair[<span class="dv">0</span>]</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    diff <span class="op">=</span> sched_pair[<span class="dv">2</span>]</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    features <span class="op">=</span> prepare_features(schedule1, diff)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    target <span class="op">=</span> rank</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Optional: Make a prediction before learning (for prequential evaluation)</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">=</span> arf_model.predict_one(x<span class="op">=</span>features)</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> y_pred <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>: <span class="co"># Model might not be ready to predict initially</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>        metric_arf.update(target, y_pred)</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Learn from the current instance (pair + rank)</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    arf_model.learn_one(x<span class="op">=</span>features, y<span class="op">=</span>target)</span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (i <span class="op">+</span> <span class="dv">1</span>) <span class="op">%</span> <span class="dv">1000</span> <span class="op">==</span> <span class="dv">0</span>: <span class="co"># Print progress for every 100th pair in this small example</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Processed pair </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">. Current Accuracy: </span><span class="sc">{</span>metric_arf<span class="sc">.</span>get()<span class="sc">:.4f}</span><span class="ss">"</span>) <span class="co"># If using prequential evaluation</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Processed pair </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">. Model updated."</span>)</span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Incremental training simulation finished."</span>)</span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Final Accuracy (Prequential): </span><span class="sc">{</span>metric_arf<span class="sc">.</span>get()<span class="sc">:.4f}</span><span class="ss">"</span>) <span class="co"># If using prequential evaluation</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Processed pair 1000. Current Accuracy: 0.7347
+Processed pair 1000. Model updated.
+Processed pair 2000. Current Accuracy: 0.7669
+Processed pair 2000. Model updated.
+Processed pair 3000. Current Accuracy: 0.7849
+Processed pair 3000. Model updated.
+Processed pair 4000. Current Accuracy: 0.7849
+Processed pair 4000. Model updated.
+Processed pair 5000. Current Accuracy: 0.7898
+Processed pair 5000. Model updated.
+Processed pair 6000. Current Accuracy: 0.7975
+Processed pair 6000. Model updated.
+Processed pair 7000. Current Accuracy: 0.8054
+Processed pair 7000. Model updated.
+Processed pair 8000. Current Accuracy: 0.8094
+Processed pair 8000. Model updated.
+Processed pair 9000. Current Accuracy: 0.8125
+Processed pair 9000. Model updated.
+Processed pair 10000. Current Accuracy: 0.8165
+Processed pair 10000. Model updated.
+Processed pair 11000. Current Accuracy: 0.8191
+Processed pair 11000. Model updated.
+Processed pair 12000. Current Accuracy: 0.8202
+Processed pair 12000. Model updated.
+Processed pair 13000. Current Accuracy: 0.8214
+Processed pair 13000. Model updated.
+Processed pair 14000. Current Accuracy: 0.8206
+Processed pair 14000. Model updated.
+Processed pair 15000. Current Accuracy: 0.8231
+Processed pair 15000. Model updated.
+Processed pair 16000. Current Accuracy: 0.8239
+Processed pair 16000. Model updated.
+Processed pair 17000. Current Accuracy: 0.8260
+Processed pair 17000. Model updated.
+Processed pair 18000. Current Accuracy: 0.8277
+Processed pair 18000. Model updated.
+Processed pair 19000. Current Accuracy: 0.8293
+Processed pair 19000. Model updated.
+Processed pair 20000. Current Accuracy: 0.8308
+Processed pair 20000. Model updated.
+Processed pair 21000. Current Accuracy: 0.8329
+Processed pair 21000. Model updated.
+Processed pair 22000. Current Accuracy: 0.8343
+Processed pair 22000. Model updated.
+Processed pair 23000. Current Accuracy: 0.8355
+Processed pair 23000. Model updated.
+Processed pair 24000. Current Accuracy: 0.8369
+Processed pair 24000. Model updated.
+Processed pair 25000. Current Accuracy: 0.8384
+Processed pair 25000. Model updated.
+Processed pair 26000. Current Accuracy: 0.8396
+Processed pair 26000. Model updated.
+Processed pair 27000. Current Accuracy: 0.8413
+Processed pair 27000. Model updated.
+Processed pair 28000. Current Accuracy: 0.8425
+Processed pair 28000. Model updated.
+Processed pair 29000. Current Accuracy: 0.8430
+Processed pair 29000. Model updated.
+Processed pair 30000. Current Accuracy: 0.8437
+Processed pair 30000. Model updated.
+Processed pair 31000. Current Accuracy: 0.8439
+Processed pair 31000. Model updated.
+Processed pair 32000. Current Accuracy: 0.8444
+Processed pair 32000. Model updated.
+Processed pair 33000. Current Accuracy: 0.8454
+Processed pair 33000. Model updated.
+Processed pair 34000. Current Accuracy: 0.8463
+Processed pair 34000. Model updated.
+Processed pair 35000. Current Accuracy: 0.8472
+Processed pair 35000. Model updated.
+Processed pair 36000. Current Accuracy: 0.8484
+Processed pair 36000. Model updated.
+Processed pair 37000. Current Accuracy: 0.8494
+Processed pair 37000. Model updated.
+Processed pair 38000. Current Accuracy: 0.8507
+Processed pair 38000. Model updated.
+Processed pair 39000. Current Accuracy: 0.8514
+Processed pair 39000. Model updated.
+Processed pair 40000. Current Accuracy: 0.8520
+Processed pair 40000. Model updated.
+Incremental training simulation finished.
+Final Accuracy (Prequential): 0.8520</code></pre>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

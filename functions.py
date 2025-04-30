@@ -4,6 +4,10 @@ from typing import List, Tuple, Dict, Iterable, TypeVar, Union
 import copy
 import random
 from itertools import combinations
+import multiprocessing as mp
+from multiprocessing import Manager
+from functools import partial
+import time
 
 """
 These functions are used in the implementation of the optimization algorithm using local search for the scheduling problem.
@@ -409,6 +413,60 @@ def build_welch_bailey_schedule(N, T):
     schedule[-1] += remaining_patients
 
     return schedule
+  
+def neighborhood_search(x: Union[List[int], np.ndarray],
+                 d: int,
+                 convolutions: Dict[int, np.ndarray],
+                 w: float,
+                 v_star: np.ndarray,
+                 size: int = 2,
+                 echo: bool = False) -> Tuple[np.ndarray, float]:
+    """
+    Perform a neigborhood search around a schedule to find a local optimum.
+
+    Parameters:
+        x (Union[List[int], np.ndarray]): The initial solution vector.
+        d (int): Duration threshold for a time slot.
+        convolutions (Dict[int, np.ndarray]): Precomputed convolutions of the service time PMF.
+        w (float): Weighting factor for combining the objectives.
+        v_star (np.ndarray): Array of adjustment vectors.
+        t (int, optional): Number of patients to switch in a neighborhood (default is 2).
+        echo (bool, optional): If True, prints progress messages. Defaults to False.
+
+    Returns:
+        Tuple[np.ndarray, float]: A tuple containing the best solution found and its associated cost.
+    """
+    x_star = np.array(x).flatten()  # Best solution (1D array)
+    objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
+    c_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
+    print(f"Initial solution: {x_star}, cost: {c_star}")
+    T = len(x_star)  # Length of the solution vector
+    N = np.sum(x_star)  # Total number of patients
+
+
+    if echo:
+        print(f'Running local search with switching {t} patient(s)')
+
+    # Generate neighborhood by switching t patients
+    ids_gen = powerset(range(T), t)
+    neighborhood = get_neighborhood(x_star, v_star, ids_gen)
+    if echo:
+        print(f"Size of neighborhood: {len(neighborhood)}")
+
+    found_better_solution = False
+
+    for neighbor in neighborhood:
+        waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
+        cost = w * waiting_time + (1 - w) * spillover
+        if cost < c_star:
+            x_star = neighbor
+            c_star = cost
+            if echo:
+                print(f"Found better solution: {x_star}, cost: {c_star}")
+            found_better_solution = True
+            break
+
+    return x_star, c_star, found_better_solution
 
 def local_search(x: Union[List[int], np.ndarray],
                  d: int,

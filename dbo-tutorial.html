@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.551">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Gemini Deep Research">
+
+<title>Discrete Bayesian Optimization Tutorial</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="dbo-tutorial_files/libs/clipboard/clipboard.min.js"></script>
+<script src="dbo-tutorial_files/libs/quarto-html/quarto.js"></script>
+<script src="dbo-tutorial_files/libs/quarto-html/popper.min.js"></script>
+<script src="dbo-tutorial_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="dbo-tutorial_files/libs/quarto-html/anchor.min.js"></script>
+<link href="dbo-tutorial_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="dbo-tutorial_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="dbo-tutorial_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="dbo-tutorial_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="dbo-tutorial_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Discrete Bayesian Optimization Tutorial</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Gemini Deep Research </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="a-hands-on-tutorial-discrete-bayesian-optimization-for-patient-scheduling-with-html-js-tailwind" class="level1">
+<h1>A Hands-On Tutorial: Discrete Bayesian Optimization for Patient Scheduling with HTML, JS &amp; Tailwind</h1>
+<section id="introduction-smarter-patient-scheduling-with-discrete-bayesian-optimization" class="level2">
+<h2 class="anchored" data-anchor-id="introduction-smarter-patient-scheduling-with-discrete-bayesian-optimization">Introduction: Smarter Patient Scheduling with Discrete Bayesian Optimization</h2>
+<section id="the-patient-scheduling-puzzle" class="level3">
+<h3 class="anchored" data-anchor-id="the-patient-scheduling-puzzle">The Patient Scheduling Puzzle</h3>
+<p>Healthcare providers constantly face the complex challenge of patient scheduling. It involves juggling multiple patients, each requiring different appointment types and durations, with limited resources like doctors, nurses, and examination rooms, all within constrained time slots. The goal is often multifaceted: minimize patient waiting times, maximize the utilization of valuable resources, accommodate patient preferences, and ensure smooth clinic flow. Manually creating optimal schedules is difficult, and simple rule-based systems often struggle as the number of patients, resources, and constraints increases. Finding the <em>absolute best</em> schedule becomes a computationally demanding puzzle, setting the stage for more sophisticated optimization techniques.</p>
+</section>
+<section id="introducing-bayesian-optimization-bo-learning-to-optimize-efficiently" class="level3">
+<h3 class="anchored" data-anchor-id="introducing-bayesian-optimization-bo-learning-to-optimize-efficiently">Introducing Bayesian Optimization (BO): Learning to Optimize Efficiently</h3>
+<p>Bayesian Optimization (BO) offers a powerful, data-efficient approach to tackling such complex optimization problems. It’s a sequential design strategy particularly well-suited for optimizing “black-box” functions – situations where we don’t have a neat mathematical formula for the objective (like schedule quality) and evaluating it is expensive or time-consuming (e.g., running a detailed clinic simulation or observing real-world outcomes).1</p>
+<p>Think of BO like a skilled physician trying to find the best treatment dosage for a patient. The physician doesn’t test every possible dose randomly. Instead, they start with an initial guess, observe the patient’s response, update their understanding of how the dosage affects the patient, and then intelligently choose the next dosage to try based on that updated understanding. Similarly, BO uses the results from previously evaluated configurations (schedules, in our case) to build a probabilistic model of the objective function and then uses this model to decide the most promising configuration to evaluate next.3 This iterative, model-guided approach allows BO to find good solutions with significantly fewer evaluations compared to exhaustive search or random sampling.3 Its efficiency has led to successful applications in diverse fields like tuning complex machine learning models 6, robotics 3, materials discovery 8, and optimizing experimental designs.10</p>
+</section>
+<section id="why-discrete-bo-handling-choices-not-just-knobs" class="level3">
+<h3 class="anchored" data-anchor-id="why-discrete-bo-handling-choices-not-just-knobs">Why <em>Discrete</em> BO? Handling Choices, Not Just Knobs</h3>
+<p>While standard BO often deals with tuning continuous parameters (like adjusting temperature or pressure smoothly), many real-world problems, including patient scheduling, involve making <em>discrete choices</em>. We need to assign Patient A to Slot 1 <em>or</em> Slot 2, use Room X <em>or</em> Room Y, assign Doctor Z <em>or</em> Nurse Y. These are distinct, separate options, not points on a continuous scale.</p>
+<p>This is where Discrete Bayesian Optimization (DBO) comes in. DBO methods are specifically designed to handle optimization problems where the decision variables belong to a discrete set.1 Trying to adapt continuous BO methods, for instance, by suggesting a continuous slot “1.7” and rounding it to the nearest integer slot “2”, can be problematic. This rounding approach might cause the optimizer to repeatedly suggest points already evaluated or get stuck, failing to explore the discrete space effectively.12 DBO directly operates on the discrete set of choices, making it a more natural fit for problems like selecting optimal compounds from a chemical library 8, protein engineering 1, or, in our case, assigning patients to specific time slots.</p>
+<p>The need for specialized discrete methods arises because the structure of discrete spaces is fundamentally different from continuous ones. Techniques that rely on smooth gradients or continuous proximity don’t directly apply. DBO algorithms often involve building models appropriate for discrete inputs and adapting acquisition strategies to select the best discrete candidate from the available options.8</p>
+</section>
+<section id="tutorial-goal-structure" class="level3">
+<h3 class="anchored" data-anchor-id="tutorial-goal-structure">Tutorial Goal &amp; Structure</h3>
+<p>The goal of this tutorial is to provide a hands-on introduction to the core concepts of Discrete Bayesian Optimization by building a simple web-based simulator. Using plain HTML, JavaScript, and Tailwind CSS, we will create an interactive tool that applies DBO principles to a simplified patient scheduling problem.</p>
+<p>The tutorial is structured as follows:</p>
+<ol type="1">
+<li><strong>Understanding the Core Ideas:</strong> We’ll break down the BO loop, surrogate models, acquisition functions, and how they adapt to discrete choices.</li>
+<li><strong>Building the Simulator Interface:</strong> We’ll set up the HTML structure and use Tailwind CSS for styling.</li>
+<li><strong>Building the Simulator Logic:</strong> We’ll implement the DBO components (objective function, simplified surrogate, simplified acquisition function, main loop) in JavaScript.</li>
+<li><strong>Running and Exploring:</strong> We’ll provide the complete code, instructions to run it, discuss the necessary simplifications made, and suggest avenues for further learning.</li>
+</ol>
+<p>This tutorial aims to build intuition and practical understanding of DBO concepts within an estimated study time of approximately 3 hours. It serves as an educational stepping stone, not a production-ready scheduling system.</p>
+</section>
+</section>
+<section id="understanding-the-core-ideas" class="level2">
+<h2 class="anchored" data-anchor-id="understanding-the-core-ideas">Understanding the Core Ideas</h2>
+<p>Before diving into the code, let’s clarify the fundamental components of Bayesian Optimization, particularly in the context of discrete choices.</p>
+<section id="the-bayesian-optimization-loop-explained-simply" class="level3">
+<h3 class="anchored" data-anchor-id="the-bayesian-optimization-loop-explained-simply">The Bayesian Optimization Loop Explained Simply</h3>
+<p>Bayesian Optimization works iteratively, continuously refining its understanding of the problem and making increasingly informed decisions. The core loop generally follows these steps 3:</p>
+<ol type="1">
+<li><strong>Initial Evaluation(s):</strong> Start by evaluating the objective function for one or more initial configurations (schedules). This provides the first data points for the model. In some cases, these initial points might be chosen randomly or based on prior knowledge.</li>
+<li><strong>Build/Update Surrogate Model:</strong> Use all the evaluated configurations and their corresponding objective function scores gathered so far to build or update a statistical model. This “surrogate model” acts as an inexpensive approximation of the true, expensive-to-evaluate objective function.3 It captures our current belief about how different configurations affect the outcome.</li>
+<li><strong>Optimize Acquisition Function:</strong> Based on the predictions and uncertainty estimates from the surrogate model, calculate an “acquisition function” score for potential unevaluated configurations. This function quantifies the utility or desirability of evaluating each candidate next.8 Select the configuration that maximizes this acquisition function – this is the point deemed most promising for evaluation in the next iteration.4</li>
+<li><strong>Evaluate Chosen Configuration:</strong> Evaluate the actual objective function for the configuration selected in the previous step. This yields a new data point (configuration, score).</li>
+<li><strong>Augment Data &amp; Repeat:</strong> Add the new data point to the set of observations and return to Step 2 to update the surrogate model with the new information. This cycle continues until a stopping criterion is met (e.g., a maximum number of evaluations is reached, a satisfactory objective value is achieved, or the potential for further improvement diminishes).8</li>
+</ol>
+<p>This iterative process allows BO to intelligently explore the search space, focusing evaluations where they are most likely to yield improvements or reduce uncertainty, leading to efficient optimization.3</p>
+<p><strong>(Video Embedding - Conceptual)</strong></p>
+<p>To visualize this loop, consider watching an introductory video on Bayesian Optimization. Videos like the one from Taylor Sparks 16 or overviews discussing BO for experimental design 10 can provide a helpful conceptual grounding. They often illustrate how the model refines over iterations and guides the search.</p>
+<div class="my-4">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/PrEuA8hm9mY" title="YouTube video player - Bayesian Optimization Introduction" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
+</iframe>
+<p class="text-sm text-gray-600 mt-1">
+Video discussing Bayesian Optimization concepts and heuristics.[16, 17, 18, 19]
+</p>
+</div>
+</section>
+<section id="surrogate-models-our-smart-guess-for-schedule-quality" class="level3">
+<h3 class="anchored" data-anchor-id="surrogate-models-our-smart-guess-for-schedule-quality">Surrogate Models: Our “Smart Guess” for Schedule Quality</h3>
+<p>The surrogate model is the heart of Bayesian Optimization. Since the true objective function (e.g., schedule quality) is unknown and expensive to evaluate, the surrogate model acts as a cheap, stand-in approximation based on the data observed so far.3 Its key roles are:</p>
+<ul>
+<li><strong>Prediction:</strong> It provides a prediction (often called the mean prediction) of the objective function’s value for any given configuration, even those not yet evaluated.</li>
+<li><strong>Uncertainty Quantification:</strong> Crucially, it also provides a measure of uncertainty (often variance or standard deviation) associated with its predictions. Predictions in regions with many nearby observations will typically have low uncertainty, while predictions in unexplored regions will have high uncertainty.3</li>
+</ul>
+<p>This combination of prediction and uncertainty allows the acquisition function (discussed next) to make intelligent decisions about where to sample next.</p>
+<p>Common types of surrogate models include:</p>
+<ul>
+<li><strong>Gaussian Processes (GPs):</strong> GPs are arguably the most popular surrogate model for BO.3 They define a probability distribution over functions, allowing them to model complex relationships and provide well-calibrated uncertainty estimates.12 Conceptually, a GP fits a flexible curve (in 1D) or surface (in higher dimensions) through the observed data points, along with “confidence bands” representing uncertainty.3 They typically use a kernel function (like Matern or RBF) to define the smoothness and correlation between points.3 However, standard GPs can become computationally expensive as the number of observations grows, and adapting them effectively to purely discrete or high-dimensional discrete spaces can require specialized techniques.1 Implementing GPs involves matrix operations (like inverting the kernel matrix) which can be complex.1</li>
+<li><strong>Random Forests (RFs):</strong> A Random Forest is an ensemble method that builds multiple decision trees on different subsets of the data and features, averaging their predictions.24 RFs can naturally handle discrete and categorical input variables and are often computationally faster to train than GPs.24 While primarily used for classification and regression, they can also serve as surrogate models in optimization.12 Estimating predictive uncertainty with RFs is possible but sometimes considered less direct or principled than with GPs.12</li>
+</ul>
+<p>The choice of surrogate model depends on the nature of the problem (continuous vs.&nbsp;discrete inputs, expected smoothness, dimensionality) and computational constraints. For this tutorial, implementing a full GP or RF in JavaScript is impractical due to complexity and the time limit. We will therefore use a highly simplified approach that captures the <em>essence</em> of a surrogate: storing observations and providing basic prediction and uncertainty estimates, allowing us to focus on the overall DBO loop structure. This simplification is a key adaptation required to bridge the gap between the advanced methods often discussed in research 1 and a practical, introductory implementation in JavaScript.</p>
+</section>
+<section id="acquisition-functions-deciding-which-schedule-to-try-next" class="level3">
+<h3 class="anchored" data-anchor-id="acquisition-functions-deciding-which-schedule-to-try-next">Acquisition Functions: Deciding Which Schedule to Try Next</h3>
+<p>Once the surrogate model provides predictions and uncertainty estimates, the <strong>acquisition function</strong> uses this information to decide which unevaluated point (schedule) is the most valuable to evaluate next.3 It essentially translates the surrogate’s probabilistic forecast into a score that quantifies the “utility” of sampling each potential point. The point with the highest acquisition score is chosen for the next expensive evaluation.4</p>
+<p>The core challenge for an acquisition function is to balance two competing goals 4:</p>
+<ul>
+<li><strong>Exploitation:</strong> Focusing on regions where the surrogate model predicts good objective function values (based on the mean prediction). This aims to refine the solution in already promising areas.</li>
+<li><strong>Exploration:</strong> Investigating regions where the surrogate model is highly uncertain (high variance/standard deviation). This aims to discover potentially better regions that haven’t been explored yet and improve the global accuracy of the surrogate model.</li>
+</ul>
+<p>Several popular acquisition functions exist, each balancing this trade-off differently:</p>
+<ul>
+<li><strong>Expected Improvement (EI):</strong> EI calculates the expected <em>amount</em> by which the objective function value at a point x will exceed the current best observed value, fbest​. It considers both the predicted mean μ(x) and standard deviation σ(x) from the surrogate model.20 Points with high predicted means <em>or</em> high uncertainty can have high EI scores, making it a popular and well-balanced choice.3 The calculation involves the probability density function (ϕ) and cumulative distribution function (Φ) of the standard normal distribution.28</li>
+<li><strong>Probability of Improvement (PI):</strong> PI calculates the <em>probability</em> that the objective function value at a point x will be better than the current best observed value fbest​.14 It primarily focuses on the likelihood of making <em>any</em> improvement, regardless of the magnitude.14 This can sometimes lead it to be more exploitative than EI, potentially getting stuck in local optima if not carefully managed.14</li>
+<li><strong>Upper Confidence Bound (UCB):</strong> UCB takes a more direct approach to balancing the trade-off. It calculates a score based on an optimistic estimate of the objective function value: UCB(x)=μ(x)+βσ(x), where μ(x) is the predicted mean, σ(x) is the predicted standard deviation, and β is a tunable parameter that controls the emphasis on exploration (higher β favors exploration).14 Points with high means or high uncertainty receive high UCB scores. It’s often considered effective for encouraging exploration.30</li>
+</ul>
+<p>Just like the surrogate model, implementing the exact mathematical formulas for these acquisition functions (especially EI, which involves Gaussian probability functions) can be complex, particularly when not using a standard GP surrogate. Given the simplified surrogate we’ll use in this JavaScript tutorial, we will implement a simplified acquisition logic inspired by UCB. The UCB structure (mean+β×uncertainty) is conceptually straightforward to adapt using our simplified prediction and uncertainty estimates. This allows us to demonstrate the core exploration-exploitation mechanism without getting bogged down in complex probability calculations, making it suitable for our learning objectives and constraints.</p>
+<p><strong>(Video Embedding - Conceptual)</strong></p>
+<p>Videos discussing acquisition functions, particularly the exploration vs.&nbsp;exploitation trade-off or specific functions like UCB/LCB (Lower Confidence Bound, used for minimization), can enhance understanding.</p>
+<div class="my-4">
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_SC5_2vkgbA" title="YouTube video player - Acquisition Functions (LCB Example)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
+</iframe>
+<p class="text-sm text-gray-600 mt-1">
+Video discussing acquisition functions like Lower Confidence Bound (LCB), related to UCB.[18]
+</p>
+</div>
+</section>
+<section id="handling-discrete-choices" class="level3">
+<h3 class="anchored" data-anchor-id="handling-discrete-choices">Handling Discrete Choices</h3>
+<p>Applying these concepts to our patient scheduling problem requires acknowledging its discrete nature. We are not searching over a continuous range of parameters but selecting from a finite (though potentially large) set of possible schedule assignments.1</p>
+<p>Key considerations for DBO include:</p>
+<ul>
+<li><strong>Direct Operation:</strong> DBO algorithms work directly on the discrete search space. They don’t rely on continuous approximations or rounding, which can be inefficient or ineffective.12</li>
+<li><strong>Surrogate Model Suitability:</strong> The surrogate model should ideally be capable of handling discrete inputs effectively. While GPs can be adapted (e.g., using specific kernels or embeddings), models like Random Forests might handle categorical or discrete features more naturally.1 Our simplified surrogate will inherently work with the discrete schedule representations.</li>
+<li><strong>Acquisition Function Optimization:</strong> In continuous BO, finding the maximum of the acquisition function often requires numerical optimization techniques.2 In DBO, especially when the number of discrete candidates is manageable, optimizing the acquisition function can be done simply by evaluating it for all (or a representative subset of) unevaluated discrete candidates and picking the best one.11 This is the approach we will take in our simulator.</li>
+</ul>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

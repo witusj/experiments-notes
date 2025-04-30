@@ -54,7 +54,7 @@ max_s = 20 # Maximum service time
 q = 0.20 # Probability of a scheduled patient not showing up
 w = 0.1 # Weight for the waiting time in objective function
 l = 10
-num_schedules = 100000 # Number of schedules to sample
+num_schedules = 300000 # Number of schedules to sample
 
 # Create service time distribution
 def generate_weighted_list(max_s, l, i):
@@ -97,14 +97,14 @@ def generate_weighted_list(max_s, l, i):
     """
     # Initialize an array of T+1 values, starting with zero
     # Index 0 is unused for probability, indices 1 to T hold the distribution
-    values = np.zeros(T + 1)
+    values = np.zeros(l + 1)
 
     # --- Inner helper function for optimization ---
     def objective(x):
         """Objective function: Squared difference between weighted average and target l."""
         # Calculate weighted average: sum(index * probability) / sum(probability)
         # Since sum(probability) is constrained to 1, it simplifies.
-        weighted_avg = np.dot(np.arange(1, T + 1), x) # Corresponds to sum(k * P(ServiceTime=k))
+        weighted_avg = np.dot(np.arange(1, l + 1), x) # Corresponds to sum(k * P(ServiceTime=k))
         return (weighted_avg - l) ** 2
 
     # --- Constraints for optimization ---
@@ -116,11 +116,11 @@ def generate_weighted_list(max_s, l, i):
 
     # Bounds: Each probability value x[k] must be between 0 and 1
     # Creates a list of T tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]
-    bounds = [(0, 1)] * T
+    bounds = [(0, 1)] * l
 
     # Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1
     # Provides a starting point for the optimizer. np.ones(T) gives equal weights initially.
-    initial_guess = np.random.dirichlet(np.ones(T))
+    initial_guess = np.random.dirichlet(np.ones(l))
 
     # --- Perform Optimization ---
     # Minimize the objective function subject to the sum and bounds constraints
@@ -139,10 +139,10 @@ def generate_weighted_list(max_s, l, i):
 
     # --- Reorder the values based on the index 'i' ---
     # Ensure 'i' is within a valid range for slicing and sorting
-    if not (0 < i < T):
+    if not (0 < i < l):
        print(f"Warning: Index 'i' ({i}) is outside the valid range (1 to {T-1}). Sorting might be trivial.")
        # Adjust i or handle as an error depending on requirements
-       i = max(1, min(i, T - 1)) # Clamp i to a safe range for demonstration
+       i = max(1, min(i, l - 1)) # Clamp i to a safe range for demonstration
 
     # Sort the first 'i' probabilities (indices 1 to i) in ascending order
     first_part = np.sort(values[1:i+1])

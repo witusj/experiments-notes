@@ -1,0 +1,49 @@
+---
+title: "latin-hypercube-sampling"
+format: html
+jupyter: python3
+---
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/videoseries?si=2EdTBEB27OY2Z7ng&amp;list=PLL0SWcFqypClTIMQDOs_Jug70qaVPOzEc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+```{python}
+import numpy as np
+import pandas as pd
+
+def sample_lhs_schedules(T, N, K, seed=None):
+    """
+    Generate K integer schedules x of length T summing to N using Latin Hypercube Sampling (LHS).
+    """
+    rng = np.random.default_rng(seed)
+    # Create the LHS grid in [0,1]^T
+    cut = np.linspace(0, 1, K + 1)
+    u = np.zeros((K, T))
+    for j in range(T):
+        # Stratify along dimension j
+        u[:, j] = cut[:-1] + rng.random(K) * (1.0 / K)
+        rng.shuffle(u[:, j])
+    
+    schedules = []
+    for vec in u:
+        # Project onto simplex so that sum = N
+        p = vec / vec.sum() * N
+        floors = np.floor(p)
+        residual = int(N - floors.sum())
+        # Distribute the remaining units to the largest fractional parts
+        fracs = p - floors
+        idx = np.argsort(-fracs)
+        floors[idx[:residual]] += 1
+        schedules.append(floors.astype(int))
+    
+    return np.array(schedules)
+
+# Example usage for T=5, N=7, K=10
+T, N, K = 20, 22, 10000
+schedules = sample_lhs_schedules(T, N, K, seed=42)
+
+# Display the sampled schedules
+df = pd.DataFrame(schedules, columns=[f"x{i+1}" for i in range(T)])
+print("LHS‐Sampled Schedules (T=5, N=7):")
+print(df[25:].to_string(index=False))
+```
+
