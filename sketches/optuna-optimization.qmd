@@ -748,7 +748,7 @@ while improvement_found and iteration < max_iterations:
     finally:
         end_time_iter = time.time()
         print(f"Iteration {iteration} Optuna run finished in {end_time_iter - start_time_iter:.2f} seconds.")
-        n_trials_per_iteration += 30 # Increment for next iteration
+        n_trials_per_iteration += 50 # Increment for next iteration
 
     # 4. Process results of this iteration
     completed_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
@@ -866,6 +866,7 @@ print(f"Initial schedule: {x_star}")
 convolutions = compute_convolutions(s, N, q)
 ```
 
+
 ```{python}
 x_star = np.array(x_star)
 duration_threshold = d # Use 'd' from initialization
@@ -892,34 +893,31 @@ def create_objective(
     def objective(trial: optuna.trial.Trial) -> float:
         """ The function Optuna minimizes. """
         # 1. Suggest u
-        # Use suggest_categorical for binary if preferred, or keep suggest_int
         U = np.array([trial.suggest_int(f"u_{i}", 0, 1) for i in range(internal_num_u)])
         u_column = U.reshape(-1, 1)
 
-        # 2. Calculate r_u (ensure v_star dimensions match u_column rows)
+        # 2. Calculate r_u
         if modification_v_star.shape[0] != u_column.shape[0]:
              msg = f"Dimension mismatch: v_star rows ({modification_v_star.shape[0]}) != u vector length ({u_column.shape[0]})"
              logging.error(msg)
-             raise optuna.exceptions.TrialPruned(msg) # Prune if dimensions mismatch
-
+             raise optuna.exceptions.TrialPruned(msg)
         r_u = modification_v_star * u_column
 
         # 3. Sum r_u columns
         r_u_col_sum = np.sum(r_u, axis=0)
 
-        # 4. Calculate neighbor (ensure base_schedule and r_u_col_sum shapes match)
+        # 4. Calculate neighbor
         if base_schedule.shape != r_u_col_sum.shape:
             msg = f"Dimension mismatch: base schedule shape ({base_schedule.shape}) != adjustment shape ({r_u_col_sum.shape})"
             logging.error(msg)
-            raise optuna.exceptions.TrialPruned(msg) # Prune if dimensions mismatch
-
+            raise optuna.exceptions.TrialPruned(msg)
         neighbor_schedule = base_schedule + r_u_col_sum
 
         # 5. Constraint Check
         if np.any(neighbor_schedule < 0):
             message = f"Constraint violation: Resulting schedule < 0: {neighbor_schedule} (u={U})"
-            # Log the violation before pruning
-            logging.debug(f"Trial {trial.number}: {message}") # Use debug level for constraint violations
+            # Log constraint violations at DEBUG level if needed, requires setting basicConfig level=logging.DEBUG
+            logging.debug(f"Trial {trial.number}: {message}")
             raise optuna.exceptions.TrialPruned(message)
 
         # 6. Evaluate
@@ -929,25 +927,18 @@ def create_objective(
                 d=slot_duration,
                 convolutions=conv_dict
             )
-            # Ensure results are floats
-            ewt = float(ewt)
-            esp = float(esp)
+            ewt = float(ewt); esp = float(esp)
             if ewt != ewt or esp != esp: # Check for NaN
                  raise ValueError("Objective calculation resulted in NaN.")
-
         except ValueError as e:
-            # Log evaluation errors
             logging.warning(f"Trial {trial.number}: Error during evaluation for schedule {neighbor_schedule} (u={U}): {e}")
             raise optuna.exceptions.TrialPruned(f"Evaluation failed: {e}")
-        except Exception as e_gen: # Catch other potential errors
+        except Exception as e_gen:
              logging.error(f"Trial {trial.number}: Unexpected error during evaluation for schedule {neighbor_schedule} (u={U}): {e_gen}", exc_info=True)
              raise optuna.exceptions.TrialPruned(f"Unexpected evaluation error: {e_gen}")
 
-
         # 7. Calculate final objective
         objective_value = objective_weight * ewt + (1 - objective_weight) * esp
-        # Log successful evaluation result (optional, can be verbose)
-        # logging.debug(f"Trial {trial.number}: u={U}, Schedule={neighbor_schedule}, EWT={ewt:.4f}, ESP={esp:.4f}, Objective={objective_value:.6f}")
         return objective_value
 
     return objective # Return the nested function
@@ -955,31 +946,18 @@ def create_objective(
 # ==============================================================================
 # Main Execution Block
 # ==============================================================================
-
-# --- Configure Logging ---
+# --- Configure Logging (File Only) ---
 log_file = 'optuna_vns.log'
 logging.basicConfig(
-    level=logging.INFO,  # Log INFO level and above
-    format='%(asctime)s - %(levelname)s - %(message)s', # Simpler format
+    level=logging.INFO,  # Log INFO level and above TO FILE
+    format='%(asctime)s - %(levelname)s - %(message)s',
     filename=log_file,
     filemode='w'  # 'w' clears the file each time
 )
-# Optional: Add console handler to see logs in console too
-# console_handler = logging.StreamHandler(sys.stdout)
-# console_handler.setLevel(logging.INFO)
-# console_handler.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-# logging.getLogger().addHandler(console_handler)
+# DO NOT add the console handler if you only want specific prints in Quarto
 
 logging.info("Optuna VNS script started.")
-
-# --- Define Parameters ---
-# Replace with your actual parameter loading/definition
-
-if v_star.ndim != 2 or v_star.shape[1] != len(x_star):
-     logging.error(f"v_star shape {v_star.shape} incompatible with x_star length {len(x_star)}. Exiting.")
-     sys.exit("Incompatible v_star dimensions.")
-num_u_variables = v_star.shape[0]
-logging.info(f"Number of u variables (v_star rows): {num_u_variables}")
+print("Optuna VNS script started.") # Print start message to Quarto output
 
 # --- Iterative Optimization Loop Variables ---
 start_time_total = time.time()
@@ -995,7 +973,12 @@ history = []
 
 # --- Initial Evaluation ---
 logging.info("\n--- Evaluating Initial Schedule ---")
+print("\n--- Evaluating Initial Schedule ---") # Print header to Quarto
+initial_eval_success = False
 try:
+    # Suppress Optuna's default INFO logging during optimize
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+
     initial_study = optuna.create_study(direction="minimize", study_name="Initial_Eval")
     initial_objective_func = create_objective(
         initial_x_star=current_x_star,
@@ -1008,27 +991,44 @@ try:
     initial_study.enqueue_trial(initial_params)
     initial_study.optimize(initial_objective_func, n_trials=1, timeout=60) # Add timeout
 
-    # Check the first trial (index 0) specifically
+    # Restore Optuna logging verbosity
+    optuna.logging.set_verbosity(optuna.logging.INFO)
+
+
     initial_trial = initial_study.trials[0]
     if initial_trial.state == optuna.trial.TrialState.COMPLETE:
         current_best_value = initial_trial.value
         logging.info(f"Initial Objective Value: {current_best_value:.6f}")
+        print(f"Initial Schedule: {current_x_star.astype(int)}") # Print initial state to Quarto
+        print(f"Initial Objective Value: {current_best_value:.6f}") # Print initial value to Quarto
         history.append((iteration, current_best_value, current_x_star.copy()))
+        initial_eval_success = True
     else:
         logging.error(f"Could not evaluate initial schedule successfully. State: {initial_trial.state}")
-        # Log prune reason if available
+        print(f"ERROR: Could not evaluate initial schedule successfully. State: {initial_trial.state}") # Print error
         if initial_trial.state == optuna.trial.TrialState.PRUNED:
-             # Accessing prune reason might need internal attributes, check Optuna docs/version
-             try: logging.error(f"  Pruning reason: {initial_trial.user_attrs.get('pruned_reason', 'N/A')}") # Example, might differ
+             try: logging.error(f"  Pruning reason: {initial_trial.user_attrs.get('pruned_reason', 'N/A')}")
              except: pass
         improvement_found = False # Stop if initial eval fails
 except Exception as e:
+    # Restore Optuna logging verbosity even on error
+    optuna.logging.set_verbosity(optuna.logging.INFO)
     logging.error(f"An unexpected error occurred during initial evaluation: {e}", exc_info=True)
+    print(f"ERROR: An unexpected error occurred during initial evaluation: {e}") # Print error
     improvement_found = False # Stop
+
+if not initial_eval_success:
+     print("Stopping due to failure in initial evaluation.")
+     sys.exit("Initial evaluation failed.")
 
 # --- Iterative Optimization Loop ---
 while improvement_found and iteration < max_iterations:
     iteration += 1
+    # --- Print Iteration Start Summary to Quarto ---
+    print(f"\n--- Optimization Iteration {iteration} ---")
+    print(f"Starting with schedule: {current_x_star.astype(int)}")
+    print(f"Current best value to beat: {current_best_value:.6f}")
+    # --- Log detailed info ---
     logging.info(f"\n--- Optimization Iteration {iteration} ---")
     logging.info(f"Starting with schedule: {current_x_star.astype(int)}")
     logging.info(f"Current best value to beat: {current_best_value:.6f}")
@@ -1054,16 +1054,22 @@ while improvement_found and iteration < max_iterations:
     logging.info(f"Running Optuna search ({n_trials_per_iteration} new trials)...")
     start_time_iter = time.time()
     try:
-        # n_trials is the number of NEW trials after the enqueued one
+        # Suppress Optuna's default INFO logging during optimize
+        optuna.logging.set_verbosity(optuna.logging.WARNING)
         study.optimize(objective_func, n_trials=n_trials_per_iteration, timeout=300) # Add timeout
+        # Restore Optuna logging verbosity
+        optuna.logging.set_verbosity(optuna.logging.INFO)
     except Exception as e:
+        # Restore Optuna logging verbosity even on error
+        optuna.logging.set_verbosity(optuna.logging.INFO)
         logging.error(f"Error during Optuna run in iteration {iteration}: {e}", exc_info=True)
+        print(f"ERROR: Error during Optuna run in iteration {iteration}: {e}") # Print error
         break # Stop loop on error
     finally:
         end_time_iter = time.time()
         logging.info(f"Iteration {iteration} Optuna run finished in {end_time_iter - start_time_iter:.2f} seconds.")
-        # Increment trials for next iteration (consider if this is the desired logic)
-        n_trials_per_iteration += 30
+        # Increment trials for next iteration
+        n_trials_per_iteration += 40 # Consider if this increment logic is correct
         logging.info(f"Increased trials for next iteration to: {n_trials_per_iteration}")
 
 
@@ -1071,26 +1077,26 @@ while improvement_found and iteration < max_iterations:
     completed_trials = [t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE]
     logging.info(f"Iteration {iteration} results: {len(completed_trials)} completed trials out of {len(study.trials)} total.")
 
+    # --- Print Iteration End Summary to Quarto ---
+    print(f"Iteration {iteration} Summary:")
+    print(f"  Completed trials: {len(completed_trials)} / {len(study.trials)}")
+
     if completed_trials:
-        # Find best trial among completed ones in *this* iteration's study
-        # Need to handle case where no trials completed successfully
         try:
-             best_trial_iter = study.best_trial # This gets the best overall, might be pruned/failed if no COMPLETE
-             # Ensure we only consider COMPLETE trials for the best *value*
+             best_trial_iter = study.best_trial
              if best_trial_iter.state != optuna.trial.TrialState.COMPLETE:
-                  # Find best among completed manually if study.best_trial wasn't COMPLETE
                   completed_trials.sort(key=lambda t: t.value)
-                  if completed_trials:
-                       best_trial_iter = completed_trials[0]
-                  else:
-                       raise ValueError("No completed trials found to determine best value.") # Should not happen if completed_trials is non-empty
+                  if completed_trials: best_trial_iter = completed_trials[0]
+                  else: raise ValueError("No completed trials found.")
 
              best_value_iter = best_trial_iter.value
              logging.info(f"  Best value found in iteration {iteration}: {best_value_iter:.6f} (Trial #{best_trial_iter.number})")
+             print(f"  Best value found this iteration: {best_value_iter:.6f}") # Print iter best value
 
              # 5. Check for improvement
              if best_value_iter < current_best_value - tolerance:
                 logging.info(f"  Improvement found! ({current_best_value:.6f} -> {best_value_iter:.6f})")
+                print(f"  Improvement Found: Yes ({current_best_value:.6f} -> {best_value_iter:.6f})") # Print improvement status
                 improvement_found_this_iter = True
                 current_best_value = best_value_iter
 
@@ -1103,10 +1109,9 @@ while improvement_found and iteration < max_iterations:
                 best_r_u_col_sum = np.sum(best_r_u, axis=0)
 
                 # Update current_x_star for the NEXT iteration
-                # Apply the modification to the schedule that *started* this iteration
-                # (already stored in current_x_star before the loop)
                 current_x_star = current_x_star + best_r_u_col_sum # Make sure shapes match
                 logging.info(f"  Updated current_x_star for next iteration: {current_x_star.astype(int)}")
+                # Don't print the updated x_star here, print it at the *start* of the next iteration
 
                 # Optional: Store history
                 history.append((iteration, current_best_value, current_x_star.copy()))
@@ -1114,19 +1119,22 @@ while improvement_found and iteration < max_iterations:
              else:
                 # No significant improvement found
                 logging.info(f"  No significant improvement found over current best value ({current_best_value:.6f}).")
+                print(f"  Improvement Found: No") # Print improvement status
                 improvement_found_this_iter = False
 
-        except ValueError as e: # Catch case where study might have no completed trials
+        except ValueError as e:
              logging.warning(f"Could not determine best trial/value in iteration {iteration}: {e}")
+             print(f"  Warning: Could not determine best trial/value in iteration {iteration}.") # Print warning
              improvement_found_this_iter = False
-        except Exception as e_inner: # Catch other unexpected errors during result processing
+        except Exception as e_inner:
              logging.error(f"Unexpected error processing results for iteration {iteration}: {e_inner}", exc_info=True)
+             print(f"  ERROR: Unexpected error processing results for iteration {iteration}.") # Print error
              improvement_found_this_iter = False
-
 
     else:
         # No trials completed successfully
         logging.warning("  No trials completed successfully in this iteration. Stopping.")
+        print("  Warning: No trials completed successfully in this iteration.") # Print warning
         improvement_found_this_iter = False
 
     # Update master loop flag
@@ -1134,39 +1142,48 @@ while improvement_found and iteration < max_iterations:
 
 # --- End of Loop ---
 logging.info("\n--- Iterative Optimization Finished ---")
+print("\n--- Iterative Optimization Finished ---") # Print header to Quarto
+stop_reason = ""
 if iteration >= max_iterations:
-    logging.info(f"Stopping: Reached maximum iteration limit ({max_iterations}).")
+    stop_reason = f"Reached maximum iteration limit ({max_iterations})."
 elif not improvement_found:
-    # Check if history has more than the initial entry to confirm improvement was ever found
-    if len(history) > 1:
-         logging.info(f"Stopping: No further improvement found in iteration {iteration}.")
-    else:
-         logging.info(f"Stopping: No improvement found after initial evaluation (or initial eval failed).")
-
-else: # Should not happen with current logic, but good practice
-    logging.warning("Stopping: Loop finished for unexpected reasons.")
+    if len(history) > 1: stop_reason = f"No further improvement found in iteration {iteration}."
+    else: stop_reason = f"No improvement found after initial evaluation (or initial eval failed)."
+else: stop_reason = "Loop finished for unexpected reasons."
+logging.info(f"Stopping: {stop_reason}")
+print(f"Stopping Reason: {stop_reason}") # Print stop reason to Quarto
 
 
 # --- Final Results ---
 logging.info("\n--- Final Optimal Result ---")
+print("\n--- Final Optimal Result ---") # Print header to Quarto
 if history: # Check if any results were recorded
     final_iter, final_value, final_schedule = history[-1] # Get last recorded state
+    # Log details
     logging.info(f"Found after iteration: {final_iter}")
     logging.info(f"Final Objective Value: {final_value:.6f}")
     logging.info(f"Final Optimal Schedule: {final_schedule.astype(int)}")
     logging.info(f"Sum of Final Schedule: {np.sum(final_schedule)}")
-
-    # Compare with the very initial schedule
     logging.info("\nComparison with Initial Schedule:")
     logging.info(f"  Initial Schedule (Iter 0): {history[0][2].astype(int)}")
     logging.info(f"  Initial Objective Value:  {history[0][1]:.6f}")
+    # Print summary
+    print(f"Found after iteration: {final_iter}")
+    print(f"Final Objective Value: {final_value:.6f}")
+    print(f"Final Optimal Schedule: {final_schedule.astype(int)}")
+    print(f"Sum of Final Schedule: {np.sum(final_schedule)}")
+    print("\nComparison with Initial Schedule:")
+    print(f"  Initial Schedule (Iter 0): {history[0][2].astype(int)}")
+    print(f"  Initial Objective Value:   {history[0][1]:.6f}")
 else:
     logging.warning("No results found (Initial evaluation might have failed or no iterations ran).")
+    print("Warning: No results recorded in history.") # Print warning
 
 
 end_time_total = time.time()
 logging.info(f"Total time taken for optimization: {end_time_total - start_time_total:.2f} seconds.")
 logging.info("\n--- End of Script ---")
+print(f"\nTotal time taken: {end_time_total - start_time_total:.2f} seconds.") # Print total time
 print(f"Script finished. Check log file: {log_file}") # Final confirmation print
 ```
 
