@@ -1,0 +1,63 @@
+---
+title: "{{experiment_title}}"
+jupyter: python3
+---
+
+## Objective
+
+Clearly define what you are aiming to accomplish with your experiment. This section sets the direction for your work.
+
+## Background
+
+Provide the necessary context for the experiment. Explain the theoretical or practical reasons behind your experiment, referencing relevant prior work. This section should help readers understand why the experiment is important.
+
+## Hypothesis
+
+State your predictions about the experiment’s outcome. This hypothesis will give a benchmark against which to measure your results.
+
+## Methodology
+
+### Tools and Materials
+
+List the software, libraries, datasets, and any other materials you will use in this experiment. Include specific versions or configurations that are crucial for reproducibility.
+
+### Experimental Design
+
+Describe the experimental setup in detail. Include how you will manipulate variables and what data you will collect. This part of the methodology outlines the overall strategy of your experiment.
+
+### Variables
+
+-   **Independent Variables**:
+    -   List the variables you will manipulate or control during the experiment.
+-   **Dependent Variables**:
+    -   List the outcomes you will measure, which depend on the independent variables.
+
+### Data Collection
+
+Explain how you will collect or generate the data needed for the experiment. Mention any tools, simulations, or datasets that will be used.
+
+### Sample Size and Selection
+
+**Sample Size**: - Indicate the number of samples you will use in the experiment. Justify the size based on the needs of the experiment, such as ensuring statistical significance.
+
+**Sample Selection**: - Describe how you will select your samples. Ensure that the sampling method is unbiased and representative of the population you are studying.
+
+### Experimental Procedure
+
+Provide a detailed, step-by-step description of the procedure you will follow in the experiment. This is the most detailed part of the methodology and should include any code blocks if applicable, explaining what each part of the code does.
+
+## Results
+
+Present your findings, using visual aids like charts or tables where appropriate. This section is factual; simply report what you found during the experiment.
+
+## Discussion
+
+Analyze your results in this section. Discuss whether your hypothesis was supported, what the results mean, and the implications for future work. Address any anomalies or unexpected findings, and consider the broader impact of your results.
+
+## Timeline
+
+Document the duration and key dates of the experiment. This helps in project management and reproducibility.
+
+## References
+
+Cite all sources that informed your experiment, including research papers, datasets, and tools. This section ensures that your work is properly grounded in existing research and that others can trace the origins of your methods and data.

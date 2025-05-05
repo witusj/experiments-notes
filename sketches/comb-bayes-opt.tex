@@ -1,0 +1,2289 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else  
+    % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\setcounter{secnumdepth}{5}
+% Make \paragraph and \subparagraph free-standing
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{241,243,245}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.40,0.45,0.13}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\ExtensionTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.28,0.35,0.67}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.46,0.62}{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\NormalTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.07,0.07,0.07}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Combinatorial Bayesian Optimization},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Combinatorial Bayesian Optimization}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\renewcommand*\contentsname{Table of contents}
+{
+\hypersetup{linkcolor=}
+\setcounter{tocdepth}{3}
+\tableofcontents
+}
+\subsection{Introduction}\label{introduction}
+
+We consider a scheduling problem where the schedule is represented by a
+vector \(\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T\). This vector
+comprises \(T\) components, where \(x_j\) denotes the non-negative
+allocation (e.g., number of patients or tasks) to time slot \(j\), for
+\(j = 0, \ldots, T-1\). A fundamental constraint is that the total
+allocation across all time slots must equal a fixed constant \(N\):
+\[ \sum_{j=0}^{T-1} x_j = N \] We require \(x_j \ge 0\) for all
+\(j = 0, \ldots, T-1\). Consequently, a valid schedule \(\mathbf{x}\)
+belongs to the feasible set
+\(\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}\),
+where \(\mathbb{D}\) is the set of non-negative integers
+(\(\mathbb{Z}_{\ge 0}\)).
+
+We define a neighborhood structure for local search based on
+perturbation vectors derived from a set of \(T\) basis change vectors,
+\(v_i \in \mathbb{D}^{T}\), for \(i = 0, \ldots, T-1\). These basis
+vectors represent elementary shifts of allocation between time slots:
+
+\begin{itemize}
+\item
+  \(v_0 = (-1, 0, \ldots, 0, 1)\) (Shift unit \emph{from} slot 0
+  \emph{to} slot \(T-1\))
+\item
+  \(v_1 = (1, -1, 0, \ldots, 0)\) (Shift unit \emph{from} slot 1
+  \emph{to} slot 0)
+\item
+  \(v_i = (0, \ldots, 0, \underbrace{1}_{\text{pos } i-1}, \underbrace{-1}_{\text{pos } i}, 0, \ldots, 0)\)
+  for \(i = 2, \ldots, T-1\) (Shift unit \emph{from} slot \(i\)
+  \emph{to} slot \(i-1\))
+\end{itemize}
+
+A key property of these basis vectors is that the sum of components for
+each vector is zero: \(\sum_{j=0}^{T-1} v_{ij} = 0\) for all
+\(i=0, \ldots, T-1\).
+
+Perturbations are constructed using a binary selection vector
+\(\mathbf{U} = (u_0, u_1, \ldots, u_{T-1})\), where
+\(u_i \in \{0, 1\}\). Each \(u_i\) indicates whether the basis change
+\(v_i\) is included in the perturbation. The resulting perturbation
+vector \(\mathbf{r}(\mathbf{U}) \in \mathbb{D}^{T}\) is the linear
+combination: \[ \mathbf{r}(\mathbf{U}) := \sum_{i=0}^{T-1} u_i v_i \]
+
+Since each \(v_i\) sums to zero, any perturbation
+\(\mathbf{r}(\mathbf{U})\) also sums to zero:
+\(\sum_{j=0}^{T-1} r_j(\mathbf{U}) = 0\). This ensures that applying
+such a perturbation to a valid schedule \(\mathbf{x}\) preserves the
+total allocation \(N\).
+
+Two specific selection vectors result in a zero perturbation:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  If \(\mathbf{U} = \mathbf{0} = (0, \ldots, 0)^T\), then
+  \(\mathbf{r}(\mathbf{0}) = \mathbf{0}\).
+\item
+  If \(\mathbf{U} = \mathbf{1} = (1, \ldots, 1)^T\), then
+  \(\mathbf{r}(\mathbf{1}) = \sum_{i=0}^{T-1} v_i = \mathbf{0}\), as
+  demonstrated by summing the components of the basis vectors.
+\end{enumerate}
+
+The neighborhood of a schedule \(\mathbf{x} \in \mathcal{F}\), denoted
+by \(\mathcal{N}(\mathbf{x})\), comprises all distinct, feasible
+schedules \(\mathbf{x}'\) reachable by applying a non-zero perturbation
+\(\mathbf{r}(\mathbf{U})\):
+\[ \mathcal{N}(\mathbf{x}) := \{ \mathbf{x}' \mid \mathbf{x}' = \mathbf{x} + \mathbf{r}(\mathbf{U}), \mathbf{U} \in \{0,1\}^T, \mathbf{r}(\mathbf{U}) \neq \mathbf{0}, \text{ and } x'_j \ge 0 \text{ for all } j = 0, \ldots, T-1 \} \]
+
+Note that because \(\sum r_j(\mathbf{U}) = 0\), any \(\mathbf{x}'\)
+generated from \(\mathbf{x} \in \mathcal{F}\) automatically satisfies
+\(\sum x'_j = N\). The condition
+\(\mathbf{r}(\mathbf{U}) \neq \mathbf{0}\) explicitly excludes the
+transformations resulting from \(\mathbf{U}=\mathbf{0}\) and
+\(\mathbf{U}=\mathbf{1}\).
+
+There are \(2^T\) possible selection vectors \(\mathbf{U}\). Since
+\(\mathbf{U}=\mathbf{0}\) and \(\mathbf{U}=\mathbf{1}\) both yield
+\(\mathbf{r}(\mathbf{U}) = \mathbf{0}\) (assuming \(T \ge 1\) so
+\(\mathbf{0} \neq \mathbf{1}\)), there are \(2^T - 2\) distinct
+selection vectors that generate non-zero perturbations. This establishes
+an upper bound on the number of candidate neighbors generated by unique
+non-zero perturbations: \[ |\mathcal{N}(\mathbf{x})| \le 2^T - 2 \]
+
+The actual size of the neighborhood may be smaller than this bound due
+to the non-negativity constraint (\(\mathbf{x}'_j \ge 0\)) rendering
+some potential neighbors unfeasible.
+
+The local search algorithm aims to iteratively improve the schedule
+based on an objective function \(C(\mathbf{x})\). Given the following
+constants:
+
+\begin{itemize}
+\item
+  \(\mathbf{x}\): The current feasible schedule vector
+  (\(\mathbf{x} \in \mathcal{F}\)).
+\item
+  \(N\): The total number of patients/tasks to be scheduled.
+\item
+  \(T\): The number of time slots.
+\item
+  \(d\): The duration of each time slot.
+\item
+  \(s\): The service time distribution.
+\item
+  \(q\): The no-show probability.
+\item
+  \(w\): The objective function weight (\(w \in [0, 1]\)).
+\end{itemize}
+
+and the objective function:
+\[ C(\mathbf{x}) = w \cdot EWT(\mathbf{x}) + (1-w) \cdot ESP(\mathbf{x}) \]
+\$\text{, where: }\textbackslash{}
+EWT(\mathbf{x})\text{: Expected Waiting Time for schedule }\mathbf{x}\text{ and }\textbackslash{}
+ESP(\mathbf{x})\text{: Expected Staff Penalty (e.g., idle/overtime) for schedule }\mathbf{x}.
+\$
+
+, a neighborhood search step seeks to find a neighbor
+\(\mathbf{x}' \in \mathcal{N}(\mathbf{x})\) such that
+\(C(\mathbf{x}') < C(\mathbf{x})\). This involves evaluating candidate
+schedules generated by \(\mathbf{x} + \mathbf{r}(\mathbf{U})\) for the
+\(2^T - 2\) selection vectors \(\mathbf{U}\) (where
+\(\mathbf{U} \neq \mathbf{0}\) and \(\mathbf{U} \neq \mathbf{1}\)),
+checking their feasibility (non-negativity), and comparing their
+objective function values to \(C(\mathbf{x})\).
+
+In case such an improvement is found, the algorithm updates the current
+schedule to \(\mathbf{x}'\) and continues the search. If no better
+neighbor is found, the algorithm terminates, returning the best schedule
+found during the search. Because of the multi-modular nature of the
+objective function, a local optimum must also be the global optimum.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# Core Libraries}
+\ImportTok{import}\NormalTok{ numpy }\ImportTok{as}\NormalTok{ np}
+\ImportTok{import}\NormalTok{ time}
+\ImportTok{import}\NormalTok{ warnings}
+\ImportTok{from}\NormalTok{ scipy.optimize }\ImportTok{import}\NormalTok{ minimize}
+\ImportTok{from}\NormalTok{ typing }\ImportTok{import}\NormalTok{ List, Dict, Tuple, Callable, Optional, Union, Any, Iterable}
+
+\CommentTok{\# Scikit{-}learn for GP, Scaling, and potentially acquisition functions}
+\ImportTok{from}\NormalTok{ sklearn.gaussian\_process }\ImportTok{import}\NormalTok{ GaussianProcessRegressor}
+\ImportTok{from}\NormalTok{ sklearn.gaussian\_process.kernels }\ImportTok{import}\NormalTok{ Matern, ConstantKernel, WhiteKernel}
+\ImportTok{from}\NormalTok{ sklearn.preprocessing }\ImportTok{import}\NormalTok{ MinMaxScaler}
+\ImportTok{from}\NormalTok{ sklearn.exceptions }\ImportTok{import}\NormalTok{ ConvergenceWarning}
+
+\CommentTok{\# SciPy for statistics (needed for Expected Improvement calculation)}
+\ImportTok{from}\NormalTok{ scipy.stats }\ImportTok{import}\NormalTok{ norm}
+
+\ImportTok{from}\NormalTok{ functions }\ImportTok{import}\NormalTok{ bailey\_welch\_schedule, get\_v\_star, compute\_convolutions, calculate\_objective\_serv\_time\_lookup}
+
+\CommentTok{\# Filter warnings}
+\NormalTok{warnings.filterwarnings(}\StringTok{"ignore"}\NormalTok{, category}\OperatorTok{=}\PreprocessorTok{RuntimeWarning}\NormalTok{)}
+\NormalTok{warnings.filterwarnings(}\StringTok{"ignore"}\NormalTok{, category}\OperatorTok{=}\NormalTok{ConvergenceWarning) }\CommentTok{\# GP fitting might not always converge perfectly}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Base Combinatorial Bayesian Optimization (CBO) Code using
+Expected
+Improvement}\label{base-combinatorial-bayesian-optimization-cbo-code-using-expected-improvement}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} Problem Definition {-}{-}{-}}
+
+\CommentTok{\# Fixed Data (Use your actual data)}
+\NormalTok{X }\OperatorTok{=}\NormalTok{ np.array([}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{])}
+\NormalTok{N }\OperatorTok{=} \BuiltInTok{sum}\NormalTok{(X) }\CommentTok{\# Total number of patients}
+\NormalTok{T }\OperatorTok{=}\NormalTok{ X.shape[}\DecValTok{0}\NormalTok{] }\CommentTok{\# Dimension of the binary vector U}
+\NormalTok{d }\OperatorTok{=} \DecValTok{5} \CommentTok{\# Length of each interval}
+\NormalTok{max\_s }\OperatorTok{=} \DecValTok{20} \CommentTok{\# Maximum service time}
+\NormalTok{q }\OperatorTok{=} \FloatTok{0.20} \CommentTok{\# Probability of a scheduled patient not showing up}
+\NormalTok{w }\OperatorTok{=} \FloatTok{0.1} \CommentTok{\# Weight for the waiting time in objective function}
+\NormalTok{l }\OperatorTok{=} \DecValTok{10}
+\NormalTok{v\_star }\OperatorTok{=}\NormalTok{ get\_v\_star(T) }\CommentTok{\# Get the V* matrix(T x T)}
+\CommentTok{\# Create service time distribution}
+\KeywordTok{def}\NormalTok{ generate\_weighted\_list(max\_s: }\BuiltInTok{int}\NormalTok{, l: }\BuiltInTok{float}\NormalTok{, i: }\BuiltInTok{int}\NormalTok{) }\OperatorTok{{-}\textgreater{}}\NormalTok{ Optional[np.ndarray]:}
+    \CommentTok{"""}
+\CommentTok{    Generates a service time probability distribution using optimization.}
+
+\CommentTok{    This function creates a discrete probability distribution over max\_s possible}
+\CommentTok{    service times (from 1 to max\_s). It uses optimization (SLSQP) to find a}
+\CommentTok{    distribution whose weighted average service time is as close as possible}
+\CommentTok{    to a target value \textquotesingle{}l\textquotesingle{}, subject to the constraint that the probabilities}
+\CommentTok{    sum to 1 and each probability is between 0 and 1.}
+
+\CommentTok{    After finding the distribution, it sorts the probabilities: the first \textquotesingle{}i\textquotesingle{}}
+\CommentTok{    probabilities (corresponding to service times 1 to i) are sorted in}
+\CommentTok{    ascending order, and the remaining probabilities (service times i+1 to max\_s)}
+\CommentTok{    are sorted in descending order.}
+
+\CommentTok{    Note:}
+\CommentTok{        {-} Requires NumPy and SciPy libraries (specifically scipy.optimize.minimize).}
+
+\CommentTok{    Args:}
+\CommentTok{        max\_s (int): Maximum service time parameter (number of probability bins).}
+\CommentTok{                     Must be a positive integer.}
+\CommentTok{        l (float): The target weighted average service time for the distribution.}
+\CommentTok{                   Must be between 1 and max\_s, inclusive.}
+\CommentTok{        i (int): The index determining the sorting split point. Probabilities}
+\CommentTok{                 for service times 1 to \textquotesingle{}i\textquotesingle{} are sorted ascendingly, and}
+\CommentTok{                 probabilities for service times \textquotesingle{}i+1\textquotesingle{} to \textquotesingle{}max\_s\textquotesingle{} are sorted}
+\CommentTok{                 descendingly. Must be between 1 and max\_s{-}1 for meaningful sorting.}
+
+\CommentTok{    Returns:}
+\CommentTok{        numpy.ndarray: An array of size max\_s+1. The first element (index 0) is 0.}
+\CommentTok{                       Elements from index 1 to max\_s represent the calculated}
+\CommentTok{                       and sorted probability distribution, summing to 1.}
+\CommentTok{                       Returns None if optimization fails or inputs are invalid.}
+\CommentTok{    """}
+
+    \CommentTok{\# {-}{-}{-} Input Validation {-}{-}{-}}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(max\_s, }\BuiltInTok{int}\NormalTok{) }\KeywordTok{or}\NormalTok{ max\_s }\OperatorTok{\textless{}=} \DecValTok{0}\NormalTok{:}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Error: max\_s must be a positive integer, but got }\SpecialCharTok{\{}\NormalTok{max\_s}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+        \ControlFlowTok{return} \VariableTok{None}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(l, (}\BuiltInTok{int}\NormalTok{, }\BuiltInTok{float}\NormalTok{)) }\KeywordTok{or} \KeywordTok{not}\NormalTok{ (}\DecValTok{1} \OperatorTok{\textless{}=}\NormalTok{ l }\OperatorTok{\textless{}=}\NormalTok{ max\_s):}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Error: Target average \textquotesingle{}l\textquotesingle{} (}\SpecialCharTok{\{}\NormalTok{l}\SpecialCharTok{\}}\SpecialStringTok{) must be between 1 and max\_s (}\SpecialCharTok{\{}\NormalTok{max\_s}\SpecialCharTok{\}}\SpecialStringTok{)."}\NormalTok{)}
+        \ControlFlowTok{return} \VariableTok{None}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(i, }\BuiltInTok{int}\NormalTok{) }\KeywordTok{or} \KeywordTok{not}\NormalTok{ (}\DecValTok{0} \OperatorTok{\textless{}}\NormalTok{ i }\OperatorTok{\textless{}}\NormalTok{ max\_s):}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Error: Sorting index \textquotesingle{}i\textquotesingle{} (}\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{) must be between 1 and max\_s{-}1 (}\SpecialCharTok{\{}\NormalTok{max\_s}\OperatorTok{{-}}\DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{)."}\NormalTok{)}
+        \CommentTok{\# If clamping is desired instead of error:}
+        \CommentTok{\# print(f"Warning: Index \textquotesingle{}i\textquotesingle{} (\{i\}) is outside the valid range (1 to \{max\_s{-}1\}). Clamping i.")}
+        \CommentTok{\# i = max(1, min(i, max\_s {-} 1))}
+        \ControlFlowTok{return} \VariableTok{None} \CommentTok{\# Strict check based on docstring requirement}
+
+    \CommentTok{\# {-}{-}{-} Inner helper function for optimization {-}{-}{-}}
+    \KeywordTok{def}\NormalTok{ objective(x: np.ndarray) }\OperatorTok{{-}\textgreater{}} \BuiltInTok{float}\NormalTok{:}
+        \CommentTok{"""Objective function: Squared difference between weighted average and target l."""}
+        \CommentTok{\# x represents probabilities P(1) to P(max\_s)}
+\NormalTok{        service\_times }\OperatorTok{=}\NormalTok{ np.arange(}\DecValTok{1}\NormalTok{, max\_s }\OperatorTok{+} \DecValTok{1}\NormalTok{)}
+\NormalTok{        weighted\_avg }\OperatorTok{=}\NormalTok{ np.dot(service\_times, x) }\CommentTok{\# Equivalent to sum(k * P(k) for k=1 to max\_s)}
+        \ControlFlowTok{return}\NormalTok{ (weighted\_avg }\OperatorTok{{-}}\NormalTok{ l) }\OperatorTok{**} \DecValTok{2}
+
+    \CommentTok{\# {-}{-}{-} Constraints for optimization {-}{-}{-}}
+    \CommentTok{\# Constraint 1: The sum of the probabilities must be 1}
+\NormalTok{    constraints }\OperatorTok{=}\NormalTok{ (\{}
+        \StringTok{\textquotesingle{}type\textquotesingle{}}\NormalTok{: }\StringTok{\textquotesingle{}eq\textquotesingle{}}\NormalTok{,}
+        \StringTok{\textquotesingle{}fun\textquotesingle{}}\NormalTok{: }\KeywordTok{lambda}\NormalTok{ x: np.}\BuiltInTok{sum}\NormalTok{(x) }\OperatorTok{{-}} \FloatTok{1.0} \CommentTok{\# Ensure float comparison}
+\NormalTok{    \})}
+
+    \CommentTok{\# Bounds: Each probability value x[k] must be between 0 and 1}
+    \CommentTok{\# Creates a list of max\_s tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]}
+\NormalTok{    bounds }\OperatorTok{=}\NormalTok{ [(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)] }\OperatorTok{*}\NormalTok{ max\_s}
+
+    \CommentTok{\# Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1.}
+    \CommentTok{\# Provides a starting point for the optimizer. np.ones(max\_s) gives equal weights initially.}
+\NormalTok{    initial\_guess }\OperatorTok{=}\NormalTok{ np.random.dirichlet(np.ones(max\_s))}
+
+    \CommentTok{\# {-}{-}{-} Perform Optimization {-}{-}{-}}
+    \ControlFlowTok{try}\NormalTok{:}
+\NormalTok{        result }\OperatorTok{=}\NormalTok{ minimize(}
+\NormalTok{            objective,}
+\NormalTok{            initial\_guess,}
+\NormalTok{            method}\OperatorTok{=}\StringTok{\textquotesingle{}SLSQP\textquotesingle{}}\NormalTok{,}
+\NormalTok{            bounds}\OperatorTok{=}\NormalTok{bounds,}
+\NormalTok{            constraints}\OperatorTok{=}\NormalTok{constraints,}
+            \CommentTok{\# options=\{\textquotesingle{}disp\textquotesingle{}: False\} \# Set True for detailed optimizer output}
+\NormalTok{        )}
+
+        \CommentTok{\# Check if optimization was successful}
+        \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ result.success:}
+            \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Optimization failed! Message: }\SpecialCharTok{\{}\NormalTok{result}\SpecialCharTok{.}\NormalTok{message}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+            \CommentTok{\# Optionally print result object for more details: print(result)}
+            \ControlFlowTok{return} \VariableTok{None} \CommentTok{\# Indicate failure}
+
+        \CommentTok{\# The optimized probabilities (P(1) to P(max\_s))}
+\NormalTok{        optimized\_probs }\OperatorTok{=}\NormalTok{ result.x}
+
+        \CommentTok{\# {-}{-}{-} Post{-}process: Correct potential floating point inaccuracies {-}{-}{-}}
+        \CommentTok{\# Ensure probabilities are non{-}negative and sum *exactly* to 1}
+\NormalTok{        optimized\_probs[optimized\_probs }\OperatorTok{\textless{}} \DecValTok{0}\NormalTok{] }\OperatorTok{=} \DecValTok{0} \CommentTok{\# Clamp small negatives to 0}
+\NormalTok{        current\_sum }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(optimized\_probs)}
+        \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isclose(current\_sum, }\FloatTok{1.0}\NormalTok{):}
+            \ControlFlowTok{if}\NormalTok{ current\_sum }\OperatorTok{\textgreater{}} \DecValTok{0}\NormalTok{: }\CommentTok{\# Avoid division by zero}
+\NormalTok{                 optimized\_probs }\OperatorTok{/=}\NormalTok{ current\_sum }\CommentTok{\# Normalize to sum to 1}
+            \ControlFlowTok{else}\NormalTok{:}
+                 \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Optimization resulted in zero sum probabilities after clamping negatives."}\NormalTok{)}
+                 \CommentTok{\# Handle this case {-} maybe return uniform distribution or None}
+                 \ControlFlowTok{return} \VariableTok{None} \CommentTok{\# Or return uniform: np.ones(max\_s) / max\_s}
+
+    \ControlFlowTok{except} \PreprocessorTok{Exception} \ImportTok{as}\NormalTok{ e:}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"An error occurred during optimization: }\SpecialCharTok{\{}\NormalTok{e}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+        \ControlFlowTok{return} \VariableTok{None}
+
+    \CommentTok{\# {-}{-}{-} Reorder the probabilities based on the index \textquotesingle{}i\textquotesingle{} {-}{-}{-}}
+    \CommentTok{\# Split the probabilities P(1)...P(i) and P(i+1)...P(max\_s)}
+    \CommentTok{\# Note: Python slicing is exclusive of the end index, array indexing is 0{-}based.}
+    \CommentTok{\# result.x[0] corresponds to P(1), result.x[i{-}1] to P(i).}
+    \CommentTok{\# result.x[i] corresponds to P(i+1), result.x[max\_s{-}1] to P(max\_s).}
+
+\NormalTok{    first\_part\_probs }\OperatorTok{=}\NormalTok{ optimized\_probs[:i]   }\CommentTok{\# Probabilities P(1) to P(i)}
+\NormalTok{    second\_part\_probs }\OperatorTok{=}\NormalTok{ optimized\_probs[i:]  }\CommentTok{\# Probabilities P(i+1) to P(max\_s)}
+
+    \CommentTok{\# Sort the first part ascending, the second part descending}
+\NormalTok{    sorted\_first\_part }\OperatorTok{=}\NormalTok{ np.sort(first\_part\_probs)}
+\NormalTok{    sorted\_second\_part }\OperatorTok{=}\NormalTok{ np.sort(second\_part\_probs)[::}\OperatorTok{{-}}\DecValTok{1}\NormalTok{] }\CommentTok{\# [::{-}1] reverses}
+
+    \CommentTok{\# {-}{-}{-} Create final output array {-}{-}{-}}
+    \CommentTok{\# Array of size max\_s + 1, initialized to zeros. Index 0 unused.}
+\NormalTok{    values }\OperatorTok{=}\NormalTok{ np.zeros(max\_s }\OperatorTok{+} \DecValTok{1}\NormalTok{)}
+
+    \CommentTok{\# Assign the sorted probabilities back into the correct slots (index 1 onwards)}
+\NormalTok{    values[}\DecValTok{1}\NormalTok{ : i }\OperatorTok{+} \DecValTok{1}\NormalTok{] }\OperatorTok{=}\NormalTok{ sorted\_first\_part      }\CommentTok{\# Assign P(1)...P(i)}
+\NormalTok{    values[i }\OperatorTok{+} \DecValTok{1}\NormalTok{ : max\_s }\OperatorTok{+} \DecValTok{1}\NormalTok{] }\OperatorTok{=}\NormalTok{ sorted\_second\_part }\CommentTok{\# Assign P(i+1)...P(max\_s)}
+
+    \CommentTok{\# Final check on sum after potential normalization/sorting}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isclose(np.}\BuiltInTok{sum}\NormalTok{(values[}\DecValTok{1}\NormalTok{:]), }\FloatTok{1.0}\NormalTok{):}
+         \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Final distribution sum is }\SpecialCharTok{\{}\NormalTok{np}\SpecialCharTok{.}\BuiltInTok{sum}\NormalTok{(values[}\DecValTok{1}\NormalTok{:])}\SpecialCharTok{\}}\SpecialStringTok{, not 1.0. Check logic."}\NormalTok{)}
+
+    \CommentTok{\# Return the final array with the sorted probability distribution}
+    \ControlFlowTok{return}\NormalTok{ values}
+
+\NormalTok{i }\OperatorTok{=} \DecValTok{5}  \CommentTok{\# First 5 highest values in ascending order, rest in descending order}
+\NormalTok{s }\OperatorTok{=}\NormalTok{ generate\_weighted\_list(max\_s, l, i)}
+\NormalTok{convolutions }\OperatorTok{=}\NormalTok{ compute\_convolutions(s, N, q)}
+
+\CommentTok{\# Objective Function Calculation}
+\NormalTok{LARGE\_PENALTY }\OperatorTok{=} \FloatTok{1e10} \CommentTok{\# Penalty for infeasible solutions}
+
+\KeywordTok{def}\NormalTok{ evaluate\_objective(U\_np, X\_vec, v\_star, convolutions, d, w):}
+    \CommentTok{"""}
+\CommentTok{    Target function: Evaluates objective for a single binary numpy array U.}
+\CommentTok{    Returns a float.}
+\CommentTok{    """}
+    \CommentTok{\# Input validation (same as before)}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(U\_np, np.ndarray):}
+        \ControlFlowTok{raise} \PreprocessorTok{TypeError}\NormalTok{(}\StringTok{"Input U must be a numpy array"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.ndim }\OperatorTok{!=} \DecValTok{1}\NormalTok{:}
+         \ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be 1{-}dimensional"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{0}\NormalTok{]:}
+         \ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\SpecialStringTok{f"Dimension mismatch: U length }\SpecialCharTok{\{}\NormalTok{U\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ != V* rows }\SpecialCharTok{\{}\NormalTok{v\_star}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ X\_vec.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{1}\NormalTok{]:}
+         \ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Dimension mismatch: X length must match V* columns."}\NormalTok{)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{((U\_np }\OperatorTok{==} \DecValTok{0}\NormalTok{) }\OperatorTok{|}\NormalTok{ (U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{)):}
+         \ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be binary (0s and 1s)."}\NormalTok{)}
+
+    \CommentTok{\# Calculate Y based on selected rows of V\_star}
+\NormalTok{    V\_sum }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}
+\NormalTok{    Y }\OperatorTok{=}\NormalTok{ X\_vec }\OperatorTok{+}\NormalTok{ V\_sum}
+
+    \CommentTok{\# Check feasibility and calculate objective}
+    \ControlFlowTok{if}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{):}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y, d, convolutions)}
+\NormalTok{        objective\_value }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+        \ControlFlowTok{return}\NormalTok{ objective\_value}
+    \ControlFlowTok{else}\NormalTok{:}
+        \CommentTok{\# Infeasible solution}
+        \ControlFlowTok{return}\NormalTok{ LARGE\_PENALTY}
+
+\CommentTok{\# {-}{-}{-} HED Implementation {-}{-}{-}}
+
+\KeywordTok{def}\NormalTok{ hamming\_distance(u1, u2):}
+    \CommentTok{"""Calculates Hamming distance between two binary numpy arrays."""}
+    \ControlFlowTok{return}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(u1 }\OperatorTok{!=}\NormalTok{ u2)}
+
+\KeywordTok{def}\NormalTok{ generate\_diverse\_random\_dictionary(T, m):}
+    \CommentTok{"""Generates the random dictionary A for HED."""}
+\NormalTok{    dictionary\_A }\OperatorTok{=}\NormalTok{ np.zeros((m, T), dtype}\OperatorTok{=}\BuiltInTok{int}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m):}
+        \CommentTok{\# Sample theta for density of 1s in this dictionary vector}
+\NormalTok{        theta }\OperatorTok{=}\NormalTok{ np.random.uniform(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{        row }\OperatorTok{=}\NormalTok{ (np.random.rand(T) }\OperatorTok{\textless{}}\NormalTok{ theta).astype(}\BuiltInTok{int}\NormalTok{)}
+\NormalTok{        dictionary\_A[i, :] }\OperatorTok{=}\NormalTok{ row}
+    \ControlFlowTok{return}\NormalTok{ dictionary\_A}
+
+\KeywordTok{def}\NormalTok{ embed\_vector(U\_np, dictionary\_A):}
+    \CommentTok{"""Embeds a single binary vector U using HED."""}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}
+\NormalTok{    embedding\_phi }\OperatorTok{=}\NormalTok{ np.zeros(m, dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{) }\CommentTok{\# Use float for GP}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m):}
+\NormalTok{        embedding\_phi[i] }\OperatorTok{=}\NormalTok{ hamming\_distance(U\_np, dictionary\_A[i, :])}
+    \ControlFlowTok{return}\NormalTok{ embedding\_phi}
+
+\KeywordTok{def}\NormalTok{ embed\_batch(U\_batch\_np, dictionary\_A):}
+    \CommentTok{"""Embeds a batch of binary vectors U."""}
+    \CommentTok{\# Input U\_batch\_np is expected to be a NumPy array}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}
+    \ControlFlowTok{if}\NormalTok{ U\_batch\_np.ndim }\OperatorTok{==} \DecValTok{1}\NormalTok{: }\CommentTok{\# Handle single vector case}
+\NormalTok{        U\_batch\_np }\OperatorTok{=}\NormalTok{ U\_batch\_np.reshape(}\DecValTok{1}\NormalTok{, }\OperatorTok{{-}}\DecValTok{1}\NormalTok{)}
+
+\NormalTok{    batch\_size }\OperatorTok{=}\NormalTok{ U\_batch\_np.shape[}\DecValTok{0}\NormalTok{]}
+\NormalTok{    embeddings\_np }\OperatorTok{=}\NormalTok{ np.zeros((batch\_size, m), dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{) }\CommentTok{\# Use float for GP}
+
+    \ControlFlowTok{for}\NormalTok{ j }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(batch\_size):}
+\NormalTok{        embeddings\_np[j, :] }\OperatorTok{=}\NormalTok{ embed\_vector(U\_batch\_np[j, :], dictionary\_A)}
+
+    \CommentTok{\# Return NumPy array directly}
+    \ControlFlowTok{return}\NormalTok{ embeddings\_np}
+
+
+\CommentTok{\# {-}{-}{-} BO Helper Functions {-}{-}{-}}
+
+\KeywordTok{def}\NormalTok{ get\_fitted\_model(train\_X\_embedded\_scaled, train\_Y, m):}
+    \CommentTok{"""}
+\CommentTok{    Fits a GaussianProcessRegressor model to the SCALED embedded data.}
+\CommentTok{    Assumes train\_Y contains negative objective values for maximization.}
+\CommentTok{    """}
+    \ControlFlowTok{if}\NormalTok{ train\_Y.ndim }\OperatorTok{\textgreater{}} \DecValTok{1} \KeywordTok{and}\NormalTok{ train\_Y.shape[}\DecValTok{1}\NormalTok{] }\OperatorTok{==} \DecValTok{1}\NormalTok{:}
+\NormalTok{        train\_Y }\OperatorTok{=}\NormalTok{ train\_Y.ravel() }\CommentTok{\# sklearn GP expects 1D target array}
+
+    \CommentTok{\# Define the kernel for the Gaussian Process}
+    \CommentTok{\# Matern kernel is a common choice, nu=2.5 is smooth (twice differentiable)}
+    \CommentTok{\# ConstantKernel handles the overall variance scaling}
+    \CommentTok{\# WhiteKernel handles the observation noise}
+\NormalTok{    kernel }\OperatorTok{=}\NormalTok{ ConstantKernel(}\FloatTok{1.0}\NormalTok{, constant\_value\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}3}\NormalTok{, }\FloatTok{1e3}\NormalTok{)) }\OperatorTok{*} \OperatorTok{\textbackslash{}}
+\NormalTok{             Matern(length\_scale}\OperatorTok{=}\NormalTok{np.ones(m), }\CommentTok{\# Enable ARD, initialize length scales to 1}
+\NormalTok{                    length\_scale\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}2}\NormalTok{, }\FloatTok{1e2}\NormalTok{),}
+\NormalTok{                    nu}\OperatorTok{=}\FloatTok{2.5}\NormalTok{) }\OperatorTok{+} \OperatorTok{\textbackslash{}}
+\NormalTok{             WhiteKernel(noise\_level}\OperatorTok{=}\FloatTok{1e{-}4}\NormalTok{, }\CommentTok{\# Initial guess for noise}
+\NormalTok{                         noise\_level\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}6}\NormalTok{, }\FloatTok{1e1}\NormalTok{)) }\CommentTok{\# Bounds for noise optimization}
+
+    \CommentTok{\# Instantiate the Gaussian Process Regressor}
+    \CommentTok{\# alpha: Value added to the diagonal of the kernel matrix during fitting}
+    \CommentTok{\#        for numerical stability (can also be seen as additional noise)}
+    \CommentTok{\# n\_restarts\_optimizer: Restarts optimizer to find better hyperparameters}
+\NormalTok{    gp\_model }\OperatorTok{=}\NormalTok{ GaussianProcessRegressor(}
+\NormalTok{        kernel}\OperatorTok{=}\NormalTok{kernel,}
+\NormalTok{        alpha}\OperatorTok{=}\FloatTok{1e{-}10}\NormalTok{, }\CommentTok{\# Small value for numerical stability}
+\NormalTok{        n\_restarts\_optimizer}\OperatorTok{=}\DecValTok{10}\NormalTok{, }\CommentTok{\# More restarts {-}\textgreater{} better hyperparams but slower}
+\NormalTok{        random\_state}\OperatorTok{=}\DecValTok{42} \CommentTok{\# For reproducibility of optimizer restarts}
+\NormalTok{    )}
+
+    \CommentTok{\# Fit the GP model}
+\NormalTok{    gp\_model.fit(train\_X\_embedded\_scaled, train\_Y)}
+    \ControlFlowTok{return}\NormalTok{ gp\_model}
+
+\KeywordTok{def}\NormalTok{ expected\_improvement(mu, sigma, f\_best, xi}\OperatorTok{=}\FloatTok{0.01}\NormalTok{):}
+    \CommentTok{"""}
+\CommentTok{    Computes the Expected Improvement acquisition function.}
+\CommentTok{    Assumes maximization (f\_best is the current maximum observed value).}
+\CommentTok{    mu, sigma: Predicted mean and standard deviation (NumPy arrays).}
+\CommentTok{    f\_best: Current best observed function value (scalar).}
+\CommentTok{    xi: Exploration{-}exploitation trade{-}off parameter.}
+\CommentTok{    """}
+    \CommentTok{\# Ensure sigma is positive and non{-}zero to avoid division errors}
+\NormalTok{    sigma }\OperatorTok{=}\NormalTok{ np.maximum(sigma, }\FloatTok{1e{-}9}\NormalTok{)}
+\NormalTok{    Z }\OperatorTok{=}\NormalTok{ (mu }\OperatorTok{{-}}\NormalTok{ f\_best }\OperatorTok{{-}}\NormalTok{ xi) }\OperatorTok{/}\NormalTok{ sigma}
+
+\NormalTok{    ei }\OperatorTok{=}\NormalTok{ (mu }\OperatorTok{{-}}\NormalTok{ f\_best }\OperatorTok{{-}}\NormalTok{ xi) }\OperatorTok{*}\NormalTok{ norm.cdf(Z) }\OperatorTok{+}\NormalTok{ sigma }\OperatorTok{*}\NormalTok{ norm.pdf(Z)}
+
+    \CommentTok{\# Set EI to 0 where variance is negligible}
+\NormalTok{    ei[sigma }\OperatorTok{\textless{}=} \FloatTok{1e{-}9}\NormalTok{] }\OperatorTok{=} \FloatTok{0.0}
+    \ControlFlowTok{return}\NormalTok{ ei}
+
+\CommentTok{\# MODIFIED: Accepts the scaler and uses scikit{-}learn GP + EI}
+\KeywordTok{def}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(gp\_model, scaler, dictionary\_A, T, q, num\_candidates, current\_best\_neg\_f\_val):}
+    \CommentTok{"""}
+\CommentTok{    Optimizes acquisition function (Expected Improvement) by sampling random}
+\CommentTok{    binary candidates, embedding, SCALING, predicting with GP, and calculating EI.}
+\CommentTok{    Selects the top q candidates based on EI.}
+\CommentTok{    Returns candidates as a numpy array (q x T).}
+\CommentTok{    """}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}
+
+    \CommentTok{\# 1. Generate Random Binary Candidates}
+\NormalTok{    candidate\_u\_vectors\_np }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{(num\_candidates, T))}
+    \CommentTok{\# Optional: Ensure unique candidates if needed (adds overhead)}
+    \CommentTok{\# candidate\_u\_vectors\_np = np.unique(candidate\_u\_vectors\_np, axis=0)}
+    \CommentTok{\# num\_candidates = candidate\_u\_vectors\_np.shape[0] \# Update count}
+
+    \CommentTok{\# 2. Embed the Candidates}
+\NormalTok{    embedded\_candidates\_np }\OperatorTok{=}\NormalTok{ embed\_batch(candidate\_u\_vectors\_np, dictionary\_A)}
+
+    \CommentTok{\# 3. Scale the Embedded Candidates}
+    \CommentTok{\# Handle potential warning if scaler expects float64 (already float here)}
+    \CommentTok{\# Use the *fitted* scaler from the training data}
+\NormalTok{    embedded\_candidates\_scaled\_np }\OperatorTok{=}\NormalTok{ scaler.transform(embedded\_candidates\_np)}
+
+    \CommentTok{\# 4. Predict Mean and Std Dev using the GP Model}
+\NormalTok{    mu, std }\OperatorTok{=}\NormalTok{ gp\_model.predict(embedded\_candidates\_scaled\_np, return\_std}\OperatorTok{=}\VariableTok{True}\NormalTok{)}
+
+    \CommentTok{\# 5. Calculate Acquisition Function (Expected Improvement)}
+    \CommentTok{\# current\_best\_neg\_f\_val is the maximum of the (negative) objectives seen so far}
+\NormalTok{    acq\_values }\OperatorTok{=}\NormalTok{ expected\_improvement(mu, std, current\_best\_neg\_f\_val, xi}\OperatorTok{=}\FloatTok{0.01}\NormalTok{)}
+
+    \CommentTok{\# 6. Select Top Candidates}
+    \CommentTok{\# Use np.argsort to find indices that would sort the array (ascending)}
+    \CommentTok{\# Select the last q indices for the highest EI values}
+    \CommentTok{\# If q=1, np.argmax(acq\_values) is simpler but argsort works generally}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ np.argsort(acq\_values)[}\OperatorTok{{-}}\NormalTok{q:]}
+
+    \CommentTok{\# Ensure indices are returned in descending order of acquisition value (optional but nice)}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ top\_indices[::}\OperatorTok{{-}}\DecValTok{1}\NormalTok{]}
+
+    \ControlFlowTok{return}\NormalTok{ candidate\_u\_vectors\_np[top\_indices, :]}
+
+
+\CommentTok{\# {-}{-}{-} BO Loop {-}{-}{-}}
+
+\CommentTok{\# Parameters}
+\NormalTok{N\_INITIAL }\OperatorTok{=} \DecValTok{20}
+\NormalTok{N\_ITERATIONS }\OperatorTok{=} \DecValTok{20}
+\NormalTok{BATCH\_SIZE\_q }\OperatorTok{=} \DecValTok{5}
+\NormalTok{NUM\_CANDIDATES\_Acqf }\OperatorTok{=}\NormalTok{ T}\OperatorTok{*}\DecValTok{1024} \CommentTok{\# Might need more for higher T}
+\NormalTok{m }\OperatorTok{=} \DecValTok{64} \CommentTok{\# Dimension of the embedding space}
+
+\CommentTok{\# Store evaluated points (using NumPy arrays)}
+\NormalTok{evaluated\_U\_np\_list }\OperatorTok{=}\NormalTok{ [] }\CommentTok{\# List to store evaluated U vectors (binary)}
+\NormalTok{evaluated\_f\_vals }\OperatorTok{=}\NormalTok{ []    }\CommentTok{\# List to store raw objective values (lower is better)}
+\NormalTok{train\_Y\_list }\OperatorTok{=}\NormalTok{ []        }\CommentTok{\# List to store NEGATED objective values for GP (higher is better)}
+
+\CommentTok{\# 1. Initialization}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Generating }\SpecialCharTok{\{}\NormalTok{N\_INITIAL}\SpecialCharTok{\}}\SpecialStringTok{ initial points..."}\NormalTok{)}
+\NormalTok{initial\_candidates }\OperatorTok{=}\NormalTok{ []}
+\ControlFlowTok{while} \BuiltInTok{len}\NormalTok{(initial\_candidates) }\OperatorTok{\textless{}}\NormalTok{ N\_INITIAL:}
+\NormalTok{    U\_init }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{T)}
+    \CommentTok{\# Ensure unique initial points}
+\NormalTok{    is\_duplicate }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(U\_init, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ initial\_candidates)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ is\_duplicate:}
+\NormalTok{        initial\_candidates.append(U\_init)}
+
+\ControlFlowTok{for}\NormalTok{ U\_init }\KeywordTok{in}\NormalTok{ initial\_candidates:}
+\NormalTok{    f\_val }\OperatorTok{=}\NormalTok{ evaluate\_objective(U\_init, X, v\_star, convolutions, d, w)}
+\NormalTok{    neg\_f\_val }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{f\_val}
+
+\NormalTok{    evaluated\_U\_np\_list.append(U\_init)}
+\NormalTok{    evaluated\_f\_vals.append(f\_val)}
+\NormalTok{    train\_Y\_list.append(neg\_f\_val)}
+
+\CommentTok{\# Convert lists to NumPy arrays for GP fitting}
+\NormalTok{train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{) }\CommentTok{\# Keep as column vector initially}
+
+\NormalTok{best\_obj\_so\_far }\OperatorTok{=} \BuiltInTok{min}\NormalTok{(evaluated\_f\_vals) }\ControlFlowTok{if}\NormalTok{ evaluated\_f\_vals }\ControlFlowTok{else} \BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Initial best objective value: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isfinite(best\_obj\_so\_far):}
+     \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Initial best objective is infinite, possibly all initial points were infeasible."}\NormalTok{)}
+
+
+\CommentTok{\# 2. BO Iterations}
+\ControlFlowTok{for}\NormalTok{ iteration }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(N\_ITERATIONS):}
+\NormalTok{    start\_time }\OperatorTok{=}\NormalTok{ time.time()}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{/}\SpecialCharTok{\{}\NormalTok{N\_ITERATIONS}\SpecialCharTok{\}}\SpecialStringTok{ {-}{-}{-}"}\NormalTok{)}
+
+    \CommentTok{\# a. Generate dictionary A for HED}
+\NormalTok{    current\_dictionary\_A }\OperatorTok{=}\NormalTok{ generate\_diverse\_random\_dictionary(T, m)}
+
+    \CommentTok{\# b. Embed ALL evaluated U vectors so far}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_U\_np\_list:}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: No points evaluated yet. Skipping iteration."}\NormalTok{)}
+        \ControlFlowTok{continue}
+\NormalTok{    evaluated\_U\_np\_array }\OperatorTok{=}\NormalTok{ np.array(evaluated\_U\_np\_list)}
+\NormalTok{    embedded\_train\_X }\OperatorTok{=}\NormalTok{ embed\_batch(evaluated\_U\_np\_array, current\_dictionary\_A)}
+
+    \CommentTok{\# c. Scale the embedded training data}
+\NormalTok{    scaler }\OperatorTok{=}\NormalTok{ MinMaxScaler()}
+    \CommentTok{\# Fit scaler only if there\textquotesingle{}s data}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0}\NormalTok{:}
+        \CommentTok{\# Fit and transform}
+\NormalTok{        embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ scaler.fit\_transform(embedded\_train\_X)}
+    \ControlFlowTok{else}\NormalTok{:}
+        \CommentTok{\# Handle case with no data (shouldn\textquotesingle{}t happen after init)}
+\NormalTok{        embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ embedded\_train\_X }\CommentTok{\# Will be empty}
+
+    \CommentTok{\# Ensure train\_Y is a NumPy array for fitting}
+\NormalTok{    train\_Y\_for\_fit }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list) }\CommentTok{\# Use the list directly}
+
+    \CommentTok{\# d. Fit GP Model using SCALED data}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"Fitting GP model..."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0} \KeywordTok{and}\NormalTok{ train\_Y\_for\_fit.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{==}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{]:}
+\NormalTok{        gp\_model }\OperatorTok{=}\NormalTok{ get\_fitted\_model(embedded\_train\_X\_scaled, train\_Y\_for\_fit, m)}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"GP model fitted."}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{:}
+         \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Not enough data or data mismatch to fit GP model. Skipping iteration."}\NormalTok{)}
+         \ControlFlowTok{continue} \CommentTok{\# Skip if no data or mismatch}
+
+    \CommentTok{\# e. Determine current best value for Acquisition Function}
+    \CommentTok{\# We are maximizing the negative objective in the GP}
+\NormalTok{    current\_best\_neg\_f\_val }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{max}\NormalTok{(train\_Y\_for\_fit) }\ControlFlowTok{if}\NormalTok{ train\_Y\_for\_fit.size }\OperatorTok{\textgreater{}} \DecValTok{0} \ControlFlowTok{else} \OperatorTok{{-}}\BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+
+    \CommentTok{\# Prevent potential issues if all points were infeasible (very large negative best\_f)}
+    \ControlFlowTok{if}\NormalTok{ current\_best\_neg\_f\_val }\OperatorTok{\textless{}=} \OperatorTok{{-}}\NormalTok{LARGE\_PENALTY }\OperatorTok{/} \DecValTok{2} \KeywordTok{and}\NormalTok{ np.isfinite(current\_best\_neg\_f\_val):}
+         \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Current best value (}\SpecialCharTok{\{}\NormalTok{current\_best\_neg\_f\_val}\SpecialCharTok{:.2f\}}\SpecialStringTok{) is very low (likely from penalties). Acqf might behave unexpectedly."}\NormalTok{)}
+
+
+    \CommentTok{\# f. Optimize Acquisition Function (Expected Improvement)}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"Optimizing acquisition function..."}\NormalTok{)}
+\NormalTok{    next\_U\_candidates\_np }\OperatorTok{=}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(}
+\NormalTok{        gp\_model}\OperatorTok{=}\NormalTok{gp\_model,}
+\NormalTok{        scaler}\OperatorTok{=}\NormalTok{scaler, }\CommentTok{\# Pass the fitted scaler}
+\NormalTok{        dictionary\_A}\OperatorTok{=}\NormalTok{current\_dictionary\_A,}
+\NormalTok{        T}\OperatorTok{=}\NormalTok{T,}
+\NormalTok{        q}\OperatorTok{=}\NormalTok{BATCH\_SIZE\_q,}
+\NormalTok{        num\_candidates}\OperatorTok{=}\NormalTok{NUM\_CANDIDATES\_Acqf,}
+\NormalTok{        current\_best\_neg\_f\_val}\OperatorTok{=}\NormalTok{current\_best\_neg\_f\_val}
+\NormalTok{    )}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Selected }\SpecialCharTok{\{}\NormalTok{next\_U\_candidates\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ candidate(s)."}\NormalTok{)}
+
+    \CommentTok{\# g. Evaluate Objective for the selected candidate(s)}
+\NormalTok{    newly\_evaluated\_U }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    newly\_evaluated\_f }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    newly\_evaluated\_neg\_f }\OperatorTok{=}\NormalTok{ []}
+
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(next\_U\_candidates\_np.shape[}\DecValTok{0}\NormalTok{]):}
+\NormalTok{        next\_U }\OperatorTok{=}\NormalTok{ next\_U\_candidates\_np[i, :]}
+
+        \CommentTok{\# Check if this candidate was already evaluated}
+        \CommentTok{\# Use a tolerance for floating point comparisons if U were continuous}
+        \CommentTok{\# For binary, exact comparison is fine}
+\NormalTok{        already\_evaluated }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(next\_U, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ evaluated\_U\_np\_list)}
+
+        \ControlFlowTok{if}\NormalTok{ already\_evaluated:}
+            \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{ was already evaluated. Skipping re{-}evaluation."}\NormalTok{)}
+            \CommentTok{\# }\AlertTok{TODO}\CommentTok{: Optionally, could try to generate a *different* candidate here}
+            \CommentTok{\#       e.g., by running optimize\_acqf again excluding this one,}
+            \CommentTok{\#       or sampling randomly near it. For now, just skip.}
+            \ControlFlowTok{continue} \CommentTok{\# Skip to next candidate}
+
+        \CommentTok{\# Evaluate the objective}
+\NormalTok{        next\_f }\OperatorTok{=}\NormalTok{ evaluate\_objective(next\_U, X, v\_star, convolutions, d, w)}
+\NormalTok{        next\_neg\_f }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{next\_f}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{: Obj = }\SpecialCharTok{\{}\NormalTok{next\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+
+        \CommentTok{\# Add to temporary lists for this iteration}
+\NormalTok{        newly\_evaluated\_U.append(next\_U)}
+\NormalTok{        newly\_evaluated\_f.append(next\_f)}
+\NormalTok{        newly\_evaluated\_neg\_f.append(next\_neg\_f)}
+
+        \CommentTok{\# Update overall best objective found}
+        \ControlFlowTok{if}\NormalTok{ next\_f }\OperatorTok{\textless{}}\NormalTok{ best\_obj\_so\_far:}
+\NormalTok{            best\_obj\_so\_far }\OperatorTok{=}\NormalTok{ next\_f}
+
+    \CommentTok{\# h. Augment Dataset for next iteration}
+\NormalTok{    evaluated\_U\_np\_list.extend(newly\_evaluated\_U)}
+\NormalTok{    evaluated\_f\_vals.extend(newly\_evaluated\_f)}
+\NormalTok{    train\_Y\_list.extend(newly\_evaluated\_neg\_f) }\CommentTok{\# Add negative values for next GP fit}
+
+    \CommentTok{\# Convert train\_Y\_list back to array for potential use (though we rebuild it next iter)}
+\NormalTok{    train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+
+\NormalTok{    iter\_time }\OperatorTok{=}\NormalTok{ time.time() }\OperatorTok{{-}}\NormalTok{ start\_time}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best objective value found so far: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total points evaluated: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{ completed in }\SpecialCharTok{\{}\NormalTok{iter\_time}\SpecialCharTok{:.2f\}}\SpecialStringTok{ seconds."}\NormalTok{)}
+
+
+\CommentTok{\# {-}{-}{-} Results {-}{-}{-}}
+\BuiltInTok{print}\NormalTok{(}\StringTok{"}\CharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Optimization Finished {-}{-}{-}"}\NormalTok{)}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_f\_vals:}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"No points were successfully evaluated."}\NormalTok{)}
+\ControlFlowTok{else}\NormalTok{:}
+    \CommentTok{\# Find the best point among all evaluated points}
+\NormalTok{    final\_best\_idx }\OperatorTok{=}\NormalTok{ np.argmin(evaluated\_f\_vals) }\CommentTok{\# Index of minimum raw objective}
+\NormalTok{    final\_best\_U }\OperatorTok{=}\NormalTok{ evaluated\_U\_np\_list[final\_best\_idx]}
+\NormalTok{    final\_best\_f }\OperatorTok{=}\NormalTok{ evaluated\_f\_vals[final\_best\_idx]}
+
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total evaluations: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best Objective Value Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \CommentTok{\# Ensure U is printed correctly if it\textquotesingle{}s long}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best U vector Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_U}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \CommentTok{\# print(f"Best U vector Found (Indices of 1s): \{np.where(final\_best\_U == 1)[0]\}")}
+
+
+    \CommentTok{\# Verification {-} Recalculate Y for the best U found}
+\NormalTok{    V\_sum\_best }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[final\_best\_U }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}
+\NormalTok{    Y\_best }\OperatorTok{=}\NormalTok{ X }\OperatorTok{+}\NormalTok{ V\_sum\_best}
+\NormalTok{    is\_feasible }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y\_best }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y\_best, d, convolutions)}
+\NormalTok{        recalculated\_obj }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+        
+    \ControlFlowTok{else}\NormalTok{:}
+\NormalTok{        LARGE\_PENALTY}
+
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Verification {-}{-}{-}"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Is the best U feasible? }\SpecialCharTok{\{}\NormalTok{is\_feasible}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector for best U: }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Objective value (recalculated): }\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+        \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isclose(final\_best\_f, recalculated\_obj):}
+             \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Stored best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{\}}\SpecialStringTok{) does not match recalculation (}\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{\}}\SpecialStringTok{)!"}\NormalTok{)}
+    \ControlFlowTok{elif}\NormalTok{ final\_best\_f }\OperatorTok{\textless{}}\NormalTok{ LARGE\_PENALTY:}
+         \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{\}}\SpecialStringTok{) is not the penalty value, but feasibility check failed."}\NormalTok{)}
+         \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector (infeasible): }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{:}
+         \BuiltInTok{print}\NormalTok{(}\StringTok{"Best solution found corresponds to an infeasible penalty value."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Generating 20 initial points...
+Initial best objective value: 45.8741644254946
+
+--- Iteration 1/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 47.0112
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 45.8742
+Total points evaluated: 25
+Iteration 1 completed in 5.56 seconds.
+
+--- Iteration 2/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 47.4316
+  Candidate 1: Obj = 49.5288
+  Candidate 2: Obj = 46.5249
+  Candidate 3: Obj = 46.0201
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 45.8742
+Total points evaluated: 30
+Iteration 2 completed in 5.69 seconds.
+
+--- Iteration 3/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 45.8742
+Total points evaluated: 35
+Iteration 3 completed in 6.93 seconds.
+
+--- Iteration 4/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.1192
+  Candidate 1: Obj = 46.4626
+  Candidate 2: Obj = 48.5151
+  Candidate 3: Obj = 50.2188
+  Candidate 4: Obj = 50.7530
+Best objective value found so far: 45.8742
+Total points evaluated: 40
+Iteration 4 completed in 7.63 seconds.
+
+--- Iteration 5/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.8270
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 50.5258
+  Candidate 3: Obj = 49.5820
+  Candidate 4: Obj = 49.6332
+Best objective value found so far: 45.8742
+Total points evaluated: 45
+Iteration 5 completed in 11.28 seconds.
+
+--- Iteration 6/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 51.5122
+  Candidate 1: Obj = 50.9039
+  Candidate 2: Obj = 50.1081
+  Candidate 3: Obj = 50.1372
+  Candidate 4: Obj = 50.5220
+Best objective value found so far: 45.8742
+Total points evaluated: 50
+Iteration 6 completed in 6.51 seconds.
+
+--- Iteration 7/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.7544
+  Candidate 1: Obj = 47.8474
+  Candidate 2: Obj = 51.6201
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 46.3737
+Best objective value found so far: 45.8742
+Total points evaluated: 55
+Iteration 7 completed in 9.08 seconds.
+
+--- Iteration 8/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.8548
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 46.9808
+Best objective value found so far: 45.8742
+Total points evaluated: 60
+Iteration 8 completed in 5.68 seconds.
+
+--- Iteration 9/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 50.2594
+  Candidate 1: Obj = 46.3601
+  Candidate 2: Obj = 46.1868
+  Candidate 3: Obj = 47.0413
+  Candidate 4: Obj = 47.0413
+Best objective value found so far: 45.8742
+Total points evaluated: 65
+Iteration 9 completed in 9.27 seconds.
+
+--- Iteration 10/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.7353
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 50.2641
+Best objective value found so far: 45.8742
+Total points evaluated: 70
+Iteration 10 completed in 10.93 seconds.
+
+--- Iteration 11/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.0150
+  Candidate 1: Obj = 46.0981
+  Candidate 2: Obj = 46.3340
+  Candidate 3: Obj = 49.2012
+  Candidate 4: Obj = 46.7630
+Best objective value found so far: 45.8742
+Total points evaluated: 75
+Iteration 11 completed in 7.80 seconds.
+
+--- Iteration 12/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.4464
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 49.2730
+  Candidate 4: Obj = 50.2897
+Best objective value found so far: 45.8742
+Total points evaluated: 80
+Iteration 12 completed in 8.48 seconds.
+
+--- Iteration 13/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.2151
+  Candidate 1: Obj = 48.9761
+  Candidate 2: Obj = 48.7093
+  Candidate 3: Obj = 50.3776
+  Candidate 4: Obj = 49.2011
+Best objective value found so far: 45.8742
+Total points evaluated: 85
+Iteration 13 completed in 17.85 seconds.
+
+--- Iteration 14/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 44.7302
+  Candidate 1: Obj = 46.1880
+  Candidate 2: Obj = 49.5066
+  Candidate 3: Obj = 46.2567
+  Candidate 4: Obj = 46.0755
+Best objective value found so far: 44.7302
+Total points evaluated: 90
+Iteration 14 completed in 11.15 seconds.
+
+--- Iteration 15/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.0445
+  Candidate 1: Obj = 49.5489
+  Candidate 2: Obj = 45.9435
+  Candidate 3: Obj = 46.6582
+  Candidate 4: Obj = 46.3973
+Best objective value found so far: 44.7302
+Total points evaluated: 95
+Iteration 15 completed in 12.67 seconds.
+
+--- Iteration 16/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 46.3336
+  Candidate 2: Obj = 46.3336
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 44.7302
+Total points evaluated: 100
+Iteration 16 completed in 6.82 seconds.
+
+--- Iteration 17/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 48.8522
+  Candidate 1: Obj = 48.8522
+  Candidate 2: Obj = 50.1819
+  Candidate 3: Obj = 48.9213
+  Candidate 4: Obj = 48.9792
+Best objective value found so far: 44.7302
+Total points evaluated: 105
+Iteration 17 completed in 26.99 seconds.
+
+--- Iteration 18/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 47.0329
+  Candidate 1: Obj = 48.5568
+  Candidate 2: Obj = 46.1143
+  Candidate 3: Obj = 46.2924
+  Candidate 4: Obj = 48.3431
+Best objective value found so far: 44.7302
+Total points evaluated: 110
+Iteration 18 completed in 28.50 seconds.
+
+--- Iteration 19/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.0554
+  Candidate 1: Obj = 46.0045
+  Candidate 2: Obj = 46.0045
+  Candidate 3: Obj = 46.0045
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 44.7302
+Total points evaluated: 115
+Iteration 19 completed in 19.20 seconds.
+
+--- Iteration 20/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.7548
+  Candidate 1: Obj = 49.7402
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 50.2143
+Best objective value found so far: 44.7302
+Total points evaluated: 120
+Iteration 20 completed in 9.20 seconds.
+
+--- Optimization Finished ---
+Total evaluations: 120
+Best Objective Value Found: 44.73022661178918
+Best U vector Found: [0 0 1 0 0 0 1 1 0 1 1 1 0 1 1 1]
+
+--- Verification ---
+Is the best U feasible? True
+Resulting Y vector for best U: [2 1 0 1 1 1 1 0 1 1 1 0 1 1 1 3]
+Objective value (recalculated): 44.7302
+\end{verbatim}
+
+\subsection{Base Combinatorial Bayesian Optimization (CBO) Code using
+Lower Confidence
+Bound}\label{base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} Problem Definition {-}{-}{-}}
+\CommentTok{\# \textless{}\textless{}\textless{} Problem definition section remains the same \textgreater{}\textgreater{}\textgreater{}}
+\NormalTok{X }\OperatorTok{=}\NormalTok{ np.array([}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{])}
+
+\CommentTok{\# {-}{-}{-} evaluate\_objective function remains the same {-}{-}{-}}
+\NormalTok{LARGE\_PENALTY }\OperatorTok{=} \FloatTok{1e10}
+\KeywordTok{def}\NormalTok{ evaluate\_objective(U\_np, X\_vec, v\_star, convolutions, d, w):}
+    \CommentTok{\# ... (implementation is unchanged) ...}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(U\_np, np.ndarray): }\ControlFlowTok{raise} \PreprocessorTok{TypeError}\NormalTok{(}\StringTok{"Input U must be a numpy array"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.ndim }\OperatorTok{!=} \DecValTok{1}\NormalTok{: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be 1{-}dimensional"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{0}\NormalTok{]: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\SpecialStringTok{f"Dimension mismatch: U length }\SpecialCharTok{\{}\NormalTok{U\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ != V* rows }\SpecialCharTok{\{}\NormalTok{v\_star}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ X\_vec.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{1}\NormalTok{]: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Dimension mismatch: X length must match V* columns."}\NormalTok{)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{((U\_np }\OperatorTok{==} \DecValTok{0}\NormalTok{) }\OperatorTok{|}\NormalTok{ (U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{)): }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be binary (0s and 1s)."}\NormalTok{)}
+
+\NormalTok{    V\_sum }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ Y }\OperatorTok{=}\NormalTok{ X\_vec }\OperatorTok{+}\NormalTok{ V\_sum}
+    \ControlFlowTok{if}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{):}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y, d, convolutions)}
+\NormalTok{        objective\_value }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+        \ControlFlowTok{return}\NormalTok{ objective\_value}
+    \ControlFlowTok{else}\NormalTok{: }\ControlFlowTok{return}\NormalTok{ LARGE\_PENALTY}
+
+
+\CommentTok{\# {-}{-}{-} HED Implementation remains the same {-}{-}{-}}
+\KeywordTok{def}\NormalTok{ hamming\_distance(u1, u2): }\ControlFlowTok{return}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(u1 }\OperatorTok{!=}\NormalTok{ u2)}
+\KeywordTok{def}\NormalTok{ generate\_diverse\_random\_dictionary(T, m):}
+\NormalTok{    dictionary\_A }\OperatorTok{=}\NormalTok{ np.zeros((m, T), dtype}\OperatorTok{=}\BuiltInTok{int}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m): theta }\OperatorTok{=}\NormalTok{ np.random.uniform(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}\OperatorTok{;}\NormalTok{ row }\OperatorTok{=}\NormalTok{ (np.random.rand(T) }\OperatorTok{\textless{}}\NormalTok{ theta).astype(}\BuiltInTok{int}\NormalTok{)}\OperatorTok{;}\NormalTok{ dictionary\_A[i, :] }\OperatorTok{=}\NormalTok{ row}
+    \ControlFlowTok{return}\NormalTok{ dictionary\_A}
+\KeywordTok{def}\NormalTok{ embed\_vector(U\_np, dictionary\_A):}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}\NormalTok{ embedding\_phi }\OperatorTok{=}\NormalTok{ np.zeros(m, dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m): embedding\_phi[i] }\OperatorTok{=}\NormalTok{ hamming\_distance(U\_np, dictionary\_A[i, :])}
+    \ControlFlowTok{return}\NormalTok{ embedding\_phi}
+\KeywordTok{def}\NormalTok{ embed\_batch(U\_batch\_np, dictionary\_A):}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}
+    \ControlFlowTok{if}\NormalTok{ U\_batch\_np.ndim }\OperatorTok{==} \DecValTok{1}\NormalTok{: U\_batch\_np }\OperatorTok{=}\NormalTok{ U\_batch\_np.reshape(}\DecValTok{1}\NormalTok{, }\OperatorTok{{-}}\DecValTok{1}\NormalTok{)}
+\NormalTok{    batch\_size }\OperatorTok{=}\NormalTok{ U\_batch\_np.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}\NormalTok{ embeddings\_np }\OperatorTok{=}\NormalTok{ np.zeros((batch\_size, m), dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ j }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(batch\_size): embeddings\_np[j, :] }\OperatorTok{=}\NormalTok{ embed\_vector(U\_batch\_np[j, :], dictionary\_A)}
+    \ControlFlowTok{return}\NormalTok{ embeddings\_np}
+
+
+\CommentTok{\# {-}{-}{-} BO Helper Functions {-}{-}{-}}
+
+\CommentTok{\# {-}{-}{-} get\_fitted\_model function remains the same {-}{-}{-}}
+\KeywordTok{def}\NormalTok{ get\_fitted\_model(train\_X\_embedded\_scaled, train\_Y, m):}
+    \CommentTok{\# ... (implementation is unchanged) ...}
+    \ControlFlowTok{if}\NormalTok{ train\_Y.ndim }\OperatorTok{\textgreater{}} \DecValTok{1} \KeywordTok{and}\NormalTok{ train\_Y.shape[}\DecValTok{1}\NormalTok{] }\OperatorTok{==} \DecValTok{1}\NormalTok{: train\_Y }\OperatorTok{=}\NormalTok{ train\_Y.ravel()}
+\NormalTok{    kernel }\OperatorTok{=}\NormalTok{ ConstantKernel(}\FloatTok{1.0}\NormalTok{, constant\_value\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}3}\NormalTok{, }\FloatTok{1e3}\NormalTok{)) }\OperatorTok{*} \OperatorTok{\textbackslash{}}
+\NormalTok{             Matern(length\_scale}\OperatorTok{=}\NormalTok{np.ones(m), length\_scale\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}2}\NormalTok{, }\FloatTok{1e2}\NormalTok{), nu}\OperatorTok{=}\FloatTok{2.5}\NormalTok{) }\OperatorTok{+} \OperatorTok{\textbackslash{}}
+\NormalTok{             WhiteKernel(noise\_level}\OperatorTok{=}\FloatTok{1e{-}4}\NormalTok{, noise\_level\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}6}\NormalTok{, }\FloatTok{1e1}\NormalTok{))}
+\NormalTok{    gp\_model }\OperatorTok{=}\NormalTok{ GaussianProcessRegressor(kernel}\OperatorTok{=}\NormalTok{kernel, alpha}\OperatorTok{=}\FloatTok{1e{-}10}\NormalTok{, n\_restarts\_optimizer}\OperatorTok{=}\DecValTok{10}\NormalTok{, random\_state}\OperatorTok{=}\DecValTok{42}\NormalTok{)}
+\NormalTok{    gp\_model.fit(train\_X\_embedded\_scaled, train\_Y)}
+    \ControlFlowTok{return}\NormalTok{ gp\_model}
+
+
+\CommentTok{\# {-}{-}{-} REMOVED upper\_confidence\_bound function {-}{-}{-}}
+
+\CommentTok{\# +++ ADDED lower\_confidence\_bound function +++}
+\KeywordTok{def}\NormalTok{ lower\_confidence\_bound(mu, sigma, kappa}\OperatorTok{=}\FloatTok{2.576}\NormalTok{):}
+    \CommentTok{"""}
+\CommentTok{    Computes the Lower Confidence Bound (LCB) acquisition function.}
+\CommentTok{    Assumes maximization of this value guides the search (since mu is neg objective).}
+\CommentTok{    Higher LCB means lower predicted objective or lower penalty for uncertainty.}
+
+\CommentTok{    mu, sigma: Predicted mean and standard deviation (NumPy arrays).}
+\CommentTok{    kappa: Controls the balance between exploitation (high mu {-}\textgreater{} low original objective)}
+\CommentTok{           and exploration (low sigma).}
+\CommentTok{    """}
+    \CommentTok{\# Ensure sigma is non{-}negative}
+\NormalTok{    sigma }\OperatorTok{=}\NormalTok{ np.maximum(sigma, }\DecValTok{0}\NormalTok{)}
+    \ControlFlowTok{return}\NormalTok{ mu }\OperatorTok{{-}}\NormalTok{ kappa }\OperatorTok{*}\NormalTok{ sigma }\CommentTok{\# \textless{}\textless{}\textless{} Sign flipped from UCB}
+
+
+\CommentTok{\# *** MODIFIED optimize\_acqf\_discrete\_via\_embedding function ***}
+\CommentTok{\# Now uses LCB}
+\KeywordTok{def}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(gp\_model, scaler, dictionary\_A, T, q, num\_candidates, kappa):}
+    \CommentTok{"""}
+\CommentTok{    Optimizes LCB acquisition function by sampling random binary candidates,}
+\CommentTok{    embedding, SCALING, predicting with GP, and calculating LCB.}
+\CommentTok{    Selects the top q candidates based on LCB.}
+\CommentTok{    Returns candidates as a numpy array (q x T).}
+\CommentTok{    """}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}
+
+    \CommentTok{\# 1. Generate Random Binary Candidates}
+\NormalTok{    candidate\_u\_vectors\_np }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{(num\_candidates, T))}
+
+    \CommentTok{\# 2. Embed the Candidates}
+\NormalTok{    embedded\_candidates\_np }\OperatorTok{=}\NormalTok{ embed\_batch(candidate\_u\_vectors\_np, dictionary\_A)}
+
+    \CommentTok{\# 3. Scale the Embedded Candidates}
+\NormalTok{    embedded\_candidates\_scaled\_np }\OperatorTok{=}\NormalTok{ scaler.transform(embedded\_candidates\_np)}
+
+    \CommentTok{\# 4. Predict Mean and Std Dev using the GP Model}
+\NormalTok{    mu, std }\OperatorTok{=}\NormalTok{ gp\_model.predict(embedded\_candidates\_scaled\_np, return\_std}\OperatorTok{=}\VariableTok{True}\NormalTok{)}
+
+    \CommentTok{\# 5. Calculate Acquisition Function (Lower Confidence Bound) \textless{}\textless{}\textless{} CHANGED HERE}
+\NormalTok{    acq\_values }\OperatorTok{=}\NormalTok{ lower\_confidence\_bound(mu, std, kappa}\OperatorTok{=}\NormalTok{kappa) }\CommentTok{\# Use LCB}
+
+    \CommentTok{\# 6. Select Top Candidates (based on highest LCB) \textless{}\textless{}\textless{} COMMENT UPDATED}
+    \CommentTok{\# We maximize LCB = mu {-} kappa*sigma, where mu is neg\_objective}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ np.argsort(acq\_values)[}\OperatorTok{{-}}\NormalTok{q:]}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ top\_indices[::}\OperatorTok{{-}}\DecValTok{1}\NormalTok{] }\CommentTok{\# Ensure descending order of LCB}
+
+    \ControlFlowTok{return}\NormalTok{ candidate\_u\_vectors\_np[top\_indices, :]}
+
+
+\CommentTok{\# {-}{-}{-} BO Loop {-}{-}{-}}
+
+\CommentTok{\# Parameters}
+\NormalTok{KAPPA }\OperatorTok{=} \FloatTok{2.576} \CommentTok{\# Exploration parameter for LCB. Adjust as needed.}
+
+\NormalTok{N\_INITIAL }\OperatorTok{=} \DecValTok{20}
+\NormalTok{N\_ITERATIONS }\OperatorTok{=} \DecValTok{20}
+\NormalTok{BATCH\_SIZE\_q }\OperatorTok{=} \DecValTok{5}
+\NormalTok{NUM\_CANDIDATES\_Acqf }\OperatorTok{=}\NormalTok{ T }\OperatorTok{*} \DecValTok{1024}
+\NormalTok{m }\OperatorTok{=} \DecValTok{64}
+
+\CommentTok{\# Store evaluated points}
+\NormalTok{evaluated\_U\_np\_list }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{evaluated\_f\_vals }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{train\_Y\_list }\OperatorTok{=}\NormalTok{ []}
+
+\CommentTok{\# 1. Initialization}
+\CommentTok{\# {-}{-}{-} Initialization logic remains the same {-}{-}{-}}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Generating }\SpecialCharTok{\{}\NormalTok{N\_INITIAL}\SpecialCharTok{\}}\SpecialStringTok{ initial points..."}\NormalTok{)}
+\NormalTok{initial\_candidates }\OperatorTok{=}\NormalTok{ []}
+\ControlFlowTok{while} \BuiltInTok{len}\NormalTok{(initial\_candidates) }\OperatorTok{\textless{}}\NormalTok{ N\_INITIAL:}
+\NormalTok{    U\_init }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{T)}
+\NormalTok{    is\_duplicate }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(U\_init, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ initial\_candidates)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ is\_duplicate: initial\_candidates.append(U\_init)}
+
+\ControlFlowTok{for}\NormalTok{ U\_init }\KeywordTok{in}\NormalTok{ initial\_candidates:}
+\NormalTok{    f\_val }\OperatorTok{=}\NormalTok{ evaluate\_objective(U\_init, X, v\_star, convolutions, d, w)}
+\NormalTok{    neg\_f\_val }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{f\_val}
+\NormalTok{    evaluated\_U\_np\_list.append(U\_init)}\OperatorTok{;}\NormalTok{ evaluated\_f\_vals.append(f\_val)}\OperatorTok{;}\NormalTok{ train\_Y\_list.append(neg\_f\_val)}
+
+\NormalTok{train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{best\_obj\_so\_far }\OperatorTok{=} \BuiltInTok{min}\NormalTok{(evaluated\_f\_vals) }\ControlFlowTok{if}\NormalTok{ evaluated\_f\_vals }\ControlFlowTok{else} \BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Initial best objective value: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isfinite(best\_obj\_so\_far): }\BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Initial best objective is infinite..."}\NormalTok{)}
+
+
+\CommentTok{\# 2. BO Iterations}
+\ControlFlowTok{for}\NormalTok{ iteration }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(N\_ITERATIONS):}
+\NormalTok{    start\_time }\OperatorTok{=}\NormalTok{ time.time()}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{/}\SpecialCharTok{\{}\NormalTok{N\_ITERATIONS}\SpecialCharTok{\}}\SpecialStringTok{ {-}{-}{-}"}\NormalTok{)}
+
+    \CommentTok{\# a. Generate dictionary A (remains the same)}
+\NormalTok{    current\_dictionary\_A }\OperatorTok{=}\NormalTok{ generate\_diverse\_random\_dictionary(T, m)}
+
+    \CommentTok{\# b. Embed ALL evaluated U vectors (remains the same)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_U\_np\_list: }\ControlFlowTok{continue}
+\NormalTok{    evaluated\_U\_np\_array }\OperatorTok{=}\NormalTok{ np.array(evaluated\_U\_np\_list)}
+\NormalTok{    embedded\_train\_X }\OperatorTok{=}\NormalTok{ embed\_batch(evaluated\_U\_np\_array, current\_dictionary\_A)}
+
+    \CommentTok{\# c. Scale the embedded training data (remains the same)}
+\NormalTok{    scaler }\OperatorTok{=}\NormalTok{ MinMaxScaler()}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0}\NormalTok{: embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ scaler.fit\_transform(embedded\_train\_X)}
+    \ControlFlowTok{else}\NormalTok{: embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ embedded\_train\_X}
+
+    \CommentTok{\# Ensure train\_Y is NumPy array}
+\NormalTok{    train\_Y\_for\_fit }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list)}
+
+    \CommentTok{\# d. Fit GP Model (remains the same)}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"Fitting GP model..."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0} \KeywordTok{and}\NormalTok{ train\_Y\_for\_fit.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{==}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{]:}
+\NormalTok{        gp\_model }\OperatorTok{=}\NormalTok{ get\_fitted\_model(embedded\_train\_X\_scaled, train\_Y\_for\_fit, m)}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"GP model fitted."}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{:}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Not enough data or data mismatch to fit GP model. Skipping iteration."}\NormalTok{)}
+        \ControlFlowTok{continue}
+
+    \CommentTok{\# e. Determine current best neg value (useful for tracking, not directly used in LCB calculation)}
+\NormalTok{    current\_best\_neg\_f\_val }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{max}\NormalTok{(train\_Y\_for\_fit) }\ControlFlowTok{if}\NormalTok{ train\_Y\_for\_fit.size }\OperatorTok{\textgreater{}} \DecValTok{0} \ControlFlowTok{else} \OperatorTok{{-}}\BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ current\_best\_neg\_f\_val }\OperatorTok{\textless{}=} \OperatorTok{{-}}\NormalTok{LARGE\_PENALTY }\OperatorTok{/} \DecValTok{2} \KeywordTok{and}\NormalTok{ np.isfinite(current\_best\_neg\_f\_val):}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Current best NEGATIVE objective value (}\SpecialCharTok{\{}\NormalTok{current\_best\_neg\_f\_val}\SpecialCharTok{:.2f\}}\SpecialStringTok{) is very low (likely from penalties)."}\NormalTok{)}
+
+    \CommentTok{\# f. Optimize Acquisition Function (LCB) \textless{}\textless{}\textless{} MODIFIED CALL \& COMMENT}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"Optimizing acquisition function (LCB)..."}\NormalTok{) }\CommentTok{\# Comment updated}
+\NormalTok{    next\_U\_candidates\_np }\OperatorTok{=}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(}
+\NormalTok{        gp\_model}\OperatorTok{=}\NormalTok{gp\_model,}
+\NormalTok{        scaler}\OperatorTok{=}\NormalTok{scaler,}
+\NormalTok{        dictionary\_A}\OperatorTok{=}\NormalTok{current\_dictionary\_A,}
+\NormalTok{        T}\OperatorTok{=}\NormalTok{T,}
+\NormalTok{        q}\OperatorTok{=}\NormalTok{BATCH\_SIZE\_q,}
+\NormalTok{        num\_candidates}\OperatorTok{=}\NormalTok{NUM\_CANDIDATES\_Acqf,}
+\NormalTok{        kappa}\OperatorTok{=}\NormalTok{KAPPA }\CommentTok{\# Pass kappa}
+\NormalTok{    )}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Selected }\SpecialCharTok{\{}\NormalTok{next\_U\_candidates\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ candidate(s)."}\NormalTok{)}
+
+    \CommentTok{\# g. Evaluate Objective (remains the same)}
+\NormalTok{    newly\_evaluated\_U }\OperatorTok{=}\NormalTok{ []}\OperatorTok{;}\NormalTok{ newly\_evaluated\_f }\OperatorTok{=}\NormalTok{ []}\OperatorTok{;}\NormalTok{ newly\_evaluated\_neg\_f }\OperatorTok{=}\NormalTok{ []}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(next\_U\_candidates\_np.shape[}\DecValTok{0}\NormalTok{]):}
+\NormalTok{        next\_U }\OperatorTok{=}\NormalTok{ next\_U\_candidates\_np[i, :]}
+\NormalTok{        already\_evaluated }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(next\_U, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ evaluated\_U\_np\_list)}
+        \ControlFlowTok{if}\NormalTok{ already\_evaluated: }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{ was already evaluated. Skipping."}\NormalTok{)}\OperatorTok{;} \ControlFlowTok{continue}
+
+\NormalTok{        next\_f }\OperatorTok{=}\NormalTok{ evaluate\_objective(next\_U, X, v\_star, convolutions, d, w)}
+\NormalTok{        next\_neg\_f }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{next\_f}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{: Obj = }\SpecialCharTok{\{}\NormalTok{next\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+\NormalTok{        newly\_evaluated\_U.append(next\_U)}\OperatorTok{;}\NormalTok{ newly\_evaluated\_f.append(next\_f)}\OperatorTok{;}\NormalTok{ newly\_evaluated\_neg\_f.append(next\_neg\_f)}
+        \ControlFlowTok{if}\NormalTok{ next\_f }\OperatorTok{\textless{}}\NormalTok{ best\_obj\_so\_far: best\_obj\_so\_far }\OperatorTok{=}\NormalTok{ next\_f}
+
+    \CommentTok{\# h. Augment Dataset (remains the same)}
+\NormalTok{    evaluated\_U\_np\_list.extend(newly\_evaluated\_U)}\OperatorTok{;}\NormalTok{ evaluated\_f\_vals.extend(newly\_evaluated\_f)}\OperatorTok{;}\NormalTok{ train\_Y\_list.extend(newly\_evaluated\_neg\_f)}
+\NormalTok{    train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+
+\NormalTok{    iter\_time }\OperatorTok{=}\NormalTok{ time.time() }\OperatorTok{{-}}\NormalTok{ start\_time}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best objective value found so far: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total points evaluated: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{ completed in }\SpecialCharTok{\{}\NormalTok{iter\_time}\SpecialCharTok{:.2f\}}\SpecialStringTok{ seconds."}\NormalTok{)}
+
+
+\CommentTok{\# {-}{-}{-} Results {-}{-}{-}}
+\CommentTok{\# \textless{}\textless{}\textless{} Results section remains the same, including Verification \textgreater{}\textgreater{}\textgreater{}}
+\BuiltInTok{print}\NormalTok{(}\StringTok{"}\CharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Optimization Finished {-}{-}{-}"}\NormalTok{)}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_f\_vals: }\BuiltInTok{print}\NormalTok{(}\StringTok{"No points were successfully evaluated."}\NormalTok{)}
+\ControlFlowTok{else}\NormalTok{:}
+\NormalTok{    final\_best\_idx }\OperatorTok{=}\NormalTok{ np.argmin(evaluated\_f\_vals)}
+\NormalTok{    final\_best\_U }\OperatorTok{=}\NormalTok{ evaluated\_U\_np\_list[final\_best\_idx]}
+\NormalTok{    final\_best\_f }\OperatorTok{=}\NormalTok{ evaluated\_f\_vals[final\_best\_idx]}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total evaluations: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best Objective Value Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best U vector Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_U}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+
+    \CommentTok{\# Verification}
+\NormalTok{    V\_sum\_best }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[final\_best\_U }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ Y\_best }\OperatorTok{=}\NormalTok{ X }\OperatorTok{+}\NormalTok{ V\_sum\_best}
+\NormalTok{    is\_feasible }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y\_best }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ recalculated\_obj }\OperatorTok{=}\NormalTok{ LARGE\_PENALTY}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y\_best, d, convolutions)}
+\NormalTok{        recalculated\_obj }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Verification {-}{-}{-}"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Is the best U feasible? }\SpecialCharTok{\{}\NormalTok{is\_feasible}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector for best U: }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Objective value (recalculated): }\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+        \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isclose(final\_best\_f, recalculated\_obj): }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Stored best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{) does not match recalculation (}\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{:.4f\}}\SpecialStringTok{)!"}\NormalTok{)}
+    \ControlFlowTok{elif}\NormalTok{ final\_best\_f }\OperatorTok{\textless{}}\NormalTok{ LARGE\_PENALTY: }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{) is not the penalty value, but feasibility check failed."}\NormalTok{)}\OperatorTok{;} \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector (infeasible): }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{: }\BuiltInTok{print}\NormalTok{(}\StringTok{"Best solution found corresponds to an infeasible penalty value."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Generating 20 initial points...
+Initial best objective value: 46.4188547070967
+
+--- Iteration 1/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.9312
+  Candidate 1: Obj = 48.9124
+  Candidate 2: Obj = 48.6963
+  Candidate 3: Obj = 48.6963
+  Candidate 4: Obj = 50.0176
+Best objective value found so far: 45.9312
+Total points evaluated: 25
+Iteration 1 completed in 5.69 seconds.
+
+--- Iteration 2/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.9035
+  Candidate 1: Obj = 45.8088
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 45.9751
+  Candidate 4: Obj = 46.3933
+Best objective value found so far: 45.8088
+Total points evaluated: 30
+Iteration 2 completed in 5.82 seconds.
+
+--- Iteration 3/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.6867
+  Candidate 1: Obj = 46.1850
+  Candidate 2: Obj = 46.3598
+  Candidate 3: Obj = 45.4643
+  Candidate 4: Obj = 46.1056
+Best objective value found so far: 45.4643
+Total points evaluated: 35
+Iteration 3 completed in 5.91 seconds.
+
+--- Iteration 4/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 48.7669
+  Candidate 1: Obj = 48.9189
+  Candidate 2: Obj = 48.7018
+  Candidate 3: Obj = 46.2506
+  Candidate 4: Obj = 46.3721
+Best objective value found so far: 45.4643
+Total points evaluated: 40
+Iteration 4 completed in 7.10 seconds.
+
+--- Iteration 5/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.7242
+  Candidate 1: Obj = 49.0931
+  Candidate 2: Obj = 48.7300
+  Candidate 3: Obj = 49.5623
+  Candidate 4: Obj = 46.1715
+Best objective value found so far: 45.4643
+Total points evaluated: 45
+Iteration 5 completed in 6.84 seconds.
+
+--- Iteration 6/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.5500
+  Candidate 1: Obj = 48.8023
+  Candidate 2: Obj = 49.3655
+  Candidate 3: Obj = 48.2887
+  Candidate 4: Obj = 48.7528
+Best objective value found so far: 45.4643
+Total points evaluated: 50
+Iteration 6 completed in 6.70 seconds.
+
+--- Iteration 7/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 50.0481
+  Candidate 1: Obj = 50.0481
+  Candidate 2: Obj = 48.5143
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 46.2214
+Best objective value found so far: 45.4643
+Total points evaluated: 55
+Iteration 7 completed in 8.49 seconds.
+
+--- Iteration 8/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.8513
+  Candidate 1: Obj = 45.7779
+  Candidate 2: Obj = 45.7779
+  Candidate 3: Obj = 45.9127
+  Candidate 4: Obj = 46.0884
+Best objective value found so far: 45.4643
+Total points evaluated: 60
+Iteration 8 completed in 7.42 seconds.
+
+--- Iteration 9/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.3693
+  Candidate 1: Obj = 44.7402
+  Candidate 2: Obj = 45.6932
+  Candidate 3: Obj = 44.7696
+  Candidate 4: Obj = 45.1854
+Best objective value found so far: 44.7402
+Total points evaluated: 65
+Iteration 9 completed in 8.21 seconds.
+
+--- Iteration 10/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.1399
+  Candidate 1: Obj = 48.9184
+  Candidate 2: Obj = 48.4848
+  Candidate 3: Obj = 49.0441
+  Candidate 4: Obj = 48.4183
+Best objective value found so far: 44.7402
+Total points evaluated: 70
+Iteration 10 completed in 7.08 seconds.
+
+--- Iteration 11/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.3302
+  Candidate 1: Obj = 49.3302
+  Candidate 2: Obj = 45.7925
+  Candidate 3: Obj = 46.4644
+  Candidate 4: Obj = 46.3397
+Best objective value found so far: 44.7402
+Total points evaluated: 75
+Iteration 11 completed in 7.49 seconds.
+
+--- Iteration 12/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.3893
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 46.6595
+  Candidate 3: Obj = 46.7203
+  Candidate 4: Obj = 46.4885
+Best objective value found so far: 44.7402
+Total points evaluated: 80
+Iteration 12 completed in 6.17 seconds.
+
+--- Iteration 13/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 44.7402
+Total points evaluated: 85
+Iteration 13 completed in 9.17 seconds.
+
+--- Iteration 14/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.7458
+  Candidate 1: Obj = 45.8088
+  Candidate 2: Obj = 46.2418
+  Candidate 3: Obj = 45.6701
+  Candidate 4: Obj = 45.7594
+Best objective value found so far: 44.7402
+Total points evaluated: 90
+Iteration 14 completed in 20.57 seconds.
+
+--- Iteration 15/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.3177
+  Candidate 1: Obj = 45.9977
+  Candidate 2: Obj = 46.3881
+  Candidate 3: Obj = 45.9350
+  Candidate 4: Obj = 46.6116
+Best objective value found so far: 44.7402
+Total points evaluated: 95
+Iteration 15 completed in 9.40 seconds.
+
+--- Iteration 16/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 48.8132
+  Candidate 1: Obj = 45.6814
+  Candidate 2: Obj = 46.3178
+  Candidate 3: Obj = 49.6795
+  Candidate 4: Obj = 50.1532
+Best objective value found so far: 44.7402
+Total points evaluated: 100
+Iteration 16 completed in 19.91 seconds.
+
+--- Iteration 17/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 46.5043
+  Candidate 2: Obj = 46.1851
+  Candidate 3: Obj = 49.1767
+  Candidate 4: Obj = 46.1921
+Best objective value found so far: 44.7402
+Total points evaluated: 105
+Iteration 17 completed in 43.53 seconds.
+
+--- Iteration 18/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 46.4928
+  Candidate 1: Obj = 45.6450
+  Candidate 2: Obj = 45.4656
+  Candidate 3: Obj = 46.2776
+  Candidate 4: Obj = 46.2235
+Best objective value found so far: 44.7402
+Total points evaluated: 110
+Iteration 18 completed in 24.88 seconds.
+
+--- Iteration 19/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 45.9005
+  Candidate 1: Obj = 46.5744
+  Candidate 2: Obj = 45.3360
+  Candidate 3: Obj = 49.2720
+  Candidate 4: Obj = 48.9126
+Best objective value found so far: 44.7402
+Total points evaluated: 115
+Iteration 19 completed in 12.77 seconds.
+
+--- Iteration 20/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 48.3251
+  Candidate 1: Obj = 48.3251
+  Candidate 2: Obj = 46.1054
+  Candidate 3: Obj = 46.6087
+  Candidate 4: Obj = 46.6087
+Best objective value found so far: 44.7402
+Total points evaluated: 120
+Iteration 20 completed in 53.15 seconds.
+
+--- Optimization Finished ---
+Total evaluations: 120
+Best Objective Value Found: 44.7402109368314
+Best U vector Found: [0 0 1 1 0 0 1 1 1 1 1 1 0 1 1 1]
+
+--- Verification ---
+Is the best U feasible? True
+Resulting Y vector for best U: [2 1 1 0 1 1 1 1 0 1 1 0 1 1 1 3]
+Objective value (recalculated): 44.7402
+\end{verbatim}
+
+\subsection{Base Combinatorial Bayesian Optimization (CBO) Code using
+Lower Confidence Bound and increasing
+Kappa.}\label{base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound-and-increasing-kappa.}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# {-}{-}{-} Problem Definition {-}{-}{-}}
+\NormalTok{X }\OperatorTok{=}\NormalTok{ np.array([}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{4}\NormalTok{])}
+
+\CommentTok{\# {-}{-}{-} evaluate\_objective function remains the same {-}{-}{-}}
+\NormalTok{LARGE\_PENALTY }\OperatorTok{=} \FloatTok{1e10}
+
+\KeywordTok{def}\NormalTok{ evaluate\_objective(U\_np, X\_vec, v\_star, convolutions, d, w):}
+    \CommentTok{\# ... (implementation is unchanged) ...}
+    \ControlFlowTok{if} \KeywordTok{not} \BuiltInTok{isinstance}\NormalTok{(U\_np, np.ndarray): }\ControlFlowTok{raise} \PreprocessorTok{TypeError}\NormalTok{(}\StringTok{"Input U must be a numpy array"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.ndim }\OperatorTok{!=} \DecValTok{1}\NormalTok{: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be 1{-}dimensional"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ U\_np.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{0}\NormalTok{]: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\SpecialStringTok{f"Dimension mismatch: U length }\SpecialCharTok{\{}\NormalTok{U\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ != V* rows }\SpecialCharTok{\{}\NormalTok{v\_star}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ X\_vec.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{!=}\NormalTok{ v\_star.shape[}\DecValTok{1}\NormalTok{]: }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Dimension mismatch: X length must match V* columns."}\NormalTok{)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{((U\_np }\OperatorTok{==} \DecValTok{0}\NormalTok{) }\OperatorTok{|}\NormalTok{ (U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{)): }\ControlFlowTok{raise} \PreprocessorTok{ValueError}\NormalTok{(}\StringTok{"Input U must be binary (0s and 1s)."}\NormalTok{)}
+
+\NormalTok{    V\_sum }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[U\_np }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ Y }\OperatorTok{=}\NormalTok{ X\_vec }\OperatorTok{+}\NormalTok{ V\_sum}
+    \ControlFlowTok{if}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{):}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y, d, convolutions)}
+\NormalTok{        objective\_value }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+        \ControlFlowTok{return}\NormalTok{ objective\_value}
+    \ControlFlowTok{else}\NormalTok{: }\ControlFlowTok{return}\NormalTok{ LARGE\_PENALTY}
+
+
+\CommentTok{\# {-}{-}{-} HED Implementation remains the same {-}{-}{-}}
+\KeywordTok{def}\NormalTok{ hamming\_distance(u1, u2): }\ControlFlowTok{return}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(u1 }\OperatorTok{!=}\NormalTok{ u2)}
+\KeywordTok{def}\NormalTok{ generate\_diverse\_random\_dictionary(T, m):}
+\NormalTok{    dictionary\_A }\OperatorTok{=}\NormalTok{ np.zeros((m, T), dtype}\OperatorTok{=}\BuiltInTok{int}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m): theta }\OperatorTok{=}\NormalTok{ np.random.uniform(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}\OperatorTok{;}\NormalTok{ row }\OperatorTok{=}\NormalTok{ (np.random.rand(T) }\OperatorTok{\textless{}}\NormalTok{ theta).astype(}\BuiltInTok{int}\NormalTok{)}\OperatorTok{;}\NormalTok{ dictionary\_A[i, :] }\OperatorTok{=}\NormalTok{ row}
+    \ControlFlowTok{return}\NormalTok{ dictionary\_A}
+\KeywordTok{def}\NormalTok{ embed\_vector(U\_np, dictionary\_A):}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}\NormalTok{ embedding\_phi }\OperatorTok{=}\NormalTok{ np.zeros(m, dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(m): embedding\_phi[i] }\OperatorTok{=}\NormalTok{ hamming\_distance(U\_np, dictionary\_A[i, :])}
+    \ControlFlowTok{return}\NormalTok{ embedding\_phi}
+\KeywordTok{def}\NormalTok{ embed\_batch(U\_batch\_np, dictionary\_A):}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}
+    \ControlFlowTok{if}\NormalTok{ U\_batch\_np.ndim }\OperatorTok{==} \DecValTok{1}\NormalTok{: U\_batch\_np }\OperatorTok{=}\NormalTok{ U\_batch\_np.reshape(}\DecValTok{1}\NormalTok{, }\OperatorTok{{-}}\DecValTok{1}\NormalTok{)}
+\NormalTok{    batch\_size }\OperatorTok{=}\NormalTok{ U\_batch\_np.shape[}\DecValTok{0}\NormalTok{]}\OperatorTok{;}\NormalTok{ embeddings\_np }\OperatorTok{=}\NormalTok{ np.zeros((batch\_size, m), dtype}\OperatorTok{=}\BuiltInTok{float}\NormalTok{)}
+    \ControlFlowTok{for}\NormalTok{ j }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(batch\_size): embeddings\_np[j, :] }\OperatorTok{=}\NormalTok{ embed\_vector(U\_batch\_np[j, :], dictionary\_A)}
+    \ControlFlowTok{return}\NormalTok{ embeddings\_np}
+
+
+\CommentTok{\# {-}{-}{-} BO Helper Functions {-}{-}{-}}
+
+\CommentTok{\# {-}{-}{-} get\_fitted\_model function remains the same {-}{-}{-}}
+\KeywordTok{def}\NormalTok{ get\_fitted\_model(train\_X\_embedded\_scaled, train\_Y, m):}
+    \CommentTok{\# ... (implementation is unchanged) ...}
+    \ControlFlowTok{if}\NormalTok{ train\_Y.ndim }\OperatorTok{\textgreater{}} \DecValTok{1} \KeywordTok{and}\NormalTok{ train\_Y.shape[}\DecValTok{1}\NormalTok{] }\OperatorTok{==} \DecValTok{1}\NormalTok{: train\_Y }\OperatorTok{=}\NormalTok{ train\_Y.ravel()}
+\NormalTok{    kernel }\OperatorTok{=}\NormalTok{ ConstantKernel(}\FloatTok{1.0}\NormalTok{, constant\_value\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}3}\NormalTok{, }\FloatTok{1e3}\NormalTok{)) }\OperatorTok{*} \OperatorTok{\textbackslash{}}
+\NormalTok{             Matern(length\_scale}\OperatorTok{=}\NormalTok{np.ones(m), length\_scale\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}2}\NormalTok{, }\FloatTok{1e2}\NormalTok{), nu}\OperatorTok{=}\FloatTok{2.5}\NormalTok{) }\OperatorTok{+} \OperatorTok{\textbackslash{}}
+\NormalTok{             WhiteKernel(noise\_level}\OperatorTok{=}\FloatTok{1e{-}4}\NormalTok{, noise\_level\_bounds}\OperatorTok{=}\NormalTok{(}\FloatTok{1e{-}6}\NormalTok{, }\FloatTok{1e1}\NormalTok{))}
+\NormalTok{    gp\_model }\OperatorTok{=}\NormalTok{ GaussianProcessRegressor(kernel}\OperatorTok{=}\NormalTok{kernel, alpha}\OperatorTok{=}\FloatTok{1e{-}10}\NormalTok{, n\_restarts\_optimizer}\OperatorTok{=}\DecValTok{10}\NormalTok{, random\_state}\OperatorTok{=}\DecValTok{42}\NormalTok{)}
+\NormalTok{    gp\_model.fit(train\_X\_embedded\_scaled, train\_Y)}
+    \ControlFlowTok{return}\NormalTok{ gp\_model}
+
+
+\CommentTok{\# {-}{-}{-} lower\_confidence\_bound function remains the same {-}{-}{-}}
+\KeywordTok{def}\NormalTok{ lower\_confidence\_bound(mu, sigma, kappa}\OperatorTok{=}\FloatTok{2.576}\NormalTok{):}
+    \CommentTok{""" Computes LCB: mu {-} kappa * sigma """}
+\NormalTok{    sigma }\OperatorTok{=}\NormalTok{ np.maximum(sigma, }\DecValTok{0}\NormalTok{)}
+    \ControlFlowTok{return}\NormalTok{ mu }\OperatorTok{{-}}\NormalTok{ kappa }\OperatorTok{*}\NormalTok{ sigma}
+
+
+\CommentTok{\# {-}{-}{-} optimize\_acqf\_discrete\_via\_embedding function remains the same {-}{-}{-}}
+\CommentTok{\# (It already accepts kappa as an argument)}
+\KeywordTok{def}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(gp\_model, scaler, dictionary\_A, T, q, num\_candidates, kappa):}
+    \CommentTok{""" Optimizes LCB acquisition function... """}
+\NormalTok{    m }\OperatorTok{=}\NormalTok{ dictionary\_A.shape[}\DecValTok{0}\NormalTok{]}
+    \CommentTok{\# 1. Generate Candidates}
+\NormalTok{    candidate\_u\_vectors\_np }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{(num\_candidates, T))}
+    \CommentTok{\# 2. Embed}
+\NormalTok{    embedded\_candidates\_np }\OperatorTok{=}\NormalTok{ embed\_batch(candidate\_u\_vectors\_np, dictionary\_A)}
+    \CommentTok{\# 3. Scale}
+\NormalTok{    embedded\_candidates\_scaled\_np }\OperatorTok{=}\NormalTok{ scaler.transform(embedded\_candidates\_np)}
+    \CommentTok{\# 4. Predict}
+\NormalTok{    mu, std }\OperatorTok{=}\NormalTok{ gp\_model.predict(embedded\_candidates\_scaled\_np, return\_std}\OperatorTok{=}\VariableTok{True}\NormalTok{)}
+    \CommentTok{\# 5. Calculate LCB}
+\NormalTok{    acq\_values }\OperatorTok{=}\NormalTok{ lower\_confidence\_bound(mu, std, kappa}\OperatorTok{=}\NormalTok{kappa) }\CommentTok{\# Uses passed kappa}
+    \CommentTok{\# 6. Select Top Candidates}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ np.argsort(acq\_values)[}\OperatorTok{{-}}\NormalTok{q:]}
+\NormalTok{    top\_indices }\OperatorTok{=}\NormalTok{ top\_indices[::}\OperatorTok{{-}}\DecValTok{1}\NormalTok{]}
+    \ControlFlowTok{return}\NormalTok{ candidate\_u\_vectors\_np[top\_indices, :]}
+
+
+\CommentTok{\# {-}{-}{-} BO Loop {-}{-}{-}}
+
+\CommentTok{\# Parameters}
+\CommentTok{\# +++ KAPPA is now dynamic +++}
+\NormalTok{INITIAL\_KAPPA }\OperatorTok{=} \FloatTok{3.75} \CommentTok{\# Starting value for kappa (e.g., 1.96 corresponds to \textasciitilde{}95\% CI)}
+\NormalTok{KAPPA\_INCREASE\_FACTOR }\OperatorTok{=} \FloatTok{1.3} \CommentTok{\# Factor to multiply kappa by on improvement (e.g., 10\% increase)}
+\CommentTok{\# Optional: Add a maximum kappa to prevent excessive exploration}
+\CommentTok{\# MAX\_KAPPA = 10.0}
+
+\NormalTok{N\_INITIAL }\OperatorTok{=} \DecValTok{20}
+\NormalTok{N\_ITERATIONS }\OperatorTok{=} \DecValTok{20}
+\NormalTok{BATCH\_SIZE\_q }\OperatorTok{=} \DecValTok{5}
+\NormalTok{NUM\_CANDIDATES\_Acqf }\OperatorTok{=}\NormalTok{ T }\OperatorTok{*} \DecValTok{1024}
+\NormalTok{m }\OperatorTok{=} \DecValTok{64}
+
+\CommentTok{\# Store evaluated points}
+\NormalTok{evaluated\_U\_np\_list }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{evaluated\_f\_vals }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{train\_Y\_list }\OperatorTok{=}\NormalTok{ []}
+
+\CommentTok{\# 1. Initialization}
+\CommentTok{\# {-}{-}{-} Initialization logic remains the same {-}{-}{-}}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Generating }\SpecialCharTok{\{}\NormalTok{N\_INITIAL}\SpecialCharTok{\}}\SpecialStringTok{ initial points..."}\NormalTok{)}
+\NormalTok{initial\_candidates }\OperatorTok{=}\NormalTok{ []}
+\ControlFlowTok{while} \BuiltInTok{len}\NormalTok{(initial\_candidates) }\OperatorTok{\textless{}}\NormalTok{ N\_INITIAL:}
+\NormalTok{    U\_init }\OperatorTok{=}\NormalTok{ np.random.randint(}\DecValTok{0}\NormalTok{, }\DecValTok{2}\NormalTok{, size}\OperatorTok{=}\NormalTok{T)}
+\NormalTok{    is\_duplicate }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(U\_init, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ initial\_candidates)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ is\_duplicate: initial\_candidates.append(U\_init)}
+
+\ControlFlowTok{for}\NormalTok{ U\_init }\KeywordTok{in}\NormalTok{ initial\_candidates:}
+\NormalTok{    f\_val }\OperatorTok{=}\NormalTok{ evaluate\_objective(U\_init, X, v\_star, convolutions, d, w)}
+\NormalTok{    neg\_f\_val }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{f\_val}
+\NormalTok{    evaluated\_U\_np\_list.append(U\_init)}\OperatorTok{;}\NormalTok{ evaluated\_f\_vals.append(f\_val)}\OperatorTok{;}\NormalTok{ train\_Y\_list.append(neg\_f\_val)}
+
+\NormalTok{train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{best\_obj\_so\_far }\OperatorTok{=} \BuiltInTok{min}\NormalTok{(evaluated\_f\_vals) }\ControlFlowTok{if}\NormalTok{ evaluated\_f\_vals }\ControlFlowTok{else} \BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Initial best objective value: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isfinite(best\_obj\_so\_far): }\BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Initial best objective is infinite..."}\NormalTok{)}
+
+\CommentTok{\# +++ Initialize current\_kappa +++}
+\NormalTok{current\_kappa }\OperatorTok{=}\NormalTok{ INITIAL\_KAPPA}
+\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Initial Kappa: }\SpecialCharTok{\{}\NormalTok{current\_kappa}\SpecialCharTok{:.3f\}}\SpecialStringTok{"}\NormalTok{)}
+
+
+\CommentTok{\# 2. BO Iterations}
+\ControlFlowTok{for}\NormalTok{ iteration }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(N\_ITERATIONS):}
+\NormalTok{    start\_time }\OperatorTok{=}\NormalTok{ time.time()}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{/}\SpecialCharTok{\{}\NormalTok{N\_ITERATIONS}\SpecialCharTok{\}}\SpecialStringTok{ {-}{-}{-}"}\NormalTok{)}
+
+    \CommentTok{\# a. Generate dictionary A (remains the same)}
+\NormalTok{    current\_dictionary\_A }\OperatorTok{=}\NormalTok{ generate\_diverse\_random\_dictionary(T, m)}
+
+    \CommentTok{\# b. Embed ALL evaluated U vectors (remains the same)}
+    \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_U\_np\_list: }\ControlFlowTok{continue}
+\NormalTok{    evaluated\_U\_np\_array }\OperatorTok{=}\NormalTok{ np.array(evaluated\_U\_np\_list)}
+\NormalTok{    embedded\_train\_X }\OperatorTok{=}\NormalTok{ embed\_batch(evaluated\_U\_np\_array, current\_dictionary\_A)}
+
+    \CommentTok{\# c. Scale the embedded training data (remains the same)}
+\NormalTok{    scaler }\OperatorTok{=}\NormalTok{ MinMaxScaler()}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0}\NormalTok{: embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ scaler.fit\_transform(embedded\_train\_X)}
+    \ControlFlowTok{else}\NormalTok{: embedded\_train\_X\_scaled }\OperatorTok{=}\NormalTok{ embedded\_train\_X}
+
+    \CommentTok{\# Ensure train\_Y is NumPy array}
+\NormalTok{    train\_Y\_for\_fit }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list)}
+
+    \CommentTok{\# d. Fit GP Model (remains the same)}
+    \BuiltInTok{print}\NormalTok{(}\StringTok{"Fitting GP model..."}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{\textgreater{}} \DecValTok{0} \KeywordTok{and}\NormalTok{ train\_Y\_for\_fit.shape[}\DecValTok{0}\NormalTok{] }\OperatorTok{==}\NormalTok{ embedded\_train\_X\_scaled.shape[}\DecValTok{0}\NormalTok{]:}
+\NormalTok{        gp\_model }\OperatorTok{=}\NormalTok{ get\_fitted\_model(embedded\_train\_X\_scaled, train\_Y\_for\_fit, m)}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"GP model fitted."}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{:}
+        \BuiltInTok{print}\NormalTok{(}\StringTok{"Warning: Not enough data or data mismatch to fit GP model. Skipping iteration."}\NormalTok{)}
+        \ControlFlowTok{continue}
+
+    \CommentTok{\# e. Determine current best neg value (useful for tracking)}
+\NormalTok{    current\_best\_neg\_f\_val }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{max}\NormalTok{(train\_Y\_for\_fit) }\ControlFlowTok{if}\NormalTok{ train\_Y\_for\_fit.size }\OperatorTok{\textgreater{}} \DecValTok{0} \ControlFlowTok{else} \OperatorTok{{-}}\BuiltInTok{float}\NormalTok{(}\StringTok{\textquotesingle{}inf\textquotesingle{}}\NormalTok{)}
+    \CommentTok{\# (Warning about low neg\_f\_val is still relevant)}
+    \ControlFlowTok{if}\NormalTok{ current\_best\_neg\_f\_val }\OperatorTok{\textless{}=} \OperatorTok{{-}}\NormalTok{LARGE\_PENALTY }\OperatorTok{/} \DecValTok{2} \KeywordTok{and}\NormalTok{ np.isfinite(current\_best\_neg\_f\_val):}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Current best NEGATIVE objective value (}\SpecialCharTok{\{}\NormalTok{current\_best\_neg\_f\_val}\SpecialCharTok{:.2f\}}\SpecialStringTok{) is very low."}\NormalTok{)}
+
+    \CommentTok{\# f. Optimize Acquisition Function (LCB) using current\_kappa \textless{}\textless{}\textless{} MODIFIED CALL \& COMMENT}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Optimizing acquisition function (LCB) with Kappa = }\SpecialCharTok{\{}\NormalTok{current\_kappa}\SpecialCharTok{:.3f\}}\SpecialStringTok{..."}\NormalTok{) }\CommentTok{\# Show kappa being used}
+\NormalTok{    next\_U\_candidates\_np }\OperatorTok{=}\NormalTok{ optimize\_acqf\_discrete\_via\_embedding(}
+\NormalTok{        gp\_model}\OperatorTok{=}\NormalTok{gp\_model,}
+\NormalTok{        scaler}\OperatorTok{=}\NormalTok{scaler,}
+\NormalTok{        dictionary\_A}\OperatorTok{=}\NormalTok{current\_dictionary\_A,}
+\NormalTok{        T}\OperatorTok{=}\NormalTok{T,}
+\NormalTok{        q}\OperatorTok{=}\NormalTok{BATCH\_SIZE\_q,}
+\NormalTok{        num\_candidates}\OperatorTok{=}\NormalTok{NUM\_CANDIDATES\_Acqf,}
+\NormalTok{        kappa}\OperatorTok{=}\NormalTok{current\_kappa }\CommentTok{\# Pass the current (potentially updated) kappa}
+\NormalTok{    )}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Selected }\SpecialCharTok{\{}\NormalTok{next\_U\_candidates\_np}\SpecialCharTok{.}\NormalTok{shape[}\DecValTok{0}\NormalTok{]}\SpecialCharTok{\}}\SpecialStringTok{ candidate(s)."}\NormalTok{)}
+
+    \CommentTok{\# g. Evaluate Objective AND UPDATE KAPPA ON IMPROVEMENT \textless{}\textless{}\textless{} MODIFIED HERE}
+\NormalTok{    newly\_evaluated\_U }\OperatorTok{=}\NormalTok{ []}\OperatorTok{;}\NormalTok{ newly\_evaluated\_f }\OperatorTok{=}\NormalTok{ []}\OperatorTok{;}\NormalTok{ newly\_evaluated\_neg\_f }\OperatorTok{=}\NormalTok{ []}
+\NormalTok{    improvement\_found\_in\_batch }\OperatorTok{=} \VariableTok{False} \CommentTok{\# Flag to track if kappa was updated in this batch}
+
+    \ControlFlowTok{for}\NormalTok{ i }\KeywordTok{in} \BuiltInTok{range}\NormalTok{(next\_U\_candidates\_np.shape[}\DecValTok{0}\NormalTok{]):}
+\NormalTok{        next\_U }\OperatorTok{=}\NormalTok{ next\_U\_candidates\_np[i, :]}
+\NormalTok{        already\_evaluated }\OperatorTok{=} \BuiltInTok{any}\NormalTok{(np.array\_equal(next\_U, u) }\ControlFlowTok{for}\NormalTok{ u }\KeywordTok{in}\NormalTok{ evaluated\_U\_np\_list)}
+        \ControlFlowTok{if}\NormalTok{ already\_evaluated: }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{ was already evaluated. Skipping."}\NormalTok{)}\OperatorTok{;} \ControlFlowTok{continue}
+
+        \CommentTok{\# Evaluate the objective}
+\NormalTok{        next\_f }\OperatorTok{=}\NormalTok{ evaluate\_objective(next\_U, X, v\_star, convolutions, d, w)}
+\NormalTok{        next\_neg\_f }\OperatorTok{=} \OperatorTok{{-}}\NormalTok{next\_f}
+\NormalTok{        V\_sum }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[next\_U }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}
+\NormalTok{        Y }\OperatorTok{=}\NormalTok{ X }\OperatorTok{+}\NormalTok{ V\_sum}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  Candidate }\SpecialCharTok{\{}\NormalTok{i}\SpecialCharTok{\}}\SpecialStringTok{: X = }\SpecialCharTok{\{}\NormalTok{Y}\SpecialCharTok{\}}\SpecialStringTok{, Obj = }\SpecialCharTok{\{}\NormalTok{next\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+
+        \CommentTok{\# Add to temporary lists for this iteration}
+\NormalTok{        newly\_evaluated\_U.append(next\_U)}\OperatorTok{;}\NormalTok{ newly\_evaluated\_f.append(next\_f)}\OperatorTok{;}\NormalTok{ newly\_evaluated\_neg\_f.append(next\_neg\_f)}
+
+        \CommentTok{\# {-}{-}{-} Check for improvement and update kappa {-}{-}{-}}
+        \ControlFlowTok{if}\NormalTok{ next\_f }\OperatorTok{\textless{}}\NormalTok{ best\_obj\_so\_far:}
+            \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  ** Improvement found! Old best: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{:.4f\}}\SpecialStringTok{, New best: }\SpecialCharTok{\{}\NormalTok{next\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+\NormalTok{            best\_obj\_so\_far }\OperatorTok{=}\NormalTok{ next\_f}
+            \CommentTok{\# Increase Kappa}
+\NormalTok{            old\_kappa }\OperatorTok{=}\NormalTok{ current\_kappa}
+\NormalTok{            current\_kappa }\OperatorTok{*=}\NormalTok{ KAPPA\_INCREASE\_FACTOR}
+            \CommentTok{\# Optional: Cap Kappa}
+            \CommentTok{\# current\_kappa = min(current\_kappa, MAX\_KAPPA)}
+            \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"  ** Increasing Kappa from }\SpecialCharTok{\{}\NormalTok{old\_kappa}\SpecialCharTok{:.3f\}}\SpecialStringTok{ to }\SpecialCharTok{\{}\NormalTok{current\_kappa}\SpecialCharTok{:.3f\}}\SpecialStringTok{"}\NormalTok{)}
+\NormalTok{            improvement\_found\_in\_batch }\OperatorTok{=} \VariableTok{True} \CommentTok{\# Set flag}
+
+    \CommentTok{\# h. Augment Dataset (remains the same)}
+\NormalTok{    evaluated\_U\_np\_list.extend(newly\_evaluated\_U)}\OperatorTok{;}\NormalTok{ evaluated\_f\_vals.extend(newly\_evaluated\_f)}\OperatorTok{;}\NormalTok{ train\_Y\_list.extend(newly\_evaluated\_neg\_f)}
+\NormalTok{    train\_Y }\OperatorTok{=}\NormalTok{ np.array(train\_Y\_list).reshape(}\OperatorTok{{-}}\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+
+\NormalTok{    iter\_time }\OperatorTok{=}\NormalTok{ time.time() }\OperatorTok{{-}}\NormalTok{ start\_time}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best objective value found so far: }\SpecialCharTok{\{}\NormalTok{best\_obj\_so\_far}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total points evaluated: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \CommentTok{\# Also report the kappa value that will be used in the *next* iteration}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Kappa for next iteration: }\SpecialCharTok{\{}\NormalTok{current\_kappa}\SpecialCharTok{:.3f\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Iteration }\SpecialCharTok{\{}\NormalTok{iteration }\OperatorTok{+} \DecValTok{1}\SpecialCharTok{\}}\SpecialStringTok{ completed in }\SpecialCharTok{\{}\NormalTok{iter\_time}\SpecialCharTok{:.2f\}}\SpecialStringTok{ seconds."}\NormalTok{)}
+
+
+\CommentTok{\# {-}{-}{-} Results {-}{-}{-}}
+\CommentTok{\# \textless{}\textless{}\textless{} Results section remains the same, including Verification \textgreater{}\textgreater{}\textgreater{}}
+\BuiltInTok{print}\NormalTok{(}\StringTok{"}\CharTok{\textbackslash{}n}\StringTok{{-}{-}{-} Optimization Finished {-}{-}{-}"}\NormalTok{)}
+\CommentTok{\# ... (Rest of the results reporting and verification code is unchanged) ...}
+\ControlFlowTok{if} \KeywordTok{not}\NormalTok{ evaluated\_f\_vals: }\BuiltInTok{print}\NormalTok{(}\StringTok{"No points were successfully evaluated."}\NormalTok{)}
+\ControlFlowTok{else}\NormalTok{:}
+\NormalTok{    final\_best\_idx }\OperatorTok{=}\NormalTok{ np.argmin(evaluated\_f\_vals)}
+\NormalTok{    final\_best\_U }\OperatorTok{=}\NormalTok{ evaluated\_U\_np\_list[final\_best\_idx]}
+\NormalTok{    final\_best\_f }\OperatorTok{=}\NormalTok{ evaluated\_f\_vals[final\_best\_idx]}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Total evaluations: }\SpecialCharTok{\{}\BuiltInTok{len}\NormalTok{(evaluated\_f\_vals)}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best Objective Value Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Best U vector Found: }\SpecialCharTok{\{}\NormalTok{final\_best\_U}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+
+    \CommentTok{\# Verification}
+\NormalTok{    V\_sum\_best }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{sum}\NormalTok{(v\_star[final\_best\_U }\OperatorTok{==} \DecValTok{1}\NormalTok{, :], axis}\OperatorTok{=}\DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ Y\_best }\OperatorTok{=}\NormalTok{ X }\OperatorTok{+}\NormalTok{ V\_sum\_best}
+\NormalTok{    is\_feasible }\OperatorTok{=}\NormalTok{ np.}\BuiltInTok{all}\NormalTok{(Y\_best }\OperatorTok{\textgreater{}=} \DecValTok{0}\NormalTok{)}\OperatorTok{;}\NormalTok{ recalculated\_obj }\OperatorTok{=}\NormalTok{ LARGE\_PENALTY}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+\NormalTok{        ewt, esp }\OperatorTok{=}\NormalTok{ calculate\_objective\_serv\_time\_lookup(Y\_best, d, convolutions)}
+\NormalTok{        recalculated\_obj }\OperatorTok{=}\NormalTok{ w }\OperatorTok{*}\NormalTok{ ewt }\OperatorTok{+}\NormalTok{ (}\DecValTok{1} \OperatorTok{{-}}\NormalTok{ w) }\OperatorTok{*}\NormalTok{ esp}
+
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"}\CharTok{\textbackslash{}n}\SpecialStringTok{{-}{-}{-} Verification {-}{-}{-}"}\NormalTok{)}
+    \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Is the best U feasible? }\SpecialCharTok{\{}\NormalTok{is\_feasible}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{if}\NormalTok{ is\_feasible:}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector for best U: }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+        \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Objective value (recalculated): }\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{:.4f\}}\SpecialStringTok{"}\NormalTok{)}
+        \ControlFlowTok{if} \KeywordTok{not}\NormalTok{ np.isclose(final\_best\_f, recalculated\_obj): }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Stored best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{) does not match recalculation (}\SpecialCharTok{\{}\NormalTok{recalculated\_obj}\SpecialCharTok{:.4f\}}\SpecialStringTok{)!"}\NormalTok{)}
+    \ControlFlowTok{elif}\NormalTok{ final\_best\_f }\OperatorTok{\textless{}}\NormalTok{ LARGE\_PENALTY: }\BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Warning: Best objective (}\SpecialCharTok{\{}\NormalTok{final\_best\_f}\SpecialCharTok{:.4f\}}\SpecialStringTok{) is not the penalty value, but feasibility check failed."}\NormalTok{)}\OperatorTok{;} \BuiltInTok{print}\NormalTok{(}\SpecialStringTok{f"Resulting Y vector (infeasible): }\SpecialCharTok{\{}\NormalTok{Y\_best}\SpecialCharTok{\}}\SpecialStringTok{"}\NormalTok{)}
+    \ControlFlowTok{else}\NormalTok{: }\BuiltInTok{print}\NormalTok{(}\StringTok{"Best solution found corresponds to an infeasible penalty value."}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Generating 20 initial points...
+Initial best objective value: 46.21735213560754
+Initial Kappa: 3.750
+
+--- Iteration 1/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 3.750...
+Selected 5 candidate(s).
+  Candidate 0: X = [ 1  1  1  1  0  1  0  2 -1  1  1  1  1  0  1  5], Obj = 10000000000.0000
+  Candidate 1: X = [1 1 0 1 1 1 0 1 0 1 2 0 1 0 1 5], Obj = 49.7960
+  Candidate 2: X = [ 1  1  1  0  2  0  0  2 -1  1  1  1  1  0  1  5], Obj = 10000000000.0000
+  Candidate 3: X = [ 1  1  0  1  1  1  1  1 -1  1  1  1  1  1  0  5], Obj = 10000000000.0000
+  Candidate 4: X = [2 0 0 1 1 1 0 1 0 1 1 1 1 0 1 5], Obj = 49.7203
+Best objective value found so far: 46.2174
+Total points evaluated: 25
+Kappa for next iteration: 3.750
+Iteration 1 completed in 5.18 seconds.
+
+--- Iteration 2/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 3.750...
+Selected 5 candidate(s).
+  Candidate 0: X = [3 0 0 2 0 1 1 0 0 1 1 1 1 0 2 3], Obj = 46.7017
+  Candidate 1: X = [2 0 0 1 1 1 1 0 0 1 1 1 1 1 1 4], Obj = 49.0182
+  Candidate 2: X = [2 0 0 1 1 0 1 1 1 0 2 1 0 1 1 4], Obj = 49.0688
+  Candidate 3: X = [3 0 0 1 1 1 0 1 1 0 1 1 1 1 1 3], Obj = 45.3810
+  ** Improvement found! Old best: 46.2174, New best: 45.3810
+  ** Increasing Kappa from 3.750 to 4.875
+  Candidate 4: X = [3 0 0 1 1 1 1 0 0 2 1 0 1 1 1 3], Obj = 46.1660
+Best objective value found so far: 45.3810
+Total points evaluated: 30
+Kappa for next iteration: 4.875
+Iteration 2 completed in 5.56 seconds.
+
+--- Iteration 3/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 4.875...
+Selected 5 candidate(s).
+  Candidate 0: X = [ 2 -1  1  1  1  0  2  0  1  0  2  0  1  0  1  5], Obj = 10000000000.0000
+  Candidate 1: X = [1 0 2 0 1 0 2 0 1 0 2 0 1 0 1 5], Obj = 50.8646
+  Candidate 2: X = [ 3 -1  1  2  0  0  2  0  1  0  1  1  1  1  0  4], Obj = 10000000000.0000
+  Candidate 3: X = [2 0 1 2 0 0 2 0 1 1 0 1 1 0 1 4], Obj = 46.2653
+  Candidate 4: X = [ 2 -1  2  0  1  0  2  0  1  0  2  0  0  1  1  5], Obj = 10000000000.0000
+Best objective value found so far: 45.3810
+Total points evaluated: 35
+Kappa for next iteration: 4.875
+Iteration 3 completed in 5.57 seconds.
+
+--- Iteration 4/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 4.875...
+Selected 5 candidate(s).
+  Candidate 0: X = [2 1 0 2 0 1 0 1 1 0 2 1 0 0 2 3], Obj = 46.3946
+  Candidate 1: X = [1 1 0 1 2 0 1 0 0 1 2 0 1 0 2 4], Obj = 50.1299
+  Candidate 2: X = [1 0 2 1 0 0 2 0 0 1 2 0 1 0 1 5], Obj = 51.5285
+  Candidate 3: X = [2 1 0 1 2 0 0 1 1 1 1 0 1 1 1 3], Obj = 45.1589
+  ** Improvement found! Old best: 45.3810, New best: 45.1589
+  ** Increasing Kappa from 4.875 to 6.338
+  Candidate 4: X = [1 1 0 1 2 0 0 2 0 1 1 0 1 0 1 5], Obj = 49.4395
+Best objective value found so far: 45.1589
+Total points evaluated: 40
+Kappa for next iteration: 6.338
+Iteration 4 completed in 6.11 seconds.
+
+--- Iteration 5/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 6.338...
+Selected 5 candidate(s).
+  Candidate 0: X = [3 0 0 2 0 0 1 1 1 0 2 0 1 0 2 3], Obj = 46.6600
+  Candidate 1: X = [ 3  0  0  2  1 -1  1  1  1  0  2  0  0  1  2  3], Obj = 10000000000.0000
+  Candidate 2: X = [3 0 0 1 2 0 0 1 1 0 1 1 1 0 2 3], Obj = 46.3281
+  Candidate 3: X = [ 2  1  1  0  2 -1  2  0  0  2  0  1  1  0  2  3], Obj = 10000000000.0000
+  Candidate 4: X = [ 2  1  0  1  2 -1  1  1  1  1  0  1  1  1  1  3], Obj = 10000000000.0000
+Best objective value found so far: 45.1589
+Total points evaluated: 45
+Kappa for next iteration: 6.338
+Iteration 5 completed in 5.73 seconds.
+
+--- Iteration 6/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 6.338...
+Selected 5 candidate(s).
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1: X = [2 1 1 0 2 0 0 1 1 1 1 0 0 2 1 3], Obj = 46.2744
+  Candidate 2: X = [2 1 0 2 0 1 0 1 1 1 1 0 1 1 1 3], Obj = 45.0604
+  ** Improvement found! Old best: 45.1589, New best: 45.0604
+  ** Increasing Kappa from 6.338 to 8.239
+  Candidate 3: X = [2 0 2 1 0 1 0 1 1 0 2 1 0 0 2 3], Obj = 46.6734
+  Candidate 4: X = [2 0 2 1 0 1 0 1 1 0 2 1 0 0 2 3], Obj = 46.6734
+Best objective value found so far: 45.0604
+Total points evaluated: 49
+Kappa for next iteration: 8.239
+Iteration 6 completed in 5.58 seconds.
+
+--- Iteration 7/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [3 0 1 0 1 1 0 1 1 0 2 0 1 1 1 3], Obj = 45.5820
+  Candidate 1: X = [2 0 1 0 1 1 0 1 1 0 1 1 1 1 1 4], Obj = 47.7626
+  Candidate 2: X = [2 0 0 1 1 1 1 0 0 1 2 0 1 1 1 4], Obj = 49.2067
+  Candidate 3: X = [2 0 1 0 1 1 1 0 0 1 1 1 1 1 1 4], Obj = 48.4327
+  Candidate 4: X = [2 0 1 0 1 1 0 1 1 0 2 0 1 0 2 4], Obj = 48.7929
+Best objective value found so far: 45.0604
+Total points evaluated: 54
+Kappa for next iteration: 8.239
+Iteration 7 completed in 6.60 seconds.
+
+--- Iteration 8/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [ 2  1  0  1  1  1  0  2 -1  1  2  0  1  1  1  3], Obj = 10000000000.0000
+  Candidate 1: X = [ 2  1  0  1  1  0  1  2 -1  1  2  1  0  1  1  3], Obj = 10000000000.0000
+  Candidate 2: X = [3 0 0 1 1 1 0 1 1 0 2 0 1 1 0 4], Obj = 46.0487
+  Candidate 3: X = [3 0 0 1 1 1 0 1 1 0 2 0 1 1 0 4], Obj = 46.0487
+  Candidate 4: X = [2 0 0 2 0 1 0 1 0 1 1 2 0 0 1 5], Obj = 50.3076
+Best objective value found so far: 45.0604
+Total points evaluated: 59
+Kappa for next iteration: 8.239
+Iteration 8 completed in 6.46 seconds.
+
+--- Iteration 9/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 1 0 2 0 1 1 0 1 0 1 1 1 0 2 4], Obj = 49.0465
+  Candidate 1: X = [1 0 2 0 1 1 0 1 1 0 2 0 1 1 0 5], Obj = 50.0641
+  Candidate 2: X = [1 1 1 0 1 1 0 1 1 0 2 0 1 1 0 5], Obj = 48.5107
+  Candidate 3: X = [1 1 1 0 1 1 0 1 1 0 2 0 1 1 0 5], Obj = 48.5107
+  Candidate 4: X = [2 0 0 2 0 1 0 1 1 0 1 1 1 1 1 4], Obj = 48.5352
+Best objective value found so far: 45.0604
+Total points evaluated: 64
+Kappa for next iteration: 8.239
+Iteration 9 completed in 8.14 seconds.
+
+--- Iteration 10/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 1 0 1 2 0 1 0 1 0 2 0 1 0 2 4], Obj = 49.4001
+  Candidate 1: X = [3 0 0 2 0 1 0 1 1 0 2 0 1 1 1 3], Obj = 45.8984
+  Candidate 2: X = [3 0 0 2 0 1 1 0 1 0 2 0 1 0 1 4], Obj = 46.5816
+  Candidate 3: X = [1 1 0 1 2 0 1 0 1 0 2 0 1 0 1 5], Obj = 49.5319
+  Candidate 4: X = [2 1 1 0 2 0 0 1 1 1 1 0 1 1 1 3], Obj = 45.1267
+Best objective value found so far: 45.0604
+Total points evaluated: 69
+Kappa for next iteration: 8.239
+Iteration 10 completed in 9.77 seconds.
+
+--- Iteration 11/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [2 0 2 1 0 0 2 1 0 1 0 1 0 1 1 4], Obj = 47.0094
+  Candidate 1: X = [2 0 2 1 0 1 1 0 1 0 2 1 0 0 2 3], Obj = 46.7218
+  Candidate 2: X = [2 0 2 1 0 1 1 0 1 0 2 1 0 0 2 3], Obj = 46.7218
+  Candidate 3: X = [2 1 1 1 0 1 1 0 1 0 2 0 1 0 2 3], Obj = 45.9788
+  Candidate 4: X = [ 3 -1  2  1  0  1  1  0  1  0  1  2  0  0  2  3], Obj = 10000000000.0000
+Best objective value found so far: 45.0604
+Total points evaluated: 74
+Kappa for next iteration: 8.239
+Iteration 11 completed in 8.49 seconds.
+
+--- Iteration 12/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [2 0 2 1 0 0 1 1 1 1 1 0 1 0 1 4], Obj = 46.3319
+  Candidate 1: X = [ 1  1  1  1  1  0  0  2 -1  1  1  1  1  1  0  5], Obj = 10000000000.0000
+  Candidate 2: X = [ 1  1  1  0  2 -1  2  1  0  0  2  0  1  0  1  5], Obj = 10000000000.0000
+  Candidate 3: X = [ 1  1  1  0  2  0  0  2 -1  1  2  0  1  1  0  5], Obj = 10000000000.0000
+  Candidate 4: X = [2 0 2 1 0 1 0 1 0 2 1 0 1 0 2 3], Obj = 46.7824
+Best objective value found so far: 45.0604
+Total points evaluated: 79
+Kappa for next iteration: 8.239
+Iteration 12 completed in 9.04 seconds.
+
+--- Iteration 13/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [2 0 1 1 0 1 0 1 0 1 2 0 1 0 1 5], Obj = 49.4011
+  Candidate 1: X = [2 0 1 0 1 1 0 1 0 1 2 0 1 1 0 5], Obj = 49.2446
+  Candidate 2: X = [1 0 2 1 0 1 0 1 0 1 2 0 1 0 2 4], Obj = 50.8897
+  Candidate 3: X = [2 0 0 2 0 1 0 1 0 1 2 0 1 1 1 4], Obj = 49.3649
+  Candidate 4: X = [2 0 0 2 0 1 0 1 0 1 2 1 0 0 2 4], Obj = 50.4192
+Best objective value found so far: 45.0604
+Total points evaluated: 84
+Kappa for next iteration: 8.239
+Iteration 13 completed in 11.62 seconds.
+
+--- Iteration 14/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 1 1 0 1 1 0 1 1 0 2 0 1 0 2 4], Obj = 48.7031
+  Candidate 1: X = [1 1 0 1 2 0 1 0 1 1 1 0 0 1 2 4], Obj = 49.5658
+  Candidate 2: X = [3 0 1 0 1 0 1 1 1 0 2 0 1 1 1 3], Obj = 45.7799
+  Candidate 3: X = [3 0 0 1 1 0 2 0 1 0 2 0 1 1 1 3], Obj = 45.9923
+  Candidate 4: X = [1 1 0 1 1 1 0 1 1 0 2 0 1 1 1 4], Obj = 48.3222
+Best objective value found so far: 45.0604
+Total points evaluated: 89
+Kappa for next iteration: 8.239
+Iteration 14 completed in 19.14 seconds.
+
+--- Iteration 15/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 0 1 2 0 1 1 0 1 0 2 0 1 0 1 5], Obj = 50.5004
+  Candidate 1: X = [2 1 0 2 1 0 0 1 1 1 1 0 1 0 2 3], Obj = 46.1522
+  Candidate 2: X = [2 0 2 1 1 0 1 0 1 0 2 0 1 0 1 4], Obj = 46.7292
+  Candidate 3: X = [1 0 2 0 1 1 0 1 1 1 1 0 1 0 1 5], Obj = 49.9452
+  Candidate 4: X = [2 0 0 1 2 0 0 1 1 1 1 0 1 0 1 5], Obj = 49.3842
+Best objective value found so far: 45.0604
+Total points evaluated: 94
+Kappa for next iteration: 8.239
+Iteration 15 completed in 14.08 seconds.
+
+--- Iteration 16/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 1 1 0 2 0 0 1 1 1 1 0 1 0 2 4], Obj = 48.4825
+  Candidate 1: X = [2 0 2 1 0 1 1 0 0 1 2 0 1 1 0 4], Obj = 46.7182
+  Candidate 2: X = [2 0 2 1 0 1 1 0 0 1 2 0 1 1 0 4], Obj = 46.7182
+  Candidate 3: X = [1 1 0 1 2 0 0 1 1 1 1 0 1 0 2 4], Obj = 49.0368
+  Candidate 4: X = [1 1 1 1 0 1 0 1 0 1 2 0 1 1 0 5], Obj = 49.0687
+Best objective value found so far: 45.0604
+Total points evaluated: 99
+Kappa for next iteration: 8.239
+Iteration 16 completed in 28.72 seconds.
+
+--- Iteration 17/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [ 2 -1  1  1  1  1  0  1  1  0  2  0  1  1  1  4], Obj = 10000000000.0000
+  Candidate 1: X = [3 0 0 2 0 1 0 1 1 0 2 0 1 0 1 4], Obj = 46.5153
+  Candidate 2: X = [2 0 0 1 1 1 0 1 1 0 1 1 1 1 1 4], Obj = 48.3639
+  Candidate 3: X = [2 0 0 1 1 1 0 1 1 0 2 0 1 1 1 4], Obj = 48.5062
+  Candidate 4: X = [3 0 0 1 1 1 1 0 1 0 2 0 1 1 0 4], Obj = 46.1199
+Best objective value found so far: 45.0604
+Total points evaluated: 104
+Kappa for next iteration: 8.239
+Iteration 17 completed in 28.44 seconds.
+
+--- Iteration 18/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [2 1 0 1 2 0 1 0 0 2 1 1 0 0 2 3], Obj = 47.0287
+  Candidate 1: X = [2 0 2 0 1 1 1 0 1 1 1 1 0 0 2 3], Obj = 46.0793
+  Candidate 2: X = [3 0 0 2 0 0 2 0 0 2 0 2 0 0 1 4], Obj = 47.4851
+  Candidate 3: X = [ 2  1  0  1  2  0  1  1 -1  2  1  1  0  0  1  4], Obj = 10000000000.0000
+  Candidate 4: X = [ 2  1  0  1  2  0  1  1 -1  2  1  1  0  0  1  4], Obj = 10000000000.0000
+Best objective value found so far: 45.0604
+Total points evaluated: 109
+Kappa for next iteration: 8.239
+Iteration 18 completed in 13.57 seconds.
+
+--- Iteration 19/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [1 1 0 1 2 0 0 1 1 0 2 0 1 1 0 5], Obj = 49.3445
+  Candidate 1: X = [1 1 0 2 0 0 1 1 1 0 2 1 0 1 0 5], Obj = 49.8488
+  Candidate 2: X = [1 1 1 0 2 0 1 0 1 0 2 0 0 1 1 5], Obj = 49.4770
+  Candidate 3: X = [2 1 1 1 0 1 1 0 1 0 2 0 0 2 0 4], Obj = 46.4602
+  Candidate 4: X = [ 1  1  1  0  2 -1  2  0  1  0  2  1 -1  1  1  5], Obj = 10000000000.0000
+Best objective value found so far: 45.0604
+Total points evaluated: 114
+Kappa for next iteration: 8.239
+Iteration 19 completed in 13.85 seconds.
+
+--- Iteration 20/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB) with Kappa = 8.239...
+Selected 5 candidate(s).
+  Candidate 0: X = [3 0 0 1 1 1 0 1 0 1 2 0 1 1 0 4], Obj = 46.3743
+  Candidate 1: X = [3 0 1 0 1 0 1 1 0 1 2 0 1 1 0 4], Obj = 46.4856
+  Candidate 2: X = [2 0 1 0 1 1 0 1 0 1 1 1 1 0 1 5], Obj = 49.2299
+  Candidate 3: X = [1 1 0 1 1 1 0 1 0 1 2 1 0 0 1 5], Obj = 50.1109
+  Candidate 4: X = [1 1 1 0 1 0 1 1 1 0 1 2 0 1 1 4], Obj = 48.4423
+Best objective value found so far: 45.0604
+Total points evaluated: 119
+Kappa for next iteration: 8.239
+Iteration 20 completed in 16.27 seconds.
+
+--- Optimization Finished ---
+Total evaluations: 119
+Best Objective Value Found: 45.06035420201859
+Best U vector Found: [0 0 1 0 1 0 1 0 0 1 1 1 0 1 1 1]
+
+--- Verification ---
+Is the best U feasible? True
+Resulting Y vector for best U: [2 1 0 2 0 1 0 1 1 1 1 0 1 1 1 3]
+Objective value (recalculated): 45.0604
+\end{verbatim}
+
+
+
+\end{document}

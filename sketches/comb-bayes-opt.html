@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Combinatorial Bayesian Optimization (Scikit-learn)</title>
+<title>Combinatorial Bayesian Optimization</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -68,6 +68,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="comb-bayes-opt_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="comb-bayes-opt_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -79,7 +108,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Combinatorial Bayesian Optimization (Scikit-learn)</h1>
+<h1 class="title">Combinatorial Bayesian Optimization</h1>
 </div>
 
 
@@ -96,7 +125,44 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<div id="5765720d" class="cell" data-execution_count="1">
+<section id="introduction" class="level2">
+<h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
+<p>We consider a scheduling problem where the schedule is represented by a vector <span class="math inline">\(\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T\)</span>. This vector comprises <span class="math inline">\(T\)</span> components, where <span class="math inline">\(x_j\)</span> denotes the non-negative allocation (e.g., number of patients or tasks) to time slot <span class="math inline">\(j\)</span>, for <span class="math inline">\(j = 0, \ldots, T-1\)</span>. A fundamental constraint is that the total allocation across all time slots must equal a fixed constant <span class="math inline">\(N\)</span>: <span class="math display">\[ \sum_{j=0}^{T-1} x_j = N \]</span> We require <span class="math inline">\(x_j \ge 0\)</span> for all <span class="math inline">\(j = 0, \ldots, T-1\)</span>. Consequently, a valid schedule <span class="math inline">\(\mathbf{x}\)</span> belongs to the feasible set <span class="math inline">\(\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}\)</span>, where <span class="math inline">\(\mathbb{D}\)</span> is the set of non-negative integers (<span class="math inline">\(\mathbb{Z}_{\ge 0}\)</span>).</p>
+<p>We define a neighborhood structure for local search based on perturbation vectors derived from a set of <span class="math inline">\(T\)</span> basis change vectors, <span class="math inline">\(v_i \in \mathbb{D}^{T}\)</span>, for <span class="math inline">\(i = 0, \ldots, T-1\)</span>. These basis vectors represent elementary shifts of allocation between time slots:</p>
+<ul>
+<li><p><span class="math inline">\(v_0 = (-1, 0, \ldots, 0, 1)\)</span> (Shift unit <em>from</em> slot 0 <em>to</em> slot <span class="math inline">\(T-1\)</span>)</p></li>
+<li><p><span class="math inline">\(v_1 = (1, -1, 0, \ldots, 0)\)</span> (Shift unit <em>from</em> slot 1 <em>to</em> slot 0)</p></li>
+<li><p><span class="math inline">\(v_i = (0, \ldots, 0, \underbrace{1}_{\text{pos } i-1}, \underbrace{-1}_{\text{pos } i}, 0, \ldots, 0)\)</span> for <span class="math inline">\(i = 2, \ldots, T-1\)</span> (Shift unit <em>from</em> slot <span class="math inline">\(i\)</span> <em>to</em> slot <span class="math inline">\(i-1\)</span>)</p></li>
+</ul>
+<p>A key property of these basis vectors is that the sum of components for each vector is zero: <span class="math inline">\(\sum_{j=0}^{T-1} v_{ij} = 0\)</span> for all <span class="math inline">\(i=0, \ldots, T-1\)</span>.</p>
+<p>Perturbations are constructed using a binary selection vector <span class="math inline">\(\mathbf{U} = (u_0, u_1, \ldots, u_{T-1})\)</span>, where <span class="math inline">\(u_i \in \{0, 1\}\)</span>. Each <span class="math inline">\(u_i\)</span> indicates whether the basis change <span class="math inline">\(v_i\)</span> is included in the perturbation. The resulting perturbation vector <span class="math inline">\(\mathbf{r}(\mathbf{U}) \in \mathbb{D}^{T}\)</span> is the linear combination: <span class="math display">\[ \mathbf{r}(\mathbf{U}) := \sum_{i=0}^{T-1} u_i v_i \]</span></p>
+<p>Since each <span class="math inline">\(v_i\)</span> sums to zero, any perturbation <span class="math inline">\(\mathbf{r}(\mathbf{U})\)</span> also sums to zero: <span class="math inline">\(\sum_{j=0}^{T-1} r_j(\mathbf{U}) = 0\)</span>. This ensures that applying such a perturbation to a valid schedule <span class="math inline">\(\mathbf{x}\)</span> preserves the total allocation <span class="math inline">\(N\)</span>.</p>
+<p>Two specific selection vectors result in a zero perturbation:</p>
+<ol type="1">
+<li><p>If <span class="math inline">\(\mathbf{U} = \mathbf{0} = (0, \ldots, 0)^T\)</span>, then <span class="math inline">\(\mathbf{r}(\mathbf{0}) = \mathbf{0}\)</span>.</p></li>
+<li><p>If <span class="math inline">\(\mathbf{U} = \mathbf{1} = (1, \ldots, 1)^T\)</span>, then <span class="math inline">\(\mathbf{r}(\mathbf{1}) = \sum_{i=0}^{T-1} v_i = \mathbf{0}\)</span>, as demonstrated by summing the components of the basis vectors.</p></li>
+</ol>
+<p>The neighborhood of a schedule <span class="math inline">\(\mathbf{x} \in \mathcal{F}\)</span>, denoted by <span class="math inline">\(\mathcal{N}(\mathbf{x})\)</span>, comprises all distinct, feasible schedules <span class="math inline">\(\mathbf{x}'\)</span> reachable by applying a non-zero perturbation <span class="math inline">\(\mathbf{r}(\mathbf{U})\)</span>: <span class="math display">\[ \mathcal{N}(\mathbf{x}) := \{ \mathbf{x}' \mid \mathbf{x}' = \mathbf{x} + \mathbf{r}(\mathbf{U}), \mathbf{U} \in \{0,1\}^T, \mathbf{r}(\mathbf{U}) \neq \mathbf{0}, \text{ and } x'_j \ge 0 \text{ for all } j = 0, \ldots, T-1 \} \]</span></p>
+<p>Note that because <span class="math inline">\(\sum r_j(\mathbf{U}) = 0\)</span>, any <span class="math inline">\(\mathbf{x}'\)</span> generated from <span class="math inline">\(\mathbf{x} \in \mathcal{F}\)</span> automatically satisfies <span class="math inline">\(\sum x'_j = N\)</span>. The condition <span class="math inline">\(\mathbf{r}(\mathbf{U}) \neq \mathbf{0}\)</span> explicitly excludes the transformations resulting from <span class="math inline">\(\mathbf{U}=\mathbf{0}\)</span> and <span class="math inline">\(\mathbf{U}=\mathbf{1}\)</span>.</p>
+<p>There are <span class="math inline">\(2^T\)</span> possible selection vectors <span class="math inline">\(\mathbf{U}\)</span>. Since <span class="math inline">\(\mathbf{U}=\mathbf{0}\)</span> and <span class="math inline">\(\mathbf{U}=\mathbf{1}\)</span> both yield <span class="math inline">\(\mathbf{r}(\mathbf{U}) = \mathbf{0}\)</span> (assuming <span class="math inline">\(T \ge 1\)</span> so <span class="math inline">\(\mathbf{0} \neq \mathbf{1}\)</span>), there are <span class="math inline">\(2^T - 2\)</span> distinct selection vectors that generate non-zero perturbations. This establishes an upper bound on the number of candidate neighbors generated by unique non-zero perturbations: <span class="math display">\[ |\mathcal{N}(\mathbf{x})| \le 2^T - 2 \]</span></p>
+<p>The actual size of the neighborhood may be smaller than this bound due to the non-negativity constraint (<span class="math inline">\(\mathbf{x}'_j \ge 0\)</span>) rendering some potential neighbors unfeasible.</p>
+<p>The local search algorithm aims to iteratively improve the schedule based on an objective function <span class="math inline">\(C(\mathbf{x})\)</span>. Given the following constants:</p>
+<ul>
+<li><p><span class="math inline">\(\mathbf{x}\)</span>: The current feasible schedule vector (<span class="math inline">\(\mathbf{x} \in \mathcal{F}\)</span>).</p></li>
+<li><p><span class="math inline">\(N\)</span>: The total number of patients/tasks to be scheduled.</p></li>
+<li><p><span class="math inline">\(T\)</span>: The number of time slots.</p></li>
+<li><p><span class="math inline">\(d\)</span>: The duration of each time slot.</p></li>
+<li><p><span class="math inline">\(s\)</span>: The service time distribution.</p></li>
+<li><p><span class="math inline">\(q\)</span>: The no-show probability.</p></li>
+<li><p><span class="math inline">\(w\)</span>: The objective function weight (<span class="math inline">\(w \in [0, 1]\)</span>).</p></li>
+</ul>
+<p>and the objective function: <span class="math display">\[ C(\mathbf{x}) = w \cdot EWT(\mathbf{x}) + (1-w) \cdot ESP(\mathbf{x}) \]</span> $\ EWT()\ ESP(). $</p>
+<p>, a neighborhood search step seeks to find a neighbor <span class="math inline">\(\mathbf{x}' \in \mathcal{N}(\mathbf{x})\)</span> such that <span class="math inline">\(C(\mathbf{x}') &lt; C(\mathbf{x})\)</span>. This involves evaluating candidate schedules generated by <span class="math inline">\(\mathbf{x} + \mathbf{r}(\mathbf{U})\)</span> for the <span class="math inline">\(2^T - 2\)</span> selection vectors <span class="math inline">\(\mathbf{U}\)</span> (where <span class="math inline">\(\mathbf{U} \neq \mathbf{0}\)</span> and <span class="math inline">\(\mathbf{U} \neq \mathbf{1}\)</span>), checking their feasibility (non-negativity), and comparing their objective function values to <span class="math inline">\(C(\mathbf{x})\)</span>.</p>
+<p>In case such an improvement is found, the algorithm updates the current schedule to <span class="math inline">\(\mathbf{x}'\)</span> and continues the search. If no better neighbor is found, the algorithm terminates, returning the best schedule found during the search. Because of the multi-modular nature of the objective function, a local optimum must also be the global optimum.</p>
+</section>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<div id="fe8020cc" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Core Libraries</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
@@ -119,9 +185,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">RuntimeWarning</span>)</span>
 <span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>warnings.filterwarnings(<span class="st">"ignore"</span>, category<span class="op">=</span>ConvergenceWarning) <span class="co"># GP fitting might not always converge perfectly</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
 <section id="base-combinatorial-bayesian-optimization-cbo-code-using-expected-improvement" class="level2">
 <h2 class="anchored" data-anchor-id="base-combinatorial-bayesian-optimization-cbo-code-using-expected-improvement">Base Combinatorial Bayesian Optimization (CBO) Code using Expected Improvement</h2>
-<div id="6e6c7e60" class="cell" data-execution_count="2">
+<div id="b79c9f46" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Problem Definition ---</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Fixed Data (Use your actual data)</span></span>
@@ -636,161 +703,161 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-512"><a href="#cb2-512" aria-hidden="true" tabindex="-1"></a>         <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Generating 20 initial points...
-Initial best objective value: 59.67738189426768
+Initial best objective value: 47.999122154942334
 
 --- Iteration 1/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.3470
-  Candidate 1: Obj = 60.3865
-  Candidate 2: Obj = 59.9035
-  Candidate 3: Obj = 60.4271
-  Candidate 4: Obj = 60.9931
-Best objective value found so far: 59.6774
+  Candidate 0: Obj = 48.9234
+  Candidate 1: Obj = 48.9234
+  Candidate 2: Obj = 48.9358
+  Candidate 3: Obj = 48.8482
+  Candidate 4: Obj = 51.6703
+Best objective value found so far: 47.9991
 Total points evaluated: 25
-Iteration 1 completed in 5.31 seconds.
+Iteration 1 completed in 5.35 seconds.
 
 --- Iteration 2/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.4549
-  Candidate 1: Obj = 61.0745
+  Candidate 0: Obj = 50.7938
+  Candidate 1: Obj = 10000000000.0000
   Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 60.6213
-  Candidate 4: Obj = 59.9408
-Best objective value found so far: 59.6774
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 47.9991
 Total points evaluated: 30
-Iteration 2 completed in 5.82 seconds.
+Iteration 2 completed in 4.94 seconds.
 
 --- Iteration 3/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.8644
-  Candidate 1: Obj = 59.2546
-  Candidate 2: Obj = 60.6904
-  Candidate 3: Obj = 59.2038
-  Candidate 4: Obj = 60.9424
-Best objective value found so far: 59.2038
+  Candidate 0: Obj = 49.3283
+  Candidate 1: Obj = 49.3804
+  Candidate 2: Obj = 50.1339
+  Candidate 3: Obj = 51.6073
+  Candidate 4: Obj = 50.3025
+Best objective value found so far: 47.9991
 Total points evaluated: 35
-Iteration 3 completed in 6.05 seconds.
+Iteration 3 completed in 5.97 seconds.
 
 --- Iteration 4/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.9618
-  Candidate 1: Obj = 59.7398
-  Candidate 2: Obj = 59.5737
-  Candidate 3: Obj = 60.6679
-  Candidate 4: Obj = 59.6036
-Best objective value found so far: 59.2038
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 47.6930
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 49.2678
+Best objective value found so far: 47.6930
 Total points evaluated: 40
-Iteration 4 completed in 5.66 seconds.
+Iteration 4 completed in 5.29 seconds.
 
 --- Iteration 5/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.5776
-  Candidate 1: Obj = 61.2933
-  Candidate 2: Obj = 61.2933
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 60.6767
-Best objective value found so far: 59.2038
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 48.1942
+  Candidate 2: Obj = 51.2480
+  Candidate 3: Obj = 48.4976
+  Candidate 4: Obj = 50.6349
+Best objective value found so far: 47.6930
 Total points evaluated: 45
-Iteration 5 completed in 6.57 seconds.
+Iteration 5 completed in 6.22 seconds.
 
 --- Iteration 6/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.1827
-  Candidate 1: Obj = 62.1827
-  Candidate 2: Obj = 62.0339
-  Candidate 3: Obj = 61.6593
-  Candidate 4: Obj = 61.6593
-Best objective value found so far: 59.2038
+  Candidate 0: Obj = 48.0843
+  Candidate 1: Obj = 48.0843
+  Candidate 2: Obj = 47.7797
+  Candidate 3: Obj = 48.1627
+  Candidate 4: Obj = 48.1188
+Best objective value found so far: 47.6930
 Total points evaluated: 50
-Iteration 6 completed in 8.01 seconds.
+Iteration 6 completed in 8.68 seconds.
 
 --- Iteration 7/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.9357
-  Candidate 1: Obj = 59.2441
-  Candidate 2: Obj = 60.1534
-  Candidate 3: Obj = 62.1240
-  Candidate 4: Obj = 59.7518
-Best objective value found so far: 59.2038
+  Candidate 0: Obj = 50.9519
+  Candidate 1: Obj = 50.5620
+  Candidate 2: Obj = 51.8020
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 50.3811
+Best objective value found so far: 47.6930
 Total points evaluated: 55
-Iteration 7 completed in 6.79 seconds.
+Iteration 7 completed in 8.42 seconds.
 
 --- Iteration 8/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 61.1405
-  Candidate 2: Obj = 61.1405
-  Candidate 3: Obj = 60.8160
-  Candidate 4: Obj = 59.0196
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 51.2845
+  Candidate 1: Obj = 47.4505
+  Candidate 2: Obj = 47.4965
+  Candidate 3: Obj = 51.0109
+  Candidate 4: Obj = 48.5838
+Best objective value found so far: 47.4505
 Total points evaluated: 60
-Iteration 8 completed in 5.07 seconds.
+Iteration 8 completed in 7.52 seconds.
 
 --- Iteration 9/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 59.9599
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 50.4098
+  Candidate 1: Obj = 48.5181
+  Candidate 2: Obj = 50.6587
+  Candidate 3: Obj = 47.0549
+  Candidate 4: Obj = 51.3911
+Best objective value found so far: 47.0549
 Total points evaluated: 65
-Iteration 9 completed in 5.30 seconds.
+Iteration 9 completed in 7.03 seconds.
 
 --- Iteration 10/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.8157
-  Candidate 1: Obj = 62.3867
-  Candidate 2: Obj = 59.3986
-  Candidate 3: Obj = 61.0854
-  Candidate 4: Obj = 60.5121
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 48.5496
+  Candidate 1: Obj = 48.5496
+  Candidate 2: Obj = 48.6639
+  Candidate 3: Obj = 48.5217
+  Candidate 4: Obj = 48.5217
+Best objective value found so far: 47.0549
 Total points evaluated: 70
-Iteration 10 completed in 6.73 seconds.
+Iteration 10 completed in 5.84 seconds.
 
 --- Iteration 11/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.8752
-  Candidate 1: Obj = 10000000000.0000
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 50.5481
+  Candidate 1: Obj = 50.7348
+  Candidate 2: Obj = 51.6949
+  Candidate 3: Obj = 50.2572
+  Candidate 4: Obj = 52.0974
+Best objective value found so far: 47.0549
 Total points evaluated: 75
-Iteration 11 completed in 6.14 seconds.
+Iteration 11 completed in 9.99 seconds.
 
 --- Iteration 12/20 ---
 Fitting GP model...
@@ -798,29 +865,43 @@ GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
   Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 59.7444
-  Candidate 2: Obj = 60.0462
-  Candidate 3: Obj = 61.3269
-  Candidate 4: Obj = 59.8989
-Best objective value found so far: 59.0196
+  Candidate 1: Obj = 48.7569
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 47.0549
 Total points evaluated: 80
-Iteration 12 completed in 6.66 seconds.
+Iteration 12 completed in 6.17 seconds.
 
 --- Iteration 13/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.7609
-  Candidate 1: Obj = 59.5039
-  Candidate 2: Obj = 59.2781
-  Candidate 3: Obj = 60.0663
-  Candidate 4: Obj = 59.7160
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 49.8613
+  Candidate 1: Obj = 51.0729
+  Candidate 2: Obj = 52.2037
+  Candidate 3: Obj = 52.5443
+  Candidate 4: Obj = 51.1821
+Best objective value found so far: 47.0549
 Total points evaluated: 85
-Iteration 13 completed in 8.89 seconds.
+Iteration 13 completed in 11.56 seconds.
 
 --- Iteration 14/20 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 49.3762
+  Candidate 1: Obj = 48.9996
+  Candidate 2: Obj = 47.9293
+  Candidate 3: Obj = 48.2197
+  Candidate 4: Obj = 48.6585
+Best objective value found so far: 47.0549
+Total points evaluated: 90
+Iteration 14 completed in 8.15 seconds.
+
+--- Iteration 15/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
@@ -829,110 +910,96 @@ Selected 5 candidate(s).
   Candidate 1: Obj = 10000000000.0000
   Candidate 2: Obj = 10000000000.0000
   Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 61.4153
-Best objective value found so far: 59.0196
-Total points evaluated: 90
-Iteration 14 completed in 6.08 seconds.
-
---- Iteration 15/20 ---
-Fitting GP model...
-GP model fitted.
-Optimizing acquisition function...
-Selected 5 candidate(s).
-  Candidate 0: Obj = 61.0383
-  Candidate 1: Obj = 59.0840
-  Candidate 2: Obj = 59.0275
-  Candidate 3: Obj = 59.4210
-  Candidate 4: Obj = 60.8555
-Best objective value found so far: 59.0196
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 47.0549
 Total points evaluated: 95
-Iteration 15 completed in 26.56 seconds.
+Iteration 15 completed in 11.66 seconds.
 
 --- Iteration 16/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.0717
-  Candidate 1: Obj = 59.6084
-  Candidate 2: Obj = 59.0574
-  Candidate 3: Obj = 59.4486
-  Candidate 4: Obj = 61.2102
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 48.4449
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 48.9779
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 47.0549
 Total points evaluated: 100
-Iteration 16 completed in 15.83 seconds.
+Iteration 16 completed in 9.03 seconds.
 
 --- Iteration 17/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.1567
-  Candidate 1: Obj = 60.1567
-  Candidate 2: Obj = 59.9683
-  Candidate 3: Obj = 59.2556
-  Candidate 4: Obj = 59.2905
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 51.3443
+  Candidate 1: Obj = 51.3443
+  Candidate 2: Obj = 51.3443
+  Candidate 3: Obj = 51.3443
+  Candidate 4: Obj = 47.9535
+Best objective value found so far: 47.0549
 Total points evaluated: 105
-Iteration 17 completed in 17.53 seconds.
+Iteration 17 completed in 16.22 seconds.
 
 --- Iteration 18/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.2478
-  Candidate 1: Obj = 59.2733
-  Candidate 2: Obj = 59.7780
-  Candidate 3: Obj = 59.4455
-  Candidate 4: Obj = 59.7786
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 51.5012
+  Candidate 1: Obj = 51.5012
+  Candidate 2: Obj = 47.2891
+  Candidate 3: Obj = 51.2118
+  Candidate 4: Obj = 48.2035
+Best objective value found so far: 47.0549
 Total points evaluated: 110
-Iteration 18 completed in 14.52 seconds.
+Iteration 18 completed in 28.02 seconds.
 
 --- Iteration 19/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.1242
-  Candidate 1: Obj = 59.5648
-  Candidate 2: Obj = 60.7309
-  Candidate 3: Obj = 62.1354
-  Candidate 4: Obj = 62.1354
-Best objective value found so far: 59.0196
+  Candidate 0: Obj = 51.4073
+  Candidate 1: Obj = 51.3397
+  Candidate 2: Obj = 48.8196
+  Candidate 3: Obj = 48.6464
+  Candidate 4: Obj = 48.3170
+Best objective value found so far: 47.0549
 Total points evaluated: 115
-Iteration 19 completed in 17.87 seconds.
+Iteration 19 completed in 15.55 seconds.
 
 --- Iteration 20/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.5935
-  Candidate 1: Obj = 59.5935
-  Candidate 2: Obj = 59.2681
+  Candidate 0: Obj = 50.8241
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
   Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 59.4173
-Best objective value found so far: 59.0196
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 47.0549
 Total points evaluated: 120
-Iteration 20 completed in 10.59 seconds.
+Iteration 20 completed in 14.31 seconds.
 
 --- Optimization Finished ---
 Total evaluations: 120
-Best Objective Value Found: 59.01962843307935
-Best U vector Found: [0 0 1 0 1 0 1 0 0 1 1 1 1 1 0 0]
+Best Objective Value Found: 47.05485095045928
+Best U vector Found: [0 0 1 1 1 0 1 1 0 1 1 1 0 1 1 1]
 
 --- Verification ---
 Is the best U feasible? True
-Resulting Y vector for best U: [2 1 0 2 0 1 0 1 1 1 1 1 0 0 1 4]
-Objective value (recalculated): 59.0196</code></pre>
+Resulting Y vector for best U: [2 1 1 1 0 1 1 0 1 1 1 0 1 1 1 3]
+Objective value (recalculated): 47.0549</code></pre>
 </div>
 </div>
 </section>
 <section id="base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound" class="level2">
 <h2 class="anchored" data-anchor-id="base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound">Base Combinatorial Bayesian Optimization (CBO) Code using Lower Confidence Bound</h2>
-<div id="4c7456dd" class="cell" data-execution_count="3">
+<div id="e77b321a" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Problem Definition ---</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># &lt;&lt;&lt; Problem definition section remains the same &gt;&gt;&gt;</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">4</span>])</span>
@@ -1175,7 +1242,7 @@ Objective value (recalculated): 59.0196</code></pre>
 <span id="cb4-240"><a href="#cb4-240" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Generating 20 initial points...
-Initial best objective value: 60.17925314760704
+Initial best objective value: 48.02718699616011
 
 --- Iteration 1/20 ---
 Fitting GP model...
@@ -1183,295 +1250,295 @@ GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
   Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 10000000000.0000
-  Candidate 2: Obj = 60.6877
-  Candidate 3: Obj = 60.4710
-  Candidate 4: Obj = 60.3335
-Best objective value found so far: 60.1793
+  Candidate 1: Obj = 53.4590
+  Candidate 2: Obj = 53.5724
+  Candidate 3: Obj = 52.6014
+  Candidate 4: Obj = 10000000000.0000
+Best objective value found so far: 48.0272
 Total points evaluated: 25
-Iteration 1 completed in 5.38 seconds.
+Iteration 1 completed in 5.71 seconds.
 
 --- Iteration 2/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.5674
-  Candidate 1: Obj = 62.6037
-  Candidate 2: Obj = 62.6037
-  Candidate 3: Obj = 10000000000.0000
+  Candidate 0: Obj = 51.1749
+  Candidate 1: Obj = 52.1605
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 52.9363
   Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 60.1793
+Best objective value found so far: 48.0272
 Total points evaluated: 30
-Iteration 2 completed in 5.58 seconds.
+Iteration 2 completed in 5.12 seconds.
 
 --- Iteration 3/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.6725
-  Candidate 1: Obj = 61.9980
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 61.6209
-  Candidate 4: Obj = 60.8317
-Best objective value found so far: 60.1793
+  Candidate 0: Obj = 10000000000.0000
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 51.1286
+  Candidate 3: Obj = 52.4316
+  Candidate 4: Obj = 52.4316
+Best objective value found so far: 48.0272
 Total points evaluated: 35
-Iteration 3 completed in 5.89 seconds.
+Iteration 3 completed in 6.03 seconds.
 
 --- Iteration 4/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.1067
-  Candidate 1: Obj = 60.1578
-  Candidate 2: Obj = 59.9235
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 62.8249
-Best objective value found so far: 59.9235
+  Candidate 0: Obj = 51.6044
+  Candidate 1: Obj = 51.5057
+  Candidate 2: Obj = 48.0811
+  Candidate 3: Obj = 48.3270
+  Candidate 4: Obj = 50.7430
+Best objective value found so far: 48.0272
 Total points evaluated: 40
-Iteration 4 completed in 5.55 seconds.
+Iteration 4 completed in 6.05 seconds.
 
 --- Iteration 5/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 61.8376
-  Candidate 1: Obj = 61.6112
-  Candidate 2: Obj = 61.9885
-  Candidate 3: Obj = 62.0414
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.9235
+  Candidate 0: Obj = 51.8156
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 50.8683
+  Candidate 4: Obj = 52.8650
+Best objective value found so far: 48.0272
 Total points evaluated: 45
-Iteration 5 completed in 6.14 seconds.
+Iteration 5 completed in 6.47 seconds.
 
 --- Iteration 6/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 10000000000.0000
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.9235
+  Candidate 0: Obj = 50.9938
+  Candidate 1: Obj = 51.3712
+  Candidate 2: Obj = 47.2382
+  Candidate 3: Obj = 51.3314
+  Candidate 4: Obj = 50.9302
+Best objective value found so far: 47.2382
 Total points evaluated: 50
-Iteration 6 completed in 5.92 seconds.
+Iteration 6 completed in 6.85 seconds.
 
 --- Iteration 7/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 61.4354
-  Candidate 1: Obj = 60.1475
-  Candidate 2: Obj = 60.6571
-  Candidate 3: Obj = 62.3260
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.9235
+  Candidate 0: Obj = 48.0327
+  Candidate 1: Obj = 48.3485
+  Candidate 2: Obj = 48.3331
+  Candidate 3: Obj = 48.7709
+  Candidate 4: Obj = 50.4798
+Best objective value found so far: 47.2382
 Total points evaluated: 55
-Iteration 7 completed in 5.62 seconds.
+Iteration 7 completed in 6.31 seconds.
 
 --- Iteration 8/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.1483
-  Candidate 1: Obj = 59.1483
-  Candidate 2: Obj = 59.5806
-  Candidate 3: Obj = 59.8185
-  Candidate 4: Obj = 61.8538
-Best objective value found so far: 59.1483
+  Candidate 0: Obj = 50.4787
+  Candidate 1: Obj = 50.6639
+  Candidate 2: Obj = 51.7518
+  Candidate 3: Obj = 51.5890
+  Candidate 4: Obj = 51.5890
+Best objective value found so far: 47.2382
 Total points evaluated: 60
-Iteration 8 completed in 6.21 seconds.
+Iteration 8 completed in 5.80 seconds.
 
 --- Iteration 9/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.2655
-  Candidate 1: Obj = 10000000000.0000
-  Candidate 2: Obj = 62.7665
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 59.1483
-Total points evaluated: 65
-Iteration 9 completed in 6.22 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1: Obj = 48.0144
+  Candidate 2: Obj = 50.8030
+  Candidate 3: Obj = 50.1330
+  Candidate 4: Obj = 47.2109
+Best objective value found so far: 47.2109
+Total points evaluated: 64
+Iteration 9 completed in 5.33 seconds.
 
 --- Iteration 10/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 59.5259
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 59.5939
-  Candidate 4: Obj = 59.5118
-Best objective value found so far: 59.1483
-Total points evaluated: 70
-Iteration 10 completed in 7.24 seconds.
+  Candidate 0: Obj = 47.3310
+  Candidate 1: Obj = 51.1211
+  Candidate 2: Obj = 51.8220
+  Candidate 3: Obj = 50.0575
+  Candidate 4: Obj = 50.3130
+Best objective value found so far: 47.2109
+Total points evaluated: 69
+Iteration 10 completed in 6.08 seconds.
 
 --- Iteration 11/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 61.6184
-  Candidate 1: Obj = 58.8442
-  Candidate 2: Obj = 59.5291
-  Candidate 3: Obj = 59.5195
-  Candidate 4: Obj = 59.1936
-Best objective value found so far: 58.8442
-Total points evaluated: 75
-Iteration 11 completed in 8.39 seconds.
+  Candidate 0: Obj = 51.8052
+  Candidate 1: Obj = 51.4261
+  Candidate 2: Obj = 51.5111
+  Candidate 3: Obj = 51.5111
+  Candidate 4: Obj = 51.5111
+Best objective value found so far: 47.2109
+Total points evaluated: 74
+Iteration 11 completed in 7.43 seconds.
 
 --- Iteration 12/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 10000000000.0000
-  Candidate 2: Obj = 59.8261
-  Candidate 3: Obj = 59.0659
-  Candidate 4: Obj = 59.2211
-Best objective value found so far: 58.8442
-Total points evaluated: 80
-Iteration 12 completed in 6.37 seconds.
+  Candidate 0: Obj = 49.6838
+  Candidate 1: Obj = 49.5923
+  Candidate 2: Obj = 50.0621
+  Candidate 3: Obj = 47.6962
+  Candidate 4: Obj = 49.4798
+Best objective value found so far: 47.2109
+Total points evaluated: 79
+Iteration 12 completed in 8.16 seconds.
 
 --- Iteration 13/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 62.5070
-  Candidate 1: Obj = 60.1001
-  Candidate 2: Obj = 10000000000.0000
-  Candidate 3: Obj = 59.7294
-  Candidate 4: Obj = 59.5762
-Best objective value found so far: 58.8442
-Total points evaluated: 85
-Iteration 13 completed in 8.38 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2 was already evaluated. Skipping.
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 48.3342
+Best objective value found so far: 47.2109
+Total points evaluated: 82
+Iteration 13 completed in 6.38 seconds.
 
 --- Iteration 14/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 60.2407
-  Candidate 1: Obj = 60.2407
-  Candidate 2: Obj = 59.1762
-  Candidate 3: Obj = 59.0028
-  Candidate 4: Obj = 61.0367
-Best objective value found so far: 58.8442
-Total points evaluated: 90
-Iteration 14 completed in 12.20 seconds.
+  Candidate 0: Obj = 48.7753
+  Candidate 1: Obj = 10000000000.0000
+  Candidate 2: Obj = 10000000000.0000
+  Candidate 3: Obj = 10000000000.0000
+  Candidate 4: Obj = 47.9925
+Best objective value found so far: 47.2109
+Total points evaluated: 87
+Iteration 14 completed in 7.76 seconds.
 
 --- Iteration 15/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.0561
-  Candidate 1: Obj = 58.6835
-  Candidate 2: Obj = 59.5947
-  Candidate 3: Obj = 58.6175
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 58.6175
-Total points evaluated: 95
-Iteration 15 completed in 21.83 seconds.
+  Candidate 0: Obj = 48.2691
+  Candidate 1: Obj = 51.7039
+  Candidate 2: Obj = 52.0584
+  Candidate 3: Obj = 47.6706
+  Candidate 4: Obj = 47.6706
+Best objective value found so far: 47.2109
+Total points evaluated: 92
+Iteration 15 completed in 19.09 seconds.
 
 --- Iteration 16/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.9724
-  Candidate 1: Obj = 61.1454
-  Candidate 2: Obj = 58.7614
-  Candidate 3: Obj = 58.5895
-  Candidate 4: Obj = 59.1727
-Best objective value found so far: 58.5895
-Total points evaluated: 100
-Iteration 16 completed in 24.90 seconds.
+  Candidate 0: Obj = 47.7663
+  Candidate 1: Obj = 47.7663
+  Candidate 2: Obj = 48.0138
+  Candidate 3: Obj = 48.4456
+  Candidate 4: Obj = 48.3945
+Best objective value found so far: 47.2109
+Total points evaluated: 97
+Iteration 16 completed in 16.77 seconds.
 
 --- Iteration 17/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 58.7730
-  Candidate 1: Obj = 59.9535
-  Candidate 2: Obj = 59.2371
-  Candidate 3: Obj = 59.0588
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 58.5895
-Total points evaluated: 105
-Iteration 17 completed in 17.79 seconds.
+  Candidate 0: Obj = 52.1166
+  Candidate 1: Obj = 47.6201
+  Candidate 2: Obj = 51.8493
+  Candidate 3: Obj = 51.2634
+  Candidate 4: Obj = 47.7800
+Best objective value found so far: 47.2109
+Total points evaluated: 102
+Iteration 17 completed in 18.10 seconds.
 
 --- Iteration 18/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 59.1341
-  Candidate 1: Obj = 59.2531
-  Candidate 2: Obj = 59.4018
-  Candidate 3: Obj = 10000000000.0000
-  Candidate 4: Obj = 10000000000.0000
-Best objective value found so far: 58.5895
-Total points evaluated: 110
-Iteration 18 completed in 9.03 seconds.
+  Candidate 0: Obj = 48.0382
+  Candidate 1: Obj = 48.5219
+  Candidate 2: Obj = 48.5219
+  Candidate 3: Obj = 47.9231
+  Candidate 4: Obj = 51.6962
+Best objective value found so far: 47.2109
+Total points evaluated: 107
+Iteration 18 completed in 28.97 seconds.
 
 --- Iteration 19/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000
-  Candidate 1: Obj = 60.2686
-  Candidate 2: Obj = 60.1725
-  Candidate 3: Obj = 61.9708
-  Candidate 4: Obj = 59.9122
-Best objective value found so far: 58.5895
-Total points evaluated: 115
-Iteration 19 completed in 20.53 seconds.
+  Candidate 0: Obj = 48.0837
+  Candidate 1: Obj = 50.3406
+  Candidate 2: Obj = 48.4476
+  Candidate 3: Obj = 48.4476
+  Candidate 4: Obj = 48.0508
+Best objective value found so far: 47.2109
+Total points evaluated: 112
+Iteration 19 completed in 19.09 seconds.
 
 --- Iteration 20/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 58.8584
-  Candidate 1: Obj = 58.8584
-  Candidate 2: Obj = 59.0316
-  Candidate 3: Obj = 61.6808
-  Candidate 4: Obj = 59.5872
-Best objective value found so far: 58.5895
-Total points evaluated: 120
-Iteration 20 completed in 33.50 seconds.
+  Candidate 0: Obj = 52.8578
+  Candidate 1: Obj = 52.7149
+  Candidate 2: Obj = 52.5312
+  Candidate 3: Obj = 51.2856
+  Candidate 4: Obj = 47.7558
+Best objective value found so far: 47.2109
+Total points evaluated: 117
+Iteration 20 completed in 33.59 seconds.
 
 --- Optimization Finished ---
-Total evaluations: 120
-Best Objective Value Found: 58.589462554291856
-Best U vector Found: [0 0 1 1 0 0 1 0 0 1 1 1 1 1 1 1]
+Total evaluations: 117
+Best Objective Value Found: 47.21094576451621
+Best U vector Found: [0 0 1 1 0 0 0 0 0 1 1 1 0 1 1 1]
 
 --- Verification ---
 Is the best U feasible? True
-Resulting Y vector for best U: [2 1 1 0 1 1 0 1 1 1 1 1 0 1 1 3]
-Objective value (recalculated): 58.5895</code></pre>
+Resulting Y vector for best U: [2 1 1 0 1 0 1 1 1 1 1 0 1 1 1 3]
+Objective value (recalculated): 47.2109</code></pre>
 </div>
 </div>
 </section>
 <section id="base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound-and-increasing-kappa." class="level2">
 <h2 class="anchored" data-anchor-id="base-combinatorial-bayesian-optimization-cbo-code-using-lower-confidence-bound-and-increasing-kappa.">Base Combinatorial Bayesian Optimization (CBO) Code using Lower Confidence Bound and increasing Kappa.</h2>
-<div id="33ab32e7" class="cell" data-execution_count="4">
+<div id="1ede0de5" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Problem Definition ---</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">4</span>])</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1720,7 +1787,7 @@ Objective value (recalculated): 58.5895</code></pre>
 <span id="cb6-246"><a href="#cb6-246" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Generating 20 initial points...
-Initial best objective value: 59.42251891335426
+Initial best objective value: 47.470164615728194
 Initial Kappa: 3.750
 
 --- Iteration 1/20 ---
@@ -1728,314 +1795,314 @@ Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [ 2  0  1  1  1 -1  2  0  1  0  2  0  0  1  1  5], Obj = 10000000000.0000
-  Candidate 1: X = [2 0 1 1 0 0 2 0 1 1 1 0 0 1 1 5], Obj = 60.5750
-  Candidate 2: X = [ 2  0  1  1  0  0  2  0  1  1  1  1 -1  2  0  5], Obj = 10000000000.0000
-  Candidate 3: X = [2 0 1 1 0 1 1 0 1 1 1 0 0 2 0 5], Obj = 59.4694
-  Candidate 4: X = [2 0 1 1 0 0 2 0 1 1 1 0 1 0 2 4], Obj = 60.2049
-Best objective value found so far: 59.4225
+  Candidate 0: X = [2 1 1 1 0 1 0 1 0 1 2 1 0 0 1 4], Obj = 48.6213
+  Candidate 1: X = [1 1 0 2 0 1 0 1 0 1 2 1 0 0 1 5], Obj = 51.7370
+  Candidate 2: X = [2 1 0 2 0 1 1 0 1 0 1 1 1 0 2 3], Obj = 47.8320
+  Candidate 3: X = [2 1 1 1 0 1 0 1 0 1 1 1 1 0 1 4], Obj = 47.8862
+  Candidate 4: X = [2 1 1 1 0 1 0 1 1 1 0 1 1 0 1 4], Obj = 47.5699
+Best objective value found so far: 47.4702
 Total points evaluated: 25
 Kappa for next iteration: 3.750
-Iteration 1 completed in 5.16 seconds.
+Iteration 1 completed in 5.05 seconds.
 
 --- Iteration 2/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 0 1 0 2 0 1 1 0 1 0 2 4], Obj = 59.3969
-  ** Improvement found! Old best: 59.4225, New best: 59.3969
-  ** Increasing Kappa from 3.750 to 4.875
-  Candidate 1: X = [2 0 1 1 0 1 1 0 1 1 1 0 1 1 1 4], Obj = 58.2601
-  ** Improvement found! Old best: 59.3969, New best: 58.2601
-  ** Increasing Kappa from 4.875 to 6.338
-  Candidate 2: X = [2 0 1 1 0 1 0 2 0 1 1 0 1 1 0 5], Obj = 59.1143
-  Candidate 3: X = [2 0 1 1 1 0 0 1 1 1 1 0 1 1 1 4], Obj = 58.8696
-  Candidate 4: X = [1 1 1 1 0 1 1 1 0 0 2 0 1 1 1 4], Obj = 59.2792
-Best objective value found so far: 58.2601
-Total points evaluated: 30
-Kappa for next iteration: 6.338
-Iteration 2 completed in 6.01 seconds.
+  Candidate 0: X = [3 0 0 2 1 0 0 1 1 1 1 1 0 0 1 4], Obj = 48.9326
+  Candidate 1: X = [ 1  1  1  1  0  0  2  1 -1  1  1  1  1  0  2  4], Obj = 10000000000.0000
+  Candidate 2 was already evaluated. Skipping.
+  Candidate 3 was already evaluated. Skipping.
+  Candidate 4: X = [ 1  1  1  1  1 -1  1  1  0  1  2  0  1  0  2  4], Obj = 10000000000.0000
+Best objective value found so far: 47.4702
+Total points evaluated: 28
+Kappa for next iteration: 3.750
+Iteration 2 completed in 4.87 seconds.
 
 --- Iteration 3/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 0 1 0 1 1 1 1 0 1 0 1 5], Obj = 59.1533
-  Candidate 1: X = [2 0 1 1 0 0 1 1 0 2 1 0 1 0 1 5], Obj = 60.7934
-  Candidate 2: X = [2 0 1 1 0 1 1 0 1 1 1 0 1 0 1 5], Obj = 58.8177
-  Candidate 3: X = [2 0 1 1 0 1 1 0 1 1 1 0 1 0 1 5], Obj = 58.8177
-  Candidate 4: X = [2 0 0 2 1 0 0 1 1 1 1 1 0 1 0 5], Obj = 60.6091
-Best objective value found so far: 58.2601
-Total points evaluated: 35
-Kappa for next iteration: 6.338
-Iteration 3 completed in 5.43 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1: X = [ 3 -1  2  0  1  1  0  1  1  1  1  0  1  1  0  4], Obj = 10000000000.0000
+  Candidate 2 was already evaluated. Skipping.
+  Candidate 3: X = [2 0 1 2 0 1 1 0 1 1 1 0 1 0 1 4], Obj = 47.9936
+  Candidate 4 was already evaluated. Skipping.
+Best objective value found so far: 47.4702
+Total points evaluated: 30
+Kappa for next iteration: 3.750
+Iteration 3 completed in 4.83 seconds.
 
 --- Iteration 4/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 0 0 2 0 0 2 0 1 0 1 2 4], Obj = 61.2006
-  Candidate 1: X = [3 0 1 1 0 0 2 0 0 2 1 0 0 1 2 3], Obj = 60.1793
-  Candidate 2: X = [3 0 1 1 0 0 2 0 0 2 1 0 0 1 2 3], Obj = 60.1793
-  Candidate 3: X = [3 0 1 1 0 0 2 0 0 2 1 0 1 0 1 4], Obj = 59.8476
-  Candidate 4: X = [3 0 1 1 0 0 2 0 0 2 0 1 0 2 0 4], Obj = 59.7816
-Best objective value found so far: 58.2601
-Total points evaluated: 40
-Kappa for next iteration: 6.338
-Iteration 4 completed in 6.65 seconds.
+  Candidate 0: X = [2 0 1 2 0 1 0 1 1 1 0 2 0 1 0 4], Obj = 47.9747
+  Candidate 1: X = [1 0 1 2 0 1 0 1 1 1 0 1 1 1 0 5], Obj = 51.3301
+  Candidate 2: X = [1 0 1 2 0 1 0 2 0 0 2 1 0 1 0 5], Obj = 52.3408
+  Candidate 3: X = [2 0 1 2 0 1 0 1 1 0 2 1 0 0 1 4], Obj = 48.4363
+  Candidate 4: X = [2 0 1 2 0 1 0 1 1 0 2 1 0 1 0 4], Obj = 48.2504
+Best objective value found so far: 47.4702
+Total points evaluated: 35
+Kappa for next iteration: 3.750
+Iteration 4 completed in 5.29 seconds.
 
 --- Iteration 5/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [1 1 1 1 1 0 0 2 0 1 1 1 0 0 2 4], Obj = 59.9962
-  Candidate 1: X = [2 0 0 1 2 0 1 1 0 1 1 1 0 0 2 4], Obj = 60.7132
-  Candidate 2: X = [2 0 0 1 2 0 1 1 0 1 1 1 0 0 2 4], Obj = 60.7132
-  Candidate 3: X = [ 1  1  1  1  1  0  1  1 -1  2  1  1  0  0  2  4], Obj = 10000000000.0000
-  Candidate 4: X = [2 0 0 2 1 0 1 1 0 1 0 2 0 0 2 4], Obj = 60.7372
-Best objective value found so far: 58.2601
-Total points evaluated: 45
-Kappa for next iteration: 6.338
-Iteration 5 completed in 5.56 seconds.
+  Candidate 0: X = [2 1 1 1 0 1 1 0 0 1 1 1 1 0 1 4], Obj = 48.1233
+  Candidate 1: X = [1 1 1 0 1 1 0 1 1 1 0 1 1 0 2 4], Obj = 49.5855
+  Candidate 2: X = [1 1 1 0 1 1 0 1 1 1 0 1 1 0 2 4], Obj = 49.5855
+  Candidate 3: X = [1 1 0 1 2 0 0 1 1 1 0 1 1 0 2 4], Obj = 50.4760
+  Candidate 4: X = [2 0 0 1 2 0 0 1 1 0 2 0 1 0 1 5], Obj = 51.2061
+Best objective value found so far: 47.4702
+Total points evaluated: 40
+Kappa for next iteration: 3.750
+Iteration 5 completed in 5.39 seconds.
 
 --- Iteration 6/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [ 2  0  1  1  1 -1  2  1  0  0  2  0  1  0  1  5], Obj = 10000000000.0000
-  Candidate 1: X = [ 1  1  1  0  2 -1  2  0  1  1  1  0  1  0  1  5], Obj = 10000000000.0000
-  Candidate 2: X = [ 2  1  1  0  2 -1  2  0  1  0  1  2  0  1  1  3], Obj = 10000000000.0000
-  Candidate 3: X = [ 2  0  1  0  2  0  0  2 -1  2  1  1  0  1  1  4], Obj = 10000000000.0000
-  Candidate 4: X = [ 2  0  1  0  2  0  0  2 -1  2  1  1  0  1  1  4], Obj = 10000000000.0000
-Best objective value found so far: 58.2601
-Total points evaluated: 50
-Kappa for next iteration: 6.338
-Iteration 6 completed in 5.12 seconds.
+  Candidate 0: X = [2 1 0 2 0 1 1 0 1 1 1 1 0 0 1 4], Obj = 48.1320
+  Candidate 1: X = [2 1 0 1 2 0 1 0 1 0 2 1 0 0 1 4], Obj = 48.5173
+  Candidate 2: X = [2 0 2 1 0 1 0 1 1 0 1 2 0 1 0 4], Obj = 48.2229
+  Candidate 3: X = [2 1 0 2 1 0 1 0 1 0 2 0 1 0 1 4], Obj = 48.4022
+  Candidate 4: X = [2 1 1 1 0 1 0 1 1 0 1 2 0 0 1 4], Obj = 48.0174
+Best objective value found so far: 47.4702
+Total points evaluated: 45
+Kappa for next iteration: 3.750
+Iteration 6 completed in 6.36 seconds.
 
 --- Iteration 7/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 3.750...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 0 2 1 0 1 1 0 1 1 1 0 0 2 4], Obj = 60.5934
-  Candidate 1: X = [2 0 0 2 1 0 0 1 1 1 1 1 0 1 1 4], Obj = 60.3065
-  Candidate 2: X = [ 2 -1  1  2  0  1  0  2  0  1  1  1  0  1  1  4], Obj = 10000000000.0000
-  Candidate 3: X = [ 2  0  0  2  1  0  1  1 -1  2  1  1  0  1  1  4], Obj = 10000000000.0000
-  Candidate 4: X = [ 2  0  0  2  1  0  1  1 -1  2  1  1  0  1  1  4], Obj = 10000000000.0000
-Best objective value found so far: 58.2601
-Total points evaluated: 55
-Kappa for next iteration: 6.338
-Iteration 7 completed in 7.59 seconds.
+  Candidate 0: X = [ 2  0  2  1  1  0  0  1  1  0  1  2 -1  2  0  4], Obj = 10000000000.0000
+  Candidate 1: X = [1 0 1 2 0 0 1 1 1 1 0 2 0 1 0 5], Obj = 52.0374
+  Candidate 2: X = [2 1 0 2 0 1 0 1 1 0 1 2 0 1 0 4], Obj = 47.9196
+  Candidate 3: X = [2 0 1 1 1 1 0 1 1 1 0 2 0 1 1 3], Obj = 47.3263
+  ** Improvement found! Old best: 47.4702, New best: 47.3263
+  ** Increasing Kappa from 3.750 to 4.875
+  Candidate 4: X = [ 2  0  1  2  1  0  0  1  1  0  1  2 -1  2  1  3], Obj = 10000000000.0000
+Best objective value found so far: 47.3263
+Total points evaluated: 50
+Kappa for next iteration: 4.875
+Iteration 7 completed in 4.97 seconds.
 
 --- Iteration 8/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [3 0 0 2 0 0 2 0 0 2 1 0 0 2 1 3], Obj = 60.3177
-  Candidate 1: X = [3 0 0 2 0 0 2 0 0 2 1 0 0 2 0 4], Obj = 60.1319
-  Candidate 2: X = [1 1 0 2 1 0 0 1 1 1 1 0 1 1 1 4], Obj = 60.0769
-  Candidate 3: X = [1 1 0 2 1 0 0 1 1 1 1 0 1 1 1 4], Obj = 60.0769
-  Candidate 4: X = [1 1 0 2 1 0 0 2 0 1 1 0 1 1 1 4], Obj = 60.2689
-Best objective value found so far: 58.2601
-Total points evaluated: 60
-Kappa for next iteration: 6.338
-Iteration 8 completed in 7.26 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1 was already evaluated. Skipping.
+  Candidate 2 was already evaluated. Skipping.
+  Candidate 3 was already evaluated. Skipping.
+  Candidate 4: X = [1 1 1 0 1 1 0 1 1 0 2 1 0 0 1 5], Obj = 50.4546
+Best objective value found so far: 47.3263
+Total points evaluated: 51
+Kappa for next iteration: 4.875
+Iteration 8 completed in 5.15 seconds.
 
 --- Iteration 9/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 0 2 1 0 0 1 1 1 1 0 1 1 1 4], Obj = 60.2079
-  Candidate 1: X = [3 0 0 2 1 0 0 2 0 1 1 0 1 1 0 4], Obj = 59.7910
-  Candidate 2: X = [2 0 1 1 0 1 1 0 0 2 1 0 0 1 2 4], Obj = 60.7002
-  Candidate 3: X = [3 0 0 2 1 0 0 2 0 1 1 1 0 0 1 4], Obj = 60.1553
-  Candidate 4: X = [2 0 1 1 0 1 1 0 0 1 2 0 1 0 1 5], Obj = 60.1928
-Best objective value found so far: 58.2601
-Total points evaluated: 65
-Kappa for next iteration: 6.338
-Iteration 9 completed in 8.40 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1 was already evaluated. Skipping.
+  Candidate 2 was already evaluated. Skipping.
+  Candidate 3 was already evaluated. Skipping.
+  Candidate 4: X = [2 0 1 2 0 1 0 1 1 0 1 2 0 1 1 3], Obj = 47.8086
+Best objective value found so far: 47.3263
+Total points evaluated: 52
+Kappa for next iteration: 4.875
+Iteration 9 completed in 5.11 seconds.
 
 --- Iteration 10/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 0 2 0 0 2 0 0 2 1 0 0 1 1 5], Obj = 62.0578
-  Candidate 1: X = [2 0 1 1 0 0 2 0 0 2 0 1 0 1 1 5], Obj = 60.9899
-  Candidate 2: X = [2 0 0 2 0 1 1 0 0 2 0 1 1 0 1 5], Obj = 61.0435
-  Candidate 3: X = [2 0 1 1 0 0 1 1 0 2 0 1 1 0 1 5], Obj = 60.5612
-  Candidate 4: X = [2 0 1 1 0 0 2 0 0 2 1 0 1 0 2 4], Obj = 61.1761
-Best objective value found so far: 58.2601
-Total points evaluated: 70
-Kappa for next iteration: 6.338
-Iteration 10 completed in 7.04 seconds.
+  Candidate 0: X = [2 1 1 1 0 1 0 1 0 2 0 1 1 0 1 4], Obj = 48.0957
+  Candidate 1: X = [1 1 1 1 0 1 0 1 0 2 0 1 1 0 1 5], Obj = 50.5524
+  Candidate 2: X = [1 0 1 2 0 1 0 1 0 2 0 2 0 0 1 5], Obj = 52.7347
+  Candidate 3: X = [2 1 1 0 1 1 0 1 0 2 1 1 0 0 1 4], Obj = 48.4797
+  Candidate 4: X = [2 1 1 0 1 1 0 1 0 2 1 1 0 0 1 4], Obj = 48.4797
+Best objective value found so far: 47.3263
+Total points evaluated: 57
+Kappa for next iteration: 4.875
+Iteration 10 completed in 6.80 seconds.
 
 --- Iteration 11/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 0 1 1 0 1 1 1 0 0 1 1 5], Obj = 59.3800
-  Candidate 1: X = [2 0 1 1 0 1 0 1 1 0 2 0 1 1 1 4], Obj = 59.2104
-  Candidate 2: X = [2 0 0 2 0 1 1 0 1 1 1 0 0 1 1 5], Obj = 60.6008
-  Candidate 3: X = [2 0 1 1 0 1 1 0 1 1 0 1 0 1 1 5], Obj = 59.1636
-  Candidate 4: X = [2 0 0 1 1 1 1 0 1 1 1 0 1 0 2 4], Obj = 60.1246
-Best objective value found so far: 58.2601
-Total points evaluated: 75
-Kappa for next iteration: 6.338
-Iteration 11 completed in 7.78 seconds.
+  Candidate 0: X = [1 1 0 2 0 1 0 2 0 1 1 0 1 0 1 5], Obj = 50.6343
+  Candidate 1: X = [1 1 0 1 2 0 0 1 1 1 1 0 1 0 2 4], Obj = 50.5020
+  Candidate 2: X = [1 1 0 1 2 0 0 1 1 1 1 0 1 0 2 4], Obj = 50.5020
+  Candidate 3: X = [1 1 0 2 0 1 0 2 0 1 1 1 0 0 1 5], Obj = 50.8971
+  Candidate 4: X = [1 1 0 2 1 0 1 0 1 1 0 2 0 0 1 5], Obj = 50.7516
+Best objective value found so far: 47.3263
+Total points evaluated: 62
+Kappa for next iteration: 4.875
+Iteration 11 completed in 7.93 seconds.
 
 --- Iteration 12/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 0 2 1 0 0 2 0 1 0 1 1 0 1 5], Obj = 60.7612
-  Candidate 1: X = [2 0 0 2 1 0 0 2 0 1 0 1 1 0 2 4], Obj = 60.8542
-  Candidate 2: X = [2 0 0 2 1 0 0 2 0 1 1 0 1 1 0 5], Obj = 60.6300
-  Candidate 3: X = [2 0 0 2 1 0 1 1 0 1 0 1 1 1 0 5], Obj = 60.1498
-  Candidate 4: X = [2 0 1 1 1 0 1 1 0 1 0 1 1 1 1 4], Obj = 58.3387
-Best objective value found so far: 58.2601
-Total points evaluated: 80
-Kappa for next iteration: 6.338
-Iteration 12 completed in 15.03 seconds.
+  Candidate 0: X = [2 1 0 1 1 1 0 1 0 2 1 1 0 0 2 3], Obj = 48.4509
+  Candidate 1: X = [2 1 0 1 1 1 0 1 0 2 1 1 0 0 2 3], Obj = 48.4509
+  Candidate 2: X = [1 1 0 2 0 1 0 1 1 1 0 1 1 0 2 4], Obj = 50.2757
+  Candidate 3: X = [1 1 0 2 0 1 0 1 1 1 0 1 1 0 2 4], Obj = 50.2757
+  Candidate 4: X = [2 1 1 1 0 0 1 1 1 0 1 2 0 1 1 3], Obj = 47.8653
+Best objective value found so far: 47.3263
+Total points evaluated: 67
+Kappa for next iteration: 4.875
+Iteration 12 completed in 5.19 seconds.
 
 --- Iteration 13/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 1 0 0 2 0 1 0 1 1 0 2 4], Obj = 59.5821
-  Candidate 1: X = [2 0 1 1 1 0 0 2 0 1 0 1 1 1 0 5], Obj = 59.3528
-  Candidate 2: X = [1 1 1 1 0 1 1 0 1 0 2 0 1 1 1 4], Obj = 59.0936
-  Candidate 3: X = [2 0 1 1 1 0 0 2 0 1 1 1 0 0 2 4], Obj = 59.8397
-  Candidate 4: X = [2 0 1 1 1 0 1 0 1 1 0 1 1 1 0 5], Obj = 58.6488
-Best objective value found so far: 58.2601
-Total points evaluated: 85
-Kappa for next iteration: 6.338
-Iteration 13 completed in 15.22 seconds.
+  Candidate 0 was already evaluated. Skipping.
+  Candidate 1: X = [2 1 1 1 0 0 1 1 0 2 1 0 1 1 0 4], Obj = 48.3719
+  Candidate 2: X = [2 1 1 1 0 0 1 1 0 2 0 1 1 1 1 3], Obj = 47.9777
+  Candidate 3 was already evaluated. Skipping.
+  Candidate 4: X = [2 1 0 2 0 0 1 2 0 0 2 1 0 0 2 3], Obj = 48.9047
+Best objective value found so far: 47.3263
+Total points evaluated: 70
+Kappa for next iteration: 4.875
+Iteration 13 completed in 5.46 seconds.
 
 --- Iteration 14/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [3 0 1 1 0 1 0 1 0 2 0 1 0 1 1 4], Obj = 59.0694
-  Candidate 1: X = [2 0 0 2 0 1 0 1 0 1 1 1 1 0 1 5], Obj = 60.7599
-  Candidate 2: X = [1 1 0 2 0 1 0 1 0 1 2 0 1 1 1 4], Obj = 60.8073
-  Candidate 3: X = [2 0 1 1 0 1 0 1 0 1 1 1 0 1 1 5], Obj = 59.9441
-  Candidate 4: X = [2 1 0 2 0 1 0 1 0 2 0 1 1 1 0 4], Obj = 58.8306
-Best objective value found so far: 58.2601
-Total points evaluated: 90
-Kappa for next iteration: 6.338
-Iteration 14 completed in 14.70 seconds.
+  Candidate 0: X = [ 2  1  0  2  0  0  1  2 -1  2  0  2  0  0  1  4], Obj = 10000000000.0000
+  Candidate 1: X = [ 2  0  1  2  0  1  0  2 -1  2  0  1  1  0  1  4], Obj = 10000000000.0000
+  Candidate 2: X = [ 2  0  1  2  0  1  0  2 -1  2  0  2  0  0  2  3], Obj = 10000000000.0000
+  Candidate 3: X = [ 2  1  0  2  0  0  1  2 -1  2  0  2  0  1  0  4], Obj = 10000000000.0000
+  Candidate 4: X = [ 2  0  1  1  1  1  0  2 -1  1  1  2  0  1  0  4], Obj = 10000000000.0000
+Best objective value found so far: 47.3263
+Total points evaluated: 75
+Kappa for next iteration: 4.875
+Iteration 14 completed in 6.50 seconds.
 
 --- Iteration 15/20 ---
 Fitting GP model...
 GP model fitted.
-Optimizing acquisition function (LCB) with Kappa = 6.338...
+Optimizing acquisition function (LCB) with Kappa = 4.875...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 1 0 0 2 0 1 1 0 1 0 2 4], Obj = 59.5781
-  Candidate 1: X = [2 0 0 2 0 1 1 0 0 2 1 0 0 1 1 5], Obj = 61.5419
-  Candidate 2: X = [3 0 1 1 1 0 0 2 0 1 1 1 0 0 2 3], Obj = 60.1286
-  Candidate 3: X = [3 0 1 1 1 0 0 2 0 1 1 0 1 0 2 3], Obj = 59.7881
-  Candidate 4: X = [2 0 0 2 0 1 1 0 0 2 1 0 0 1 2 4], Obj = 61.7420
-Best objective value found so far: 58.2601
-Total points evaluated: 95
+  Candidate 0: X = [1 1 0 1 1 1 0 1 1 1 1 0 1 1 0 5], Obj = 49.8252
+  Candidate 1: X = [1 1 0 1 1 1 0 1 1 1 1 0 1 1 0 5], Obj = 49.8252
+  Candidate 2: X = [1 1 0 1 1 1 0 1 0 2 1 0 1 1 1 4], Obj = 50.4782
+  Candidate 3: X = [2 1 1 0 1 1 0 1 1 1 0 1 1 1 1 3], Obj = 46.9551
+  ** Improvement found! Old best: 47.3263, New best: 46.9551
+  ** Increasing Kappa from 4.875 to 6.338
+  Candidate 4: X = [2 1 1 1 0 1 0 1 0 2 1 0 1 1 0 4], Obj = 48.2299
+Best objective value found so far: 46.9551
+Total points evaluated: 80
 Kappa for next iteration: 6.338
-Iteration 15 completed in 12.49 seconds.
+Iteration 15 completed in 7.40 seconds.
 
 --- Iteration 16/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 6.338...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 0 1 1 0 1 1 1 0 0 1 2 4], Obj = 59.5243
-  Candidate 1: X = [2 0 1 1 0 1 1 0 1 1 0 1 1 0 2 4], Obj = 58.8533
-  Candidate 2: X = [3 0 0 2 1 0 0 2 0 1 1 1 0 0 2 3], Obj = 60.3244
-  Candidate 3: X = [3 0 0 2 1 0 0 2 0 1 1 1 0 0 2 3], Obj = 60.3244
-  Candidate 4: X = [2 0 0 2 0 1 0 1 1 1 0 1 1 1 0 5], Obj = 60.0930
-Best objective value found so far: 58.2601
-Total points evaluated: 100
+  Candidate 0: X = [2 0 0 2 0 1 0 1 0 1 1 2 0 1 0 5], Obj = 51.4869
+  Candidate 1: X = [1 1 0 2 0 1 0 1 1 0 1 2 0 1 0 5], Obj = 50.6289
+  Candidate 2: X = [2 0 0 2 0 0 1 1 0 2 0 2 0 0 2 4], Obj = 52.1535
+  Candidate 3: X = [ 2 -1  1  2  0  1  0  1  0  2  0  2  0  0  2  4], Obj = 10000000000.0000
+  Candidate 4: X = [1 1 0 1 1 1 0 1 1 1 0 1 1 0 1 5], Obj = 50.1643
+Best objective value found so far: 46.9551
+Total points evaluated: 85
 Kappa for next iteration: 6.338
-Iteration 16 completed in 9.76 seconds.
+Iteration 16 completed in 9.26 seconds.
 
 --- Iteration 17/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 6.338...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 1 1 1 0 0 1 1 1 1 1 0 0 2 4], Obj = 59.6811
-  Candidate 1: X = [2 0 1 1 1 0 0 1 1 1 1 1 0 0 2 4], Obj = 59.6811
-  Candidate 2: X = [2 0 0 2 1 0 0 2 0 1 0 1 1 1 0 5], Obj = 60.6422
-  Candidate 3: X = [2 0 0 2 1 0 0 2 0 1 0 1 1 1 0 5], Obj = 60.6422
-  Candidate 4: X = [2 0 0 2 1 0 0 2 0 1 0 1 1 1 0 5], Obj = 60.6422
-Best objective value found so far: 58.2601
-Total points evaluated: 105
+  Candidate 0: X = [2 1 1 0 1 1 0 1 1 1 1 1 0 1 0 4], Obj = 47.5137
+  Candidate 1: X = [1 1 0 1 1 0 1 1 1 1 1 1 0 0 2 4], Obj = 50.8750
+  Candidate 2: X = [3 0 1 1 0 1 0 1 1 1 1 1 0 0 2 3], Obj = 48.4333
+  Candidate 3: X = [1 0 1 2 0 0 1 1 1 0 1 2 0 1 0 5], Obj = 52.2089
+  Candidate 4: X = [2 1 0 2 0 1 0 1 1 1 1 1 0 1 0 4], Obj = 47.7917
+Best objective value found so far: 46.9551
+Total points evaluated: 90
 Kappa for next iteration: 6.338
-Iteration 17 completed in 24.37 seconds.
+Iteration 17 completed in 9.57 seconds.
 
 --- Iteration 18/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 6.338...
 Selected 5 candidate(s).
-  Candidate 0: X = [2 0 0 2 1 0 0 2 0 1 1 0 0 1 2 4], Obj = 61.4725
-  Candidate 1: X = [3 0 1 1 0 1 1 0 0 2 1 0 1 0 2 3], Obj = 59.8319
-  Candidate 2: X = [2 0 1 1 1 0 0 2 0 1 1 0 0 1 1 5], Obj = 60.0892
-  Candidate 3: X = [3 0 1 1 0 1 1 0 0 1 1 1 1 0 1 4], Obj = 59.1020
-  Candidate 4: X = [3 0 1 1 0 1 1 0 0 1 1 1 1 0 1 4], Obj = 59.1020
-Best objective value found so far: 58.2601
-Total points evaluated: 110
+  Candidate 0: X = [2 1 1 1 0 1 0 1 1 0 1 1 1 1 0 4], Obj = 47.5186
+  Candidate 1: X = [2 1 0 1 1 1 0 1 1 1 0 2 0 1 1 3], Obj = 47.1878
+  Candidate 2: X = [1 1 1 0 1 1 0 1 0 2 0 1 1 1 0 5], Obj = 50.3506
+  Candidate 3: X = [2 1 1 1 0 0 1 1 1 1 0 1 1 1 0 4], Obj = 47.7143
+  Candidate 4: X = [1 1 0 2 0 1 0 1 1 0 2 1 0 1 1 4], Obj = 50.1674
+Best objective value found so far: 46.9551
+Total points evaluated: 95
 Kappa for next iteration: 6.338
-Iteration 18 completed in 17.55 seconds.
+Iteration 18 completed in 15.92 seconds.
 
 --- Iteration 19/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 6.338...
 Selected 5 candidate(s).
-  Candidate 0: X = [1 1 0 2 0 1 0 1 1 1 1 0 1 1 0 5], Obj = 59.9850
-  Candidate 1: X = [1 1 1 1 0 1 1 0 0 2 0 1 1 0 1 5], Obj = 60.0684
-  Candidate 2: X = [1 1 0 2 0 1 1 0 1 1 1 0 1 1 0 5], Obj = 59.7745
-  Candidate 3: X = [1 1 0 2 0 1 1 1 0 1 0 1 1 0 1 5], Obj = 60.0291
-  Candidate 4: X = [1 1 0 2 0 1 1 1 0 1 0 1 1 0 1 5], Obj = 60.0291
-Best objective value found so far: 58.2601
-Total points evaluated: 115
+  Candidate 0: X = [1 1 0 2 0 0 2 0 1 0 2 0 1 0 1 5], Obj = 51.4444
+  Candidate 1: X = [1 1 1 1 0 1 1 0 1 0 2 0 1 0 1 5], Obj = 49.8718
+  Candidate 2: X = [1 0 1 2 0 1 0 1 1 0 2 1 0 1 0 5], Obj = 51.9909
+  Candidate 3: X = [3 0 0 2 0 1 0 1 1 0 2 1 0 0 2 3], Obj = 48.8012
+  Candidate 4: X = [1 0 2 1 0 1 0 1 1 0 1 2 0 0 1 5], Obj = 52.0316
+Best objective value found so far: 46.9551
+Total points evaluated: 100
 Kappa for next iteration: 6.338
-Iteration 19 completed in 15.40 seconds.
+Iteration 19 completed in 34.22 seconds.
 
 --- Iteration 20/20 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB) with Kappa = 6.338...
 Selected 5 candidate(s).
-  Candidate 0: X = [1 1 1 1 1 0 0 2 0 1 1 0 1 0 1 5], Obj = 59.6853
-  Candidate 1: X = [2 0 0 2 1 0 0 1 1 1 1 0 1 0 2 4], Obj = 60.6772
-  Candidate 2: X = [2 0 1 1 0 1 1 0 1 1 1 0 1 0 2 4], Obj = 58.8474
-  Candidate 3: X = [2 0 1 1 0 0 2 0 0 2 1 0 0 1 2 4], Obj = 61.5272
-  Candidate 4: X = [2 0 1 1 1 0 0 1 1 1 0 1 1 1 1 4], Obj = 58.9530
-Best objective value found so far: 58.2601
-Total points evaluated: 120
+  Candidate 0: X = [1 1 0 1 1 0 2 0 1 1 1 0 1 0 1 5], Obj = 50.8081
+  Candidate 1: X = [1 1 0 1 1 0 2 0 1 1 1 0 1 0 1 5], Obj = 50.8081
+  Candidate 2: X = [2 1 0 2 0 1 1 0 1 1 0 1 1 0 1 4], Obj = 47.6827
+  Candidate 3: X = [1 1 0 1 1 1 1 0 1 1 0 1 1 0 1 5], Obj = 50.0575
+  Candidate 4: X = [1 1 0 1 1 1 0 2 0 0 2 0 1 0 2 4], Obj = 50.8918
+Best objective value found so far: 46.9551
+Total points evaluated: 105
 Kappa for next iteration: 6.338
-Iteration 20 completed in 17.25 seconds.
+Iteration 20 completed in 13.76 seconds.
 
 --- Optimization Finished ---
-Total evaluations: 120
-Best Objective Value Found: 58.26013283744824
-Best U vector Found: [1 1 1 1 1 0 1 1 0 1 1 1 0 1 1 1]
+Total evaluations: 105
+Best Objective Value Found: 46.955136718415616
+Best U vector Found: [0 0 1 1 0 0 1 0 0 1 1 0 0 1 1 1]
 
 --- Verification ---
 Is the best U feasible? True
-Resulting Y vector for best U: [2 0 1 1 0 1 1 0 1 1 1 0 1 1 1 4]
-Objective value (recalculated): 58.2601</code></pre>
+Resulting Y vector for best U: [2 1 1 0 1 1 0 1 1 1 0 1 1 1 1 3]
+Objective value (recalculated): 46.9551</code></pre>
 </div>
 </div>
 </section>
