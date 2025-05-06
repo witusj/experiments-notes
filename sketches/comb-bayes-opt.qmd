@@ -90,15 +90,14 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=ConvergenceWarning) # GP fitting might not always converge perfectly
 ```
 
-## Base Combinatorial Bayesian Optimization (CBO) Code using Expected Improvement
+## Constants
 
 ```{python}
 # --- Problem Definition ---
 
 # Fixed Data (Use your actual data)
-X = np.array([2, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 4])
-N = sum(X) # Total number of patients
-T = X.shape[0] # Dimension of the binary vector U
+N = 21 # Total number of patients
+T = 20 # Dimension of the binary vector U
 d = 5 # Length of each interval
 max_s = 20 # Maximum service time
 q = 0.20 # Probability of a scheduled patient not showing up
@@ -244,11 +243,16 @@ def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]
 
 i = 5  # First 5 highest values in ascending order, rest in descending order
 s = generate_weighted_list(max_s, l, i)
+print(f"Generated average service time: {np.dot(np.arange(len(s)), s)}")
 convolutions = compute_convolutions(s, N, q)
-
+X = np.array(bailey_welch_schedule(T, d, N, s))
 # Objective Function Calculation
 LARGE_PENALTY = 1e10 # Penalty for infeasible solutions
+```
 
+## Base Combinatorial Bayesian Optimization (CBO) Code using Expected Improvement
+
+```{python}
 def evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):
     """
     Target function: Evaluates objective for a single binary numpy array U.
@@ -319,7 +323,6 @@ def embed_batch(U_batch_np, dictionary_A):
     # Return NumPy array directly
     return embeddings_np
 
-
 # --- BO Helper Functions ---
 
 def get_fitted_model(train_X_embedded_scaled, train_Y, m):
@@ -338,8 +341,8 @@ def get_fitted_model(train_X_embedded_scaled, train_Y, m):
              Matern(length_scale=np.ones(m), # Enable ARD, initialize length scales to 1
                     length_scale_bounds=(1e-2, 1e2),
                     nu=2.5) + \
-             WhiteKernel(noise_level=1e-4, # Initial guess for noise
-                         noise_level_bounds=(1e-6, 1e1)) # Bounds for noise optimization
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
 
     # Instantiate the Gaussian Process Regressor
     # alpha: Value added to the diagonal of the kernel matrix during fitting
@@ -421,10 +424,10 @@ def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, n
 
 # Parameters
 N_INITIAL = 20
-N_ITERATIONS = 20
+N_ITERATIONS = 25
 BATCH_SIZE_q = 5
 NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
-m = 64 # Dimension of the embedding space
+m = 128 # Dimension of the embedding space
 
 # Store evaluated points (using NumPy arrays)
 evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
@@ -610,28 +613,6 @@ else:
 ## Base Combinatorial Bayesian Optimization (CBO) Code using Lower Confidence Bound
 
 ```{python}
-# --- Problem Definition ---
-# <<< Problem definition section remains the same >>>
-X = np.array([2, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 4])
-
-# --- evaluate_objective function remains the same ---
-LARGE_PENALTY = 1e10
-def evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):
-    # ... (implementation is unchanged) ...
-    if not isinstance(U_np, np.ndarray): raise TypeError("Input U must be a numpy array")
-    if U_np.ndim != 1: raise ValueError("Input U must be 1-dimensional")
-    if U_np.shape[0] != v_star.shape[0]: raise ValueError(f"Dimension mismatch: U length {U_np.shape[0]} != V* rows {v_star.shape[0]}.")
-    if X_vec.shape[0] != v_star.shape[1]: raise ValueError("Dimension mismatch: X length must match V* columns.")
-    if not np.all((U_np == 0) | (U_np == 1)): raise ValueError("Input U must be binary (0s and 1s).")
-
-    V_sum = np.sum(v_star[U_np == 1, :], axis=0); Y = X_vec + V_sum
-    if np.all(Y >= 0):
-        ewt, esp = calculate_objective_serv_time_lookup(Y, d, convolutions)
-        objective_value = w * ewt + (1 - w) * esp
-        return objective_value
-    else: return LARGE_PENALTY
-
-
 # --- HED Implementation remains the same ---
 def hamming_distance(u1, u2): return np.sum(u1 != u2)
 def generate_diverse_random_dictionary(T, m):
@@ -658,7 +639,8 @@ def get_fitted_model(train_X_embedded_scaled, train_Y, m):
     if train_Y.ndim > 1 and train_Y.shape[1] == 1: train_Y = train_Y.ravel()
     kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
              Matern(length_scale=np.ones(m), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
-             WhiteKernel(noise_level=1e-4, noise_level_bounds=(1e-6, 1e1))
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
     gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
     gp_model.fit(train_X_embedded_scaled, train_Y)
     return gp_model
@@ -720,12 +702,11 @@ def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, n
 
 # Parameters
 KAPPA = 2.576 # Exploration parameter for LCB. Adjust as needed.
-
 N_INITIAL = 20
-N_ITERATIONS = 20
+N_ITERATIONS = 25
 BATCH_SIZE_q = 5
-NUM_CANDIDATES_Acqf = T * 1024
-m = 64
+NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
+m = 128 # Dimension of the embedding space
 
 # Store evaluated points
 evaluated_U_np_list = []
@@ -855,28 +836,6 @@ else:
 ## Base Combinatorial Bayesian Optimization (CBO) Code using Lower Confidence Bound and increasing Kappa.
 
 ```{python}
-# --- Problem Definition ---
-X = np.array([2, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 4])
-
-# --- evaluate_objective function remains the same ---
-LARGE_PENALTY = 1e10
-
-def evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):
-    # ... (implementation is unchanged) ...
-    if not isinstance(U_np, np.ndarray): raise TypeError("Input U must be a numpy array")
-    if U_np.ndim != 1: raise ValueError("Input U must be 1-dimensional")
-    if U_np.shape[0] != v_star.shape[0]: raise ValueError(f"Dimension mismatch: U length {U_np.shape[0]} != V* rows {v_star.shape[0]}.")
-    if X_vec.shape[0] != v_star.shape[1]: raise ValueError("Dimension mismatch: X length must match V* columns.")
-    if not np.all((U_np == 0) | (U_np == 1)): raise ValueError("Input U must be binary (0s and 1s).")
-
-    V_sum = np.sum(v_star[U_np == 1, :], axis=0); Y = X_vec + V_sum
-    if np.all(Y >= 0):
-        ewt, esp = calculate_objective_serv_time_lookup(Y, d, convolutions)
-        objective_value = w * ewt + (1 - w) * esp
-        return objective_value
-    else: return LARGE_PENALTY
-
-
 # --- HED Implementation remains the same ---
 def hamming_distance(u1, u2): return np.sum(u1 != u2)
 def generate_diverse_random_dictionary(T, m):
@@ -903,7 +862,8 @@ def get_fitted_model(train_X_embedded_scaled, train_Y, m):
     if train_Y.ndim > 1 and train_Y.shape[1] == 1: train_Y = train_Y.ravel()
     kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
              Matern(length_scale=np.ones(m), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
-             WhiteKernel(noise_level=1e-4, noise_level_bounds=(1e-6, 1e1))
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
     gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
     gp_model.fit(train_X_embedded_scaled, train_Y)
     return gp_model
@@ -944,13 +904,12 @@ def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, n
 INITIAL_KAPPA = 3.75 # Starting value for kappa (e.g., 1.96 corresponds to ~95% CI)
 KAPPA_INCREASE_FACTOR = 1.3 # Factor to multiply kappa by on improvement (e.g., 10% increase)
 # Optional: Add a maximum kappa to prevent excessive exploration
-# MAX_KAPPA = 10.0
-
+MAX_KAPPA = 15.0
 N_INITIAL = 20
-N_ITERATIONS = 20
+N_ITERATIONS = 25
 BATCH_SIZE_q = 5
-NUM_CANDIDATES_Acqf = T * 1024
-m = 64
+NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
+m = 128 # Dimension of the embedding space
 
 # Store evaluated points
 evaluated_U_np_list = []
