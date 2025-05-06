@@ -49,7 +49,7 @@ We hypothesize that:
 
 1.  All three CBO strategies, leveraging the HED embedding (Deshwal et al., 2023), will be capable of finding schedules superior to the initial schedule derived from the Bailey-Welch method (a common heuristic mentioned by Kaandorp and Koole (2007)).
 2.  CBO strategies employing Lower Confidence Bound (LCB) may exhibit superior performance or faster convergence compared to Expected Improvement (EI), due to the explicit exploration-exploitation trade-off inherent in LCB.
-3.  The LCB strategy with a dynamically increasing kappa ($\kappa$) value will demonstrate a more robust search, potentially leading to improved final solutions compared to a fixed $\kappa$. However, preliminary results suggest that a fixed $\kappa$ might perform better for this specific problem instance.
+3.  The LCB strategy with a dynamically increasing kappa ($\kappa$) value will demonstrate a more robust search, potentially leading to improved final solutions compared to a fixed $\kappa$.
 
 ## Methodology
 
