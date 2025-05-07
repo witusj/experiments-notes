@@ -2,28 +2,22 @@
 title: "Combinatorial Bayesian Optimization Experiments"
 editor: visual
 jupyter: python3
-format:
-  html:
-    toc: true
-    code-fold: true
-    code-summary: "Show code"
 ---
 
 ## Objective
 
-The objective of this experiment is to evaluate and compare the performance of three distinct Combinatorial Bayesian Optimization (CBO) strategies for a scheduling problem, specifically outpatient appointment scheduling as described by Kaandorp and Koole (2007). We investigate:
+The objective of this experiment is to evaluate and compare the performance of two distinct Combinatorial Bayesian Optimization (CBO) strategies for an outpatient appointment scheduling problem. We investigate:
 
 1.  CBO utilizing Expected Improvement (EI) as the acquisition function.
 2.  CBO utilizing Lower Confidence Bound (LCB) as the acquisition function with a fixed kappa ($\kappa$) value.
-3.  CBO utilizing Lower Confidence Bound (LCB) as the acquisition function with a dynamically increasing kappa ($\kappa$) value.
 
-We aim to determine which strategy is most effective in identifying an optimal or near-optimal schedule, as measured by the objective function value, leveraging dictionary-based embeddings for the high-dimensional combinatorial space (Deshwal et al., 2023).
+We aim to determine which strategy is most effective in identifying an optimal or near-optimal schedule, as measured by the objective function value, leveraging dictionary-based embeddings for the high-dimensional combinatorial space [@deshwal_bayesian_2023].
 
 ## Background
 
-We consider an outpatient appointment scheduling problem (Kaandorp and Koole, 2007) where the schedule is represented by a vector $\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T$. This vector comprises $T$ components, where $x_j$ denotes the non-negative allocation (number of patients) to time slot $j$, for $j = 0, \ldots, T-1$. A fundamental constraint is that the total allocation across all time slots must equal a fixed constant $N$: $$\sum_{j=0}^{T-1} x_j = N$$ We require $x_j \ge 0$ for all $j = 0, \ldots, T-1$. Consequently, a valid schedule $\mathbf{x}$ belongs to the feasible set $\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}$, where $\mathbb{D}$ is the set of non-negative integers ($\mathbb{Z}_{\ge 0}$).
+We consider an outpatient appointment scheduling problem as described by @kaandorp_optimal_2007 where the schedule is represented by a vector $\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T$. This vector comprises $T$ components, where $x_j$ denotes the non-negative allocation (number of patients) to time slot $j$, for $j = 0, \ldots, T-1$. A fundamental constraint is that the total allocation across all time slots must equal a fixed constant $N$: $$\sum_{j=0}^{T-1} x_j = N$$ We require $x_j \ge 0$ for all $j = 0, \ldots, T-1$. Consequently, a valid schedule $\mathbf{x}$ belongs to the feasible set $\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}$, where $\mathbb{D}$ is the set of non-negative integers ($\mathbb{Z}_{\ge 0}$).
 
-Kaandorp and Koole (2007) define a neighborhood structure for local search based on perturbation vectors derived from a set of $T$ basis change vectors, $v_i \in \mathbb{D}^{T}$, for $i = 0, \ldots, T-1$. These basis vectors represent elementary shifts of allocation between time slots:
+@kaandorp_optimal_2007 define a neighborhood structure for local search based on perturbation vectors derived from a set of $T$ basis change vectors, $v_i \in \mathbb{D}^{T}$, for $i = 0, \ldots, T-1$. These basis vectors represent elementary shifts of allocation between time slots:
 
 -   $v_0 = (-1, 0, \ldots, 0, 1)$ (Shift unit *from* slot 0 *to* slot $T-1$)
 -   $v_1 = (1, -1, 0, \ldots, 0)$ (Shift unit *from* slot 1 *to* slot 0)
@@ -35,21 +29,20 @@ Perturbations are constructed using a binary selection vector $\mathbf{U} = (u_0
 
 Since each $v_i$ sums to zero, any perturbation $\mathbf{r}(\mathbf{U})$ also sums to zero: $\sum_{j=0}^{T-1} r_j(\mathbf{U}) = 0$. This ensures that applying such a perturbation to a valid schedule $\mathbf{x}$ preserves the total allocation $N$.
 
-The neighborhood of a schedule $\mathbf{x} \in \mathcal{F}$, denoted by $\mathcal{N}(\mathbf{x})$, comprises all distinct, feasible schedules $\mathbf{x}'$ reachable by applying a non-zero perturbation $\mathbf{r}(\mathbf{U})$ (Kaandorp and Koole, 2007, use a slightly different but related neighborhood definition based on combinations of these basis vectors).
+The neighborhood of a schedule $\mathbf{x} \in \mathcal{F}$, denoted by $\mathcal{N}(\mathbf{x})$, comprises all distinct, feasible schedules $\mathbf{x}'$ reachable by applying a non-zero perturbation $\mathbf{r}(\mathbf{U})$ (@kaandorp_optimal_2007, use a slightly different but related neighborhood definition based on combinations of these basis vectors).
 
-The objective function to be minimized is a weighted sum of Expected Waiting Time (EWT) and Expected Staff Penalty (ESP), as defined by Kaandorp and Koole (2007):
+The objective function to be minimized is a weighted sum of Expected Waiting Time (EWT) and Expected Staff Penalty (ESP), as defined by @kaandorp_optimal_2007:
 $$C(\mathbf{x}) = w \cdot EWT(\mathbf{x}) + (1-w) \cdot ESP(\mathbf{x})$$
-Kaandorp and Koole (2007) prove that this objective function is multimodular, which guarantees that a local search algorithm using their defined neighborhood converges to the global optimum.
+@kaandorp_optimal_2007 prove that this objective function is multimodular, which guarantees that a local search algorithm using their defined neighborhood converges to the global optimum.
 
-However, evaluating $C(\mathbf{x})$ can be computationally expensive, especially for large $N$ and $T$. Furthermore, the search space defined by the binary vectors $\mathbf{U}$ is high-dimensional ($2^T - 2$ possibilities, excluding $\mathbf{0}$ and $\mathbf{1}$). Bayesian Optimization (BO) is a suitable framework for optimizing such expensive black-box functions. Standard BO methods often struggle with high-dimensional combinatorial spaces. Deshwal et al. (2023) propose a method using dictionary-based embeddings (Hamming Embedding via Dictionaries - HED) to map the high-dimensional binary space of $\mathbf{U}$ vectors into a lower-dimensional continuous space, where standard Gaussian Process (GP) models can be effectively applied. This experiment applies the HED approach within a BO framework to solve the scheduling problem formulated by Kaandorp and Koole (2007).
+However, evaluating $C(\mathbf{x})$ can be computationally expensive, especially for large $N$ and $T$. Furthermore, the search space defined by the binary vectors $\mathbf{U}$ is high-dimensional ($2^T - 2$ possibilities, excluding $\mathbf{0}$ and $\mathbf{1}$). Bayesian Optimization (BO) is a suitable framework for optimizing such expensive black-box functions. Standard BO methods often struggle with high-dimensional combinatorial spaces. @deshwal_bayesian_2023 propose a method using dictionary-based embeddings (Hamming Embedding via Dictionaries - HED) to map the high-dimensional binary space of $\mathbf{U}$ vectors into a lower-dimensional continuous space, where standard Gaussian Process (GP) models can be effectively applied. This experiment applies the HED approach within a BO framework to solve the scheduling problem formulated by @kaandorp_optimal_2007.
 
 ## Hypothesis
 
 We hypothesize that:
 
-1.  All three CBO strategies, leveraging the HED embedding (Deshwal et al., 2023), will be capable of finding schedules superior to the initial schedule derived from the Bailey-Welch method (a common heuristic mentioned by Kaandorp and Koole (2007)).
+1.  Both CBO strategies, leveraging the HED embedding [@deshwal_bayesian_2023], will be capable of finding schedules superior to the initial schedule derived from the Bailey-Welch method (@).
 2.  CBO strategies employing Lower Confidence Bound (LCB) may exhibit superior performance or faster convergence compared to Expected Improvement (EI), due to the explicit exploration-exploitation trade-off inherent in LCB.
-3.  The LCB strategy with a dynamically increasing kappa ($\kappa$) value will demonstrate a more robust search, potentially leading to improved final solutions compared to a fixed $\kappa$.
 
 ## Methodology
 
@@ -59,11 +52,11 @@ We hypothesize that:
 -   Core Libraries: NumPy, SciPy
 -   Machine Learning: Scikit-learn (for `GaussianProcessRegressor`, `MinMaxScaler`)
 -   Data Structures: Standard Python lists and dictionaries, NumPy arrays.
--   Imported functions: `bailey_welch_schedule`, `get_v_star`, `compute_convolutions`, `calculate_objective_serv_time_lookup` (implementing the logic from Kaandorp and Koole (2007), assumed to be in an external `functions.py` file).
+-   Imported functions: `bailey_welch_schedule`, `get_v_star`, `compute_convolutions`, `calculate_objective_serv_time_lookup` (implementing the logic from @bailey1952study, assumed to be in an external `functions.py` file).
 
 ### Experimental Design
 
-Three distinct Bayesian optimization experiments are conducted, applying the HED embedding approach (Deshwal et al., 2023) to the scheduling problem:
+Three distinct Bayesian optimization experiments are conducted, applying the HED embedding approach [@deshwal_bayesian_2023] to the scheduling problem:
 
 1.  **Experiment 1: Expected Improvement (EI)**
     * Acquisition Function: Expected Improvement.
@@ -71,20 +64,16 @@ Three distinct Bayesian optimization experiments are conducted, applying the HED
 2.  **Experiment 2: Lower Confidence Bound (LCB) - Fixed Kappa**
     * Acquisition Function: Lower Confidence Bound.
     * Objective: Minimize $C(\mathbf{x})$ using a fixed `kappa` ($\kappa$) value in the LCB acquisition function applied to the GP model over the embedded space.
-3.  **Experiment 3: Lower Confidence Bound (LCB) - Increasing Kappa**
-    * Acquisition Function: Lower Confidence Bound.
-    * Objective: Minimize $C(\mathbf{x})$ using a `kappa` ($\kappa$) value that dynamically increases whenever an improved solution is discovered during the BO process.
 
-For all experiments, Hamming Distance Embedding (HED) with a "diverse random" dictionary construction strategy (Deshwal et al., 2023) is employed to map the binary perturbation vectors $\mathbf{U}$ to a continuous embedding space. A Gaussian Process (GP) model with Automatic Relevance Determination (ARD) kernels models the (negative) objective function in this embedded space.
+For all experiments, Hamming Distance Embedding (HED) with a "diverse random" dictionary construction strategy [@deshwal_bayesian_2023] is employed to map the binary perturbation vectors $\mathbf{U}$ to a continuous embedding space. A Gaussian Process (GP) model with Automatic Relevance Determination (ARD) kernels models the (negative) objective function in this embedded space.
 
 ### Variables
 
 -   **Independent Variables**:
     -   Type of acquisition function (EI, LCB).
-    -   Strategy for $\kappa$ in LCB (fixed, increasing).
     -   The specific binary perturbation vector $\mathbf{U}$ selected in each iteration (chosen via optimizing the acquisition function over the embedded space).
 -   **Dependent Variables**:
-    -   The objective function value $C(\mathbf{x}')$ for the resulting schedule $\mathbf{x}' = \mathbf{x} + \mathbf{r}(\mathbf{U})$ (calculated using the method from Kaandorp and Koole (2007)).
+    -   The objective function value $C(\mathbf{x}')$ for the resulting schedule $\mathbf{x}' = \mathbf{x} + \mathbf{r}(\mathbf{U})$ (calculated using the method from @kaandorp_optimal_2007).
     -   The best objective function value found throughout the optimization process.
 
 ### Data Collection
@@ -97,10 +86,10 @@ Data, comprising evaluated pairs $(\mathbf{U}, C(\mathbf{x}'))$, is collected it
 ### Sample Size and Selection
 
 -   **N_INITIAL**: 20 (number of initial random evaluations)
--   **N_ITERATIONS**: 25 (number of Bayesian optimization iterations)
+-   **N_ITERATIONS**: 20 (number of Bayesian optimization iterations)
 -   **BATCH_SIZE_q**: 5 (number of candidates selected and evaluated per iteration)
 -   **NUM_CANDIDATES_Acqf**: $T \times 1024 = 20 \times 1024 = 20480$ (number of random candidates generated for optimizing the acquisition function in each iteration)
--   **m**: 128 (dimensionality of the HED embedding space, following Deshwal et al. (2023))
+-   **m**: 128 (dimensionality of the HED embedding space, following @deshwal_bayesian_2023)
 
 The selection of new points for evaluation is guided by the respective acquisition function (EI or LCB) optimized over the embedded space representation of candidate $\mathbf{U}$ vectors.
 
@@ -109,7 +98,7 @@ The selection of new points for evaluation is guided by the respective acquisiti
 #### 1. Setup
 Import necessary libraries and configure warning filters.
 
-```python
+```{python}
 # Core Libraries
 import numpy as np
 import time
@@ -126,582 +115,790 @@ from sklearn.exceptions import ConvergenceWarning
 # SciPy for statistics (needed for Expected Improvement calculation)
 from scipy.stats import norm
 
-# Assume functions.py contains implementations based on Kaandorp and Koole (2007)
-# from functions import bailey_welch_schedule, get_v_star, compute_convolutions, calculate_objective_serv_time_lookup
-# Mocking them for now as the file is not provided:
-def bailey_welch_schedule(T, d, N, s): 
-    # Placeholder: Returns a simple initial schedule (e.g., even distribution or zeros)
-    # Kaandorp and Koole (2007) mention Bailey-Welch schedules two patients at t=0, then one per block.
-    print(f"Mock bailey_welch_schedule called with T={T}, d={d}, N={N}")
-    mock_schedule = np.zeros(T)
-    if T > 0 and N > 0:
-        mock_schedule[0] = 2 # Bailey-Welch starts with two
-        remaining_N = N - 2
-        intervals_per_patient = T / N # Approximate spacing
-        current_interval = intervals_per_patient 
-        for _ in range(remaining_N):
-            idx = min(int(round(current_interval)), T-1)
-            # Ensure we don't overwrite the first slot if T is small
-            if idx == 0 and mock_schedule[0] == 2: 
-                 idx = 1 % T # Put in next slot if available
-            mock_schedule[idx] += 1
-            current_interval += intervals_per_patient
-        # Adjust if sum is not N due to rounding/integer constraints
-        current_sum = np.sum(mock_schedule)
-        diff = N - current_sum
-        if diff > 0: # Add remaining patients somewhere
-            for i in range(int(diff)): mock_schedule[(i+1)%T] += 1
-        elif diff < 0: # Remove excess patients (less likely with this mock)
-             for i in range(int(abs(diff))): 
-                 non_zero_indices = np.where(mock_schedule > 0)[0]
-                 if len(non_zero_indices) > 0:
-                     mock_schedule[non_zero_indices[-1]] -= 1 # Remove from later slots first
-                 else: break # Should not happen if N > 0
-    return mock_schedule
-
-
-def get_v_star(T): 
-    # Basis change vectors as defined in Kaandorp and Koole (2007), Appendix A
-    # Note: Their v_i corresponds to u_i in the original code's notation
-    print(f"Mock get_v_star called with T={T}")
-    v_star_matrix = np.zeros((T, T))
-    if T > 0:
-        # v_0 = (-1, 0, ..., 0, 1) -> Corresponds to u_1 in Kaandorp&Koole notation (shift from t=1 to t=T)
-        # The code's v_0 shifts from slot 0 to T-1. Let's match the code's definition.
-        v_star_matrix[0, 0] = -1
-        v_star_matrix[0, T-1] = 1 
-        # v_1 = (1, -1, 0, ..., 0) -> Corresponds to u_2 in Kaandorp&Koole (shift from t=2 to t=1)
-        # Matches code's v_1 (shift from slot 1 to 0)
-        if T > 1:
-            v_star_matrix[1, 1] = -1
-            v_star_matrix[1, 0] = 1
-        # v_i = (0,..,1_{i-1},-1_i,..,0) for i=2..T-1 -> Corresponds to u_{i+1} in Kaandorp&Koole (shift from t=i+1 to t=i)
-        # Matches code's v_i (shift from slot i to i-1)
-        for i in range(2, T):
-            v_star_matrix[i, i] = -1
-            v_star_matrix[i, i-1] = 1
-    # The provided code uses T basis vectors. Kaandorp&Koole define T basis vectors u_1..u_T
-    # Let's ensure the dimensions match the code (TxT matrix for T basis vectors)
-    return v_star_matrix # Returns a TxT matrix where row i is basis vector v_i
-
-def compute_convolutions(s, N, q_prob): 
-    # Placeholder: Computes convolutions for queueing calculations (Kaandorp and Koole, 2007)
-    print(f"Mock compute_convolutions called with N={N}, q_prob={q_prob}")
-    return {"mock_convolution_data": True} 
-
-def calculate_objective_serv_time_lookup(Y, d, convolutions): 
-    # Placeholder: Calculates EWT and ESP based on schedule Y (Kaandorp and Koole, 2007)
-    # Simple mock: return sum of Y as ewt and variance as esp, scaled
-    mock_ewt = np.sum(Y) * 0.1 * d # Factor in interval duration
-    mock_esp = np.var(Y) * 0.5 * d
-    return mock_ewt, mock_esp
+from functions import bailey_welch_schedule, get_v_star, compute_convolutions, calculate_objective_serv_time_lookup
 
 # Filter warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-warnings.filterwarnings("ignore", category=ConvergenceWarning) 
+warnings.filterwarnings("ignore", category=ConvergenceWarning) # GP fitting might not always converge perfectly
 ```
 
 #### 2. Constants
 Definition of problem parameters and initial configuration.
 
-```python
+```{python}
 # --- Problem Definition ---
 
-# Fixed Data (Parameters for the scheduling problem based on Kaandorp and Koole (2007))
-N = 21          # Total number of patients to be scheduled
-T = 20          # Number of time slots (also dimension of perturbation vector U)
-d = 5           # Duration of each time slot (e.g., in minutes)
-max_s = 20      # Maximum possible service time (used for generating distribution s_dist)
-q_prob = 0.20   # No-show probability (denoted 'rho' in Kaandorp and Koole (2007))
-w = 0.1         # Weight for EWT in objective C(x)
-l_target = 10   # Target average service time (parameter 'l' in original code)
-v_star = get_v_star(T) # Basis change vectors matrix (T x T)
-
-# Function to generate a weighted service time probability distribution
-def generate_weighted_list(max_s_val: int, target_l: float, split_i: int) -> Optional[np.ndarray]:
+# Fixed Data (Use your actual data)
+N = 21 # Total number of patients
+T = 20 # Dimension of the binary vector U
+d = 5 # Length of each interval
+max_s = 20 # Maximum service time
+q = 0.20 # Probability of a scheduled patient not showing up
+w = 0.1 # Weight for the waiting time in objective function
+l = 10
+v_star = get_v_star(T) # Get the V* matrix(T x T)
+# Create service time distribution
+def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
     """
-    Generates a service time probability distribution s.
-    (Implementation as provided previously)
+    Generates a service time probability distribution using optimization.
+
+    This function creates a discrete probability distribution over max_s possible
+    service times (from 1 to max_s). It uses optimization (SLSQP) to find a
+    distribution whose weighted average service time is as close as possible
+    to a target value 'l', subject to the constraint that the probabilities
+    sum to 1 and each probability is between 0 and 1.
+
+    After finding the distribution, it sorts the probabilities: the first 'i'
+    probabilities (corresponding to service times 1 to i) are sorted in
+    ascending order, and the remaining probabilities (service times i+1 to max_s)
+    are sorted in descending order.
+
+    Note:
+        - Requires NumPy and SciPy libraries (specifically scipy.optimize.minimize).
+
+    Args:
+        max_s (int): Maximum service time parameter (number of probability bins).
+                     Must be a positive integer.
+        l (float): The target weighted average service time for the distribution.
+                   Must be between 1 and max_s, inclusive.
+        i (int): The index determining the sorting split point. Probabilities
+                 for service times 1 to 'i' are sorted ascendingly, and
+                 probabilities for service times 'i+1' to 'max_s' are sorted
+                 descendingly. Must be between 1 and max_s-1 for meaningful sorting.
+
+    Returns:
+        numpy.ndarray: An array of size max_s+1. The first element (index 0) is 0.
+                       Elements from index 1 to max_s represent the calculated
+                       and sorted probability distribution, summing to 1.
+                       Returns None if optimization fails or inputs are invalid.
     """
-    # Input Validation
-    if not isinstance(max_s_val, int) or max_s_val <= 0: return None
-    if not isinstance(target_l, (int, float)) or not (1 <= target_l <= max_s_val): return None
-    if not isinstance(split_i, int) or not (0 < split_i < max_s_val): return None
 
-    def _objective(p_dist: np.ndarray) -> float:
-        service_times = np.arange(1, max_s_val + 1)
-        weighted_avg = np.dot(service_times, p_dist)
-        return (weighted_avg - target_l) ** 2
+    # --- Input Validation ---
+    if not isinstance(max_s, int) or max_s <= 0:
+        print(f"Error: max_s must be a positive integer, but got {max_s}")
+        return None
+    if not isinstance(l, (int, float)) or not (1 <= l <= max_s):
+        print(f"Error: Target average 'l' ({l}) must be between 1 and max_s ({max_s}).")
+        return None
+    if not isinstance(i, int) or not (0 < i < max_s):
+        print(f"Error: Sorting index 'i' ({i}) must be between 1 and max_s-1 ({max_s-1}).")
+        # If clamping is desired instead of error:
+        # print(f"Warning: Index 'i' ({i}) is outside the valid range (1 to {max_s-1}). Clamping i.")
+        # i = max(1, min(i, max_s - 1))
+        return None # Strict check based on docstring requirement
 
-    constraints = ({'type': 'eq', 'fun': lambda p_dist: np.sum(p_dist) - 1.0})
-    bounds = [(0, 1)] * max_s_val
-    initial_guess = np.random.dirichlet(np.ones(max_s_val))
-    
+    # --- Inner helper function for optimization ---
+    def objective(x: np.ndarray) -> float:
+        """Objective function: Squared difference between weighted average and target l."""
+        # x represents probabilities P(1) to P(max_s)
+        service_times = np.arange(1, max_s + 1)
+        weighted_avg = np.dot(service_times, x) # Equivalent to sum(k * P(k) for k=1 to max_s)
+        return (weighted_avg - l) ** 2
+
+    # --- Constraints for optimization ---
+    # Constraint 1: The sum of the probabilities must be 1
+    constraints = ({
+        'type': 'eq',
+        'fun': lambda x: np.sum(x) - 1.0 # Ensure float comparison
+    })
+
+    # Bounds: Each probability value x[k] must be between 0 and 1
+    # Creates a list of max_s tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]
+    bounds = [(0, 1)] * max_s
+
+    # Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1.
+    # Provides a starting point for the optimizer. np.ones(max_s) gives equal weights initially.
+    initial_guess = np.random.dirichlet(np.ones(max_s))
+
+    # --- Perform Optimization ---
     try:
-        result = minimize(_objective, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints)
-        if not result.success: return None
+        result = minimize(
+            objective,
+            initial_guess,
+            method='SLSQP',
+            bounds=bounds,
+            constraints=constraints,
+            # options={'disp': False} # Set True for detailed optimizer output
+        )
+
+        # Check if optimization was successful
+        if not result.success:
+            print(f"Warning: Optimization failed! Message: {result.message}")
+            # Optionally print result object for more details: print(result)
+            return None # Indicate failure
+
+        # The optimized probabilities (P(1) to P(max_s))
         optimized_probs = result.x
-        optimized_probs[optimized_probs < 0] = 0
+
+        # --- Post-process: Correct potential floating point inaccuracies ---
+        # Ensure probabilities are non-negative and sum *exactly* to 1
+        optimized_probs[optimized_probs < 0] = 0 # Clamp small negatives to 0
         current_sum = np.sum(optimized_probs)
         if not np.isclose(current_sum, 1.0):
-            if current_sum > 0: optimized_probs /= current_sum
-            else: return None
-    except Exception as e: return None
+            if current_sum > 0: # Avoid division by zero
+                 optimized_probs /= current_sum # Normalize to sum to 1
+            else:
+                 print("Warning: Optimization resulted in zero sum probabilities after clamping negatives.")
+                 # Handle this case - maybe return uniform distribution or None
+                 return None # Or return uniform: np.ones(max_s) / max_s
 
-    first_part_probs = optimized_probs[:split_i]
-    second_part_probs = optimized_probs[split_i:]
-    sorted_first_part = np.sort(first_part_probs)      
-    sorted_second_part = np.sort(second_part_probs)[::-1] 
-    
-    final_dist = np.zeros(max_s_val + 1)
-    final_dist[1 : split_i + 1] = sorted_first_part
-    final_dist[split_i + 1 : max_s_val + 1] = sorted_second_part
-    
-    if not np.isclose(np.sum(final_dist[1:]), 1.0): print(f"Warning: Service dist sum {np.sum(final_dist[1:])}")
-    return final_dist
+    except Exception as e:
+        print(f"An error occurred during optimization: {e}")
+        return None
 
-# Generate service time distribution 's_dist'
-i_val = 5 
-s_dist = generate_weighted_list(max_s, l_target, i_val) 
-if s_dist is not None:
-    convolutions = compute_convolutions(s_dist, N, q_prob)
-else:
-    print("Failed to generate service time distribution. Using fallback.")
-    s_dist = np.zeros(max_s + 1); 
-    if max_s > 0: s_dist[1:] = 1/max_s 
-    convolutions = compute_convolutions(s_dist, N, q_prob) 
+    # --- Reorder the probabilities based on the index 'i' ---
+    # Split the probabilities P(1)...P(i) and P(i+1)...P(max_s)
+    # Note: Python slicing is exclusive of the end index, array indexing is 0-based.
+    # result.x[0] corresponds to P(1), result.x[i-1] to P(i).
+    # result.x[i] corresponds to P(i+1), result.x[max_s-1] to P(max_s).
 
-# Initial schedule 'X_initial_schedule' from Bailey-Welch heuristic
-X_initial_schedule = np.array(bailey_welch_schedule(T, d, N, s_dist))
-print(f"Initial schedule X: {X_initial_schedule}")
+    first_part_probs = optimized_probs[:i]   # Probabilities P(1) to P(i)
+    second_part_probs = optimized_probs[i:]  # Probabilities P(i+1) to P(max_s)
 
-# Penalty for infeasible solutions
-LARGE_PENALTY = 1e10
+    # Sort the first part ascending, the second part descending
+    sorted_first_part = np.sort(first_part_probs)
+    sorted_second_part = np.sort(second_part_probs)[::-1] # [::-1] reverses
+
+    # --- Create final output array ---
+    # Array of size max_s + 1, initialized to zeros. Index 0 unused.
+    values = np.zeros(max_s + 1)
+
+    # Assign the sorted probabilities back into the correct slots (index 1 onwards)
+    values[1 : i + 1] = sorted_first_part      # Assign P(1)...P(i)
+    values[i + 1 : max_s + 1] = sorted_second_part # Assign P(i+1)...P(max_s)
+
+    # Final check on sum after potential normalization/sorting
+    if not np.isclose(np.sum(values[1:]), 1.0):
+         print(f"Warning: Final distribution sum is {np.sum(values[1:])}, not 1.0. Check logic.")
+
+    # Return the final array with the sorted probability distribution
+    return values
+
+i = 5  # First 5 highest values in ascending order, rest in descending order
+s = generate_weighted_list(max_s, l, i)
+print(f"Average generated service time: {np.dot(np.arange(len(s)), s)}")
+convolutions = compute_convolutions(s, N, q)
+X = np.array(bailey_welch_schedule(T, d, N, s))
+# Objective Function Calculation
+LARGE_PENALTY = 1e10 # Penalty for infeasible solutions
 ```
 
 #### 3. Common Functions (Objective Evaluation and HED)
-Objective evaluation implements $C(\mathbf{x})$ from Kaandorp and Koole (2007). HED implementation follows Deshwal et al. (2023).
+Objective evaluation implements $C(\mathbf{x})$ from @kaandorp_optimal_2007. HED implementation follows @deshwal_bayesian_2023.
 
-```python
-def evaluate_objective(U_np, X_vec, v_star_matrix, convolutions_data, d_interval, w_weight):
+```{python}
+def evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):
     """
-    Evaluates the objective function C(x') where x' = X_vec + r(U_np).
-    Uses logic from Kaandorp and Koole (2007) via calculate_objective_serv_time_lookup.
-    Applies HED approach from Deshwal et al. (2023) by operating on U_np.
-    (Implementation as provided previously)
+    Target function: Evaluates objective for a single binary numpy array U.
+    Returns a float.
     """
-    # Input validation...
-    if not isinstance(U_np, np.ndarray): raise TypeError("Input U_np must be a numpy array")
-    if U_np.ndim != 1: raise ValueError("Input U_np must be 1-dimensional")
-    if U_np.shape[0] != v_star_matrix.shape[0]: raise ValueError(f"Dimension mismatch: U_np length {U_np.shape[0]} != v_star_matrix rows {v_star_matrix.shape[0]}.")
-    if X_vec.shape[0] != v_star_matrix.shape[1]: raise ValueError("Dimension mismatch: X_vec length must match v_star_matrix columns.")
-    if not np.all((U_np == 0) | (U_np == 1)): raise ValueError("Input U_np must be binary (0s and 1s).")
+    # Input validation (same as before)
+    if not isinstance(U_np, np.ndarray):
+        raise TypeError("Input U must be a numpy array")
+    if U_np.ndim != 1:
+         raise ValueError("Input U must be 1-dimensional")
+    if U_np.shape[0] != v_star.shape[0]:
+         raise ValueError(f"Dimension mismatch: U length {U_np.shape[0]} != V* rows {v_star.shape[0]}.")
+    if X_vec.shape[0] != v_star.shape[1]:
+         raise ValueError("Dimension mismatch: X length must match V* columns.")
+    if not np.all((U_np == 0) | (U_np == 1)):
+         raise ValueError("Input U must be binary (0s and 1s).")
 
-    perturbation_rU = np.sum(v_star_matrix[U_np == 1, :], axis=0)
-    Y_schedule = X_vec + perturbation_rU
+    # Calculate Y based on selected rows of V_star
+    V_sum = np.sum(v_star[U_np == 1, :], axis=0)
+    Y = X_vec + V_sum
 
-    if np.all(Y_schedule >= 0):
-        ewt, esp = calculate_objective_serv_time_lookup(Y_schedule, d_interval, convolutions_data)
-        objective_value = w_weight * ewt + (1 - w_weight) * esp
+    # Check feasibility and calculate objective
+    if np.all(Y >= 0):
+        ewt, esp = calculate_objective_serv_time_lookup(Y, d, convolutions)
+        objective_value = w * ewt + (1 - w) * esp
         return objective_value
     else:
+        # Infeasible solution
         return LARGE_PENALTY
 
-# --- Hamming Distance Embedding (HED) Implementation (Deshwal et al., 2023) ---
-def hamming_distance(u1_vec: np.ndarray, u2_vec: np.ndarray) -> int:
-    """Calculates the Hamming distance."""
-    return np.sum(u1_vec != u2_vec)
+# --- HED Implementation ---
 
-def generate_diverse_random_dictionary(T_dim: int, m_embed_dim: int) -> np.ndarray:
-    """Generates the random dictionary A using the 'diverse random' strategy."""
-    dictionary_A = np.zeros((m_embed_dim, T_dim), dtype=int)
-    for i in range(m_embed_dim):
-        theta = np.random.uniform(0, 1) 
-        row = (np.random.rand(T_dim) < theta).astype(int)
+def hamming_distance(u1, u2):
+    """Calculates Hamming distance between two binary numpy arrays."""
+    return np.sum(u1 != u2)
+
+def generate_diverse_random_dictionary(T, m):
+    """Generates the random dictionary A for HED."""
+    dictionary_A = np.zeros((m, T), dtype=int)
+    for i in range(m):
+        # Sample theta for density of 1s in this dictionary vector
+        theta = np.random.uniform(0, 1)
+        row = (np.random.rand(T) < theta).astype(int)
         dictionary_A[i, :] = row
     return dictionary_A
 
-def embed_vector(U_binary_vec: np.ndarray, dictionary_A: np.ndarray) -> np.ndarray:
-    """Embeds a single binary vector U_binary_vec using HED."""
-    m_embed_dim = dictionary_A.shape[0]
-    embedding_phi = np.zeros(m_embed_dim, dtype=float) 
-    for i in range(m_embed_dim):
-        embedding_phi[i] = hamming_distance(U_binary_vec, dictionary_A[i, :])
+def embed_vector(U_np, dictionary_A):
+    """Embeds a single binary vector U using HED."""
+    m = dictionary_A.shape[0]
+    embedding_phi = np.zeros(m, dtype=float) # Use float for GP
+    for i in range(m):
+        embedding_phi[i] = hamming_distance(U_np, dictionary_A[i, :])
     return embedding_phi
 
-def embed_batch(U_batch_binary_vecs: np.ndarray, dictionary_A: np.ndarray) -> np.ndarray:
-    """Embeds a batch of binary vectors U_batch_binary_vecs using HED."""
-    m_embed_dim = dictionary_A.shape[0]
-    if U_batch_binary_vecs.ndim == 1: U_batch_binary_vecs = U_batch_binary_vecs.reshape(1, -1)
-    batch_size = U_batch_binary_vecs.shape[0]
-    embeddings_np = np.zeros((batch_size, m_embed_dim), dtype=float) 
+def embed_batch(U_batch_np, dictionary_A):
+    """Embeds a batch of binary vectors U."""
+    # Input U_batch_np is expected to be a NumPy array
+    m = dictionary_A.shape[0]
+    if U_batch_np.ndim == 1: # Handle single vector case
+        U_batch_np = U_batch_np.reshape(1, -1)
+
+    batch_size = U_batch_np.shape[0]
+    embeddings_np = np.zeros((batch_size, m), dtype=float) # Use float for GP
+
     for j in range(batch_size):
-        embeddings_np[j, :] = embed_vector(U_batch_binary_vecs[j, :], dictionary_A)
+        embeddings_np[j, :] = embed_vector(U_batch_np[j, :], dictionary_A)
+
+    # Return NumPy array directly
     return embeddings_np
-
-# --- Common Gaussian Process (GP) Fitting Function (Deshwal et al., 2023) ---
-def get_fitted_model(train_X_embedded_scaled: np.ndarray, train_Y_neg_obj: np.ndarray, m_embed_dim: int) -> GaussianProcessRegressor:
-    """Fits a GP model to the scaled embedded training data."""
-    if train_Y_neg_obj.ndim > 1 and train_Y_neg_obj.shape[1] == 1: train_Y_neg_obj = train_Y_neg_obj.ravel()
-
-    kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
-             Matern(length_scale=np.ones(m_embed_dim), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
-             WhiteKernel(noise_level=1e-10, noise_level_bounds="fixed") 
-    
-    gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
-    gp_model.fit(train_X_embedded_scaled, train_Y_neg_obj)
-    return gp_model
+  
 ```
 
 #### 4. Experiment 1: CBO with Expected Improvement (EI)
-Applies the methodology from Deshwal et al. (2023) using EI.
+Applies the methodology from @deshwal_bayesian_2023 using EI.
 
-```python
-# --- EI Specific Acquisition Function and Optimization ---
-def expected_improvement(mu_pred: np.ndarray, sigma_pred: np.ndarray, f_best_neg: float, xi: float = 0.01) -> np.ndarray:
-    """Computes the Expected Improvement (EI) acquisition function."""
-    sigma_pred = np.maximum(sigma_pred, 1e-9)
-    Z = (mu_pred - f_best_neg - xi) / sigma_pred
-    ei_values = (mu_pred - f_best_neg - xi) * norm.cdf(Z) + sigma_pred * norm.pdf(Z)
-    ei_values[sigma_pred <= 1e-9] = 0.0
-    return ei_values
+```{python}
+# --- BO Helper Functions ---
 
-def optimize_acqf_ei(gp_model: GaussianProcessRegressor, scaler: MinMaxScaler, 
-                     dictionary_A: np.ndarray, T_dim: int, q_batch_size: int, 
-                     num_acqf_candidates: int, current_best_neg_f_val: float) -> np.ndarray:
-    """Optimizes the EI acquisition function using HED."""
-    m_embed_dim = dictionary_A.shape[0]
-    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_acqf_candidates, T_dim))
-    embedded_candidates_np = embed_batch(candidate_u_vectors_np, dictionary_A)
-    embedded_candidates_scaled_np = scaler.transform(embedded_candidates_np)
-    mu_pred, std_pred = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
-    acq_values = expected_improvement(mu_pred, std_pred, current_best_neg_f_val, xi=0.01)
-    top_indices = np.argsort(acq_values)[-q_batch_size:][::-1]
-    return candidate_u_vectors_np[top_indices, :]
+def get_fitted_model(train_X_embedded_scaled, train_Y, m):
+    """
+    Fits a GaussianProcessRegressor model to the SCALED embedded data.
+    Assumes train_Y contains negative objective values for maximization.
+    """
+    if train_Y.ndim > 1 and train_Y.shape[1] == 1:
+        train_Y = train_Y.ravel() # sklearn GP expects 1D target array
 
-# --- BO Loop Parameters ---
-N_INITIAL_POINTS = 20
-N_BO_ITERATIONS = 25
-BATCH_SIZE_Q = 5 
-NUM_ACQF_CANDIDATES = T * 1024 
-M_EMBED_DIM = 128 # Dictionary size as used in Deshwal et al. (2023) experiments
+    # Define the kernel for the Gaussian Process
+    # Matern kernel is a common choice, nu=2.5 is smooth (twice differentiable)
+    # ConstantKernel handles the overall variance scaling
+    # WhiteKernel handles the observation noise
+    kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
+             Matern(length_scale=np.ones(m), # Enable ARD, initialize length scales to 1
+                    length_scale_bounds=(1e-2, 1e2),
+                    nu=2.5) + \
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
 
-# --- EI BO Loop ---
-print("\n--- Starting Experiment 1: CBO with Expected Improvement (EI) ---")
-evaluated_U_np_list_ei = []  
-evaluated_f_vals_ei = []     
-train_Y_list_ei = []         
-
-# Initialization 
-print(f"Generating {N_INITIAL_POINTS} initial random points for EI...")
-initial_candidates_ei = []
-while len(initial_candidates_ei) < N_INITIAL_POINTS:
-    U_init_candidate = np.random.randint(0, 2, size=T)
-    if not any(np.array_equal(U_init_candidate, u) for u in initial_candidates_ei):
-        initial_candidates_ei.append(U_init_candidate)
-
-for U_init in initial_candidates_ei:
-    f_val = evaluate_objective(U_init, X_initial_schedule, v_star, convolutions, d, w)
-    neg_f_val = -f_val 
-    evaluated_U_np_list_ei.append(U_init)
-    evaluated_f_vals_ei.append(f_val)
-    train_Y_list_ei.append(neg_f_val)
-
-best_obj_so_far_ei = min(evaluated_f_vals_ei) if evaluated_f_vals_ei else float('inf')
-print(f"Initial best objective value (EI): {best_obj_so_far_ei:.4f}")
-if not np.isfinite(best_obj_so_far_ei): print("Warning: Initial best objective (EI) is infinite.")
-
-# Bayesian Optimization Iterations
-for iteration in range(N_BO_ITERATIONS):
-    iter_start_time = time.time()
-    print(f"\n--- EI Iteration {iteration + 1}/{N_BO_ITERATIONS} ---")
-    current_dictionary_A_ei = generate_diverse_random_dictionary(T, M_EMBED_DIM)
-    if not evaluated_U_np_list_ei: continue
-    evaluated_U_np_array_ei = np.array(evaluated_U_np_list_ei)
-    embedded_train_X_ei = embed_batch(evaluated_U_np_array_ei, current_dictionary_A_ei)
-    scaler_ei = MinMaxScaler() 
-    if embedded_train_X_ei.shape[0] > 0:
-        embedded_train_X_scaled_ei = scaler_ei.fit_transform(embedded_train_X_ei)
-    else: embedded_train_X_scaled_ei = embedded_train_X_ei
-    train_Y_for_fit_ei = np.array(train_Y_list_ei) 
-    if embedded_train_X_scaled_ei.shape[0] > 0 and train_Y_for_fit_ei.shape[0] == embedded_train_X_scaled_ei.shape[0]:
-        gp_model_ei = get_fitted_model(embedded_train_X_scaled_ei, train_Y_for_fit_ei, M_EMBED_DIM)
-    else: continue
-    current_best_neg_f_val_ei = np.max(train_Y_for_fit_ei) if train_Y_for_fit_ei.size > 0 else -float('inf')
-    if current_best_neg_f_val_ei <= -LARGE_PENALTY / 2 and np.isfinite(current_best_neg_f_val_ei): pass
-    next_U_candidates_np_ei = optimize_acqf_ei(
-        gp_model_ei, scaler_ei, current_dictionary_A_ei, T, BATCH_SIZE_Q, NUM_ACQF_CANDIDATES, current_best_neg_f_val_ei
+    # Instantiate the Gaussian Process Regressor
+    # alpha: Value added to the diagonal of the kernel matrix during fitting
+    #        for numerical stability (can also be seen as additional noise)
+    # n_restarts_optimizer: Restarts optimizer to find better hyperparameters
+    gp_model = GaussianProcessRegressor(
+        kernel=kernel,
+        alpha=1e-10, # Small value for numerical stability
+        n_restarts_optimizer=10, # More restarts -> better hyperparams but slower
+        random_state=42 # For reproducibility of optimizer restarts
     )
-    for i_cand in range(next_U_candidates_np_ei.shape[0]):
-        next_U = next_U_candidates_np_ei[i_cand, :]
-        if any(np.array_equal(next_U, u) for u in evaluated_U_np_list_ei): continue
-        next_f = evaluate_objective(next_U, X_initial_schedule, v_star, convolutions, d, w)
-        evaluated_U_np_list_ei.append(next_U)
-        evaluated_f_vals_ei.append(next_f)
-        train_Y_list_ei.append(-next_f) 
-        if next_f < best_obj_so_far_ei: best_obj_so_far_ei = next_f
-    print(f"Best objective (EI) so far: {best_obj_so_far_ei:.4f}")
 
-# --- Results for EI ---
-print("\n--- EI Optimization Finished ---")
-if not evaluated_f_vals_ei:
-    final_best_f_ei = float('inf'); final_best_U_ei = None
+    # Fit the GP model
+    gp_model.fit(train_X_embedded_scaled, train_Y)
+    return gp_model
+
+def expected_improvement(mu, sigma, f_best, xi=0.01):
+    """
+    Computes the Expected Improvement acquisition function.
+    Assumes maximization (f_best is the current maximum observed value).
+    mu, sigma: Predicted mean and standard deviation (NumPy arrays).
+    f_best: Current best observed function value (scalar).
+    xi: Exploration-exploitation trade-off parameter.
+    """
+    # Ensure sigma is positive and non-zero to avoid division errors
+    sigma = np.maximum(sigma, 1e-9)
+    Z = (mu - f_best - xi) / sigma
+
+    ei = (mu - f_best - xi) * norm.cdf(Z) + sigma * norm.pdf(Z)
+
+    # Set EI to 0 where variance is negligible
+    ei[sigma <= 1e-9] = 0.0
+    return ei
+
+# MODIFIED: Accepts the scaler and uses scikit-learn GP + EI
+def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, num_candidates, current_best_neg_f_val):
+    """
+    Optimizes acquisition function (Expected Improvement) by sampling random
+    binary candidates, embedding, SCALING, predicting with GP, and calculating EI.
+    Selects the top q candidates based on EI.
+    Returns candidates as a numpy array (q x T).
+    """
+    m = dictionary_A.shape[0]
+
+    # 1. Generate Random Binary Candidates
+    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_candidates, T))
+    # Optional: Ensure unique candidates if needed (adds overhead)
+    # candidate_u_vectors_np = np.unique(candidate_u_vectors_np, axis=0)
+    # num_candidates = candidate_u_vectors_np.shape[0] # Update count
+
+    # 2. Embed the Candidates
+    embedded_candidates_np = embed_batch(candidate_u_vectors_np, dictionary_A)
+
+    # 3. Scale the Embedded Candidates
+    # Handle potential warning if scaler expects float64 (already float here)
+    # Use the *fitted* scaler from the training data
+    embedded_candidates_scaled_np = scaler.transform(embedded_candidates_np)
+
+    # 4. Predict Mean and Std Dev using the GP Model
+    mu, std = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
+
+    # 5. Calculate Acquisition Function (Expected Improvement)
+    # current_best_neg_f_val is the maximum of the (negative) objectives seen so far
+    acq_values = expected_improvement(mu, std, current_best_neg_f_val, xi=0.01)
+
+    # 6. Select Top Candidates
+    # Use np.argsort to find indices that would sort the array (ascending)
+    # Select the last q indices for the highest EI values
+    # If q=1, np.argmax(acq_values) is simpler but argsort works generally
+    top_indices = np.argsort(acq_values)[-q:]
+
+    # Ensure indices are returned in descending order of acquisition value (optional but nice)
+    top_indices = top_indices[::-1]
+
+    return candidate_u_vectors_np[top_indices, :]
+# --- BO Loop ---
+
+# Parameters
+N_INITIAL = 20
+N_ITERATIONS = 20
+BATCH_SIZE_q = 5
+NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
+m = 128 # Dimension of the embedding space
+
+# Store evaluated points (using NumPy arrays)
+evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
+evaluated_f_vals = []    # List to store raw objective values (lower is better)
+train_Y_list = []        # List to store NEGATED objective values for GP (higher is better)
+
+# 1. Initialization
+print(f"Generating {N_INITIAL} initial points...")
+initial_candidates = []
+while len(initial_candidates) < N_INITIAL:
+    U_init = np.random.randint(0, 2, size=T)
+    # Ensure unique initial points
+    is_duplicate = any(np.array_equal(U_init, u) for u in initial_candidates)
+    if not is_duplicate:
+        initial_candidates.append(U_init)
+
+for U_init in initial_candidates:
+    f_val = evaluate_objective(U_init, X, v_star, convolutions, d, w)
+    neg_f_val = -f_val
+
+    evaluated_U_np_list.append(U_init)
+    evaluated_f_vals.append(f_val)
+    train_Y_list.append(neg_f_val)
+
+# Convert lists to NumPy arrays for GP fitting
+train_Y = np.array(train_Y_list).reshape(-1, 1) # Keep as column vector initially
+
+best_obj_so_far = min(evaluated_f_vals) if evaluated_f_vals else float('inf')
+initial_best_obj_so_far_ei = best_obj_so_far
+print(f"Initial best objective value: {best_obj_so_far}")
+if not np.isfinite(best_obj_so_far):
+     print("Warning: Initial best objective is infinite, possibly all initial points were infeasible.")
+
+
+# 2. BO Iterations
+for iteration in range(N_ITERATIONS):
+    start_time = time.time()
+    print(f"\n--- Iteration {iteration + 1}/{N_ITERATIONS} ---")
+
+    # a. Generate dictionary A for HED
+    current_dictionary_A = generate_diverse_random_dictionary(T, m)
+
+    # b. Embed ALL evaluated U vectors so far
+    if not evaluated_U_np_list:
+        print("Warning: No points evaluated yet. Skipping iteration.")
+        continue
+    evaluated_U_np_array = np.array(evaluated_U_np_list)
+    embedded_train_X = embed_batch(evaluated_U_np_array, current_dictionary_A)
+
+    # c. Scale the embedded training data
+    scaler = MinMaxScaler()
+    # Fit scaler only if there's data
+    if embedded_train_X.shape[0] > 0:
+        # Fit and transform
+        embedded_train_X_scaled = scaler.fit_transform(embedded_train_X)
+    else:
+        # Handle case with no data (shouldn't happen after init)
+        embedded_train_X_scaled = embedded_train_X # Will be empty
+
+    # Ensure train_Y is a NumPy array for fitting
+    train_Y_for_fit = np.array(train_Y_list) # Use the list directly
+
+    # d. Fit GP Model using SCALED data
+    print("Fitting GP model...")
+    if embedded_train_X_scaled.shape[0] > 0 and train_Y_for_fit.shape[0] == embedded_train_X_scaled.shape[0]:
+        gp_model = get_fitted_model(embedded_train_X_scaled, train_Y_for_fit, m)
+        print("GP model fitted.")
+    else:
+         print("Warning: Not enough data or data mismatch to fit GP model. Skipping iteration.")
+         continue # Skip if no data or mismatch
+
+    # e. Determine current best value for Acquisition Function
+    # We are maximizing the negative objective in the GP
+    current_best_neg_f_val = np.max(train_Y_for_fit) if train_Y_for_fit.size > 0 else -float('inf')
+
+    # Prevent potential issues if all points were infeasible (very large negative best_f)
+    if current_best_neg_f_val <= -LARGE_PENALTY / 2 and np.isfinite(current_best_neg_f_val):
+         print(f"Warning: Current best value ({current_best_neg_f_val:.2f}) is very low (likely from penalties). Acqf might behave unexpectedly.")
+
+
+    # f. Optimize Acquisition Function (Expected Improvement)
+    print("Optimizing acquisition function...")
+    next_U_candidates_np = optimize_acqf_discrete_via_embedding(
+        gp_model=gp_model,
+        scaler=scaler, # Pass the fitted scaler
+        dictionary_A=current_dictionary_A,
+        T=T,
+        q=BATCH_SIZE_q,
+        num_candidates=NUM_CANDIDATES_Acqf,
+        current_best_neg_f_val=current_best_neg_f_val
+    )
+    print(f"Selected {next_U_candidates_np.shape[0]} candidate(s).")
+
+    # g. Evaluate Objective for the selected candidate(s)
+    newly_evaluated_U = []
+    newly_evaluated_f = []
+    newly_evaluated_neg_f = []
+
+    for i in range(next_U_candidates_np.shape[0]):
+        next_U = next_U_candidates_np[i, :]
+
+        # Check if this candidate was already evaluated
+        # Use a tolerance for floating point comparisons if U were continuous
+        # For binary, exact comparison is fine
+        already_evaluated = any(np.array_equal(next_U, u) for u in evaluated_U_np_list)
+
+        if already_evaluated:
+            print(f"  Candidate {i} was already evaluated. Skipping re-evaluation.")
+            # TODO: Optionally, could try to generate a *different* candidate here
+            #       e.g., by running optimize_acqf again excluding this one,
+            #       or sampling randomly near it. For now, just skip.
+            continue # Skip to next candidate
+
+        # Evaluate the objective
+        next_f = evaluate_objective(next_U, X, v_star, convolutions, d, w)
+        next_neg_f = -next_f
+        print(f"  Candidate {i}: Obj = {next_f:.4f}")
+
+        # Add to temporary lists for this iteration
+        newly_evaluated_U.append(next_U)
+        newly_evaluated_f.append(next_f)
+        newly_evaluated_neg_f.append(next_neg_f)
+
+        # Update overall best objective found
+        if next_f < best_obj_so_far:
+            best_obj_so_far = next_f
+
+    # h. Augment Dataset for next iteration
+    evaluated_U_np_list.extend(newly_evaluated_U)
+    evaluated_f_vals.extend(newly_evaluated_f)
+    train_Y_list.extend(newly_evaluated_neg_f) # Add negative values for next GP fit
+
+    # Convert train_Y_list back to array for potential use (though we rebuild it next iter)
+    train_Y = np.array(train_Y_list).reshape(-1, 1)
+
+    iter_time = time.time() - start_time
+    print(f"Best objective value found so far: {best_obj_so_far:.4f}")
+    print(f"Total points evaluated: {len(evaluated_f_vals)}")
+    print(f"Iteration {iteration + 1} completed in {iter_time:.2f} seconds.")
+
+
+# --- Results ---
+print("\n--- Optimization Finished ---")
+if not evaluated_f_vals:
+    print("No points were successfully evaluated.")
 else:
-    final_best_idx_ei = np.argmin(evaluated_f_vals_ei)
-    final_best_U_ei = evaluated_U_np_list_ei[final_best_idx_ei]
-    final_best_f_ei = evaluated_f_vals_ei[final_best_idx_ei]
-    print(f"Total evaluations (EI): {len(evaluated_f_vals_ei)}")
-    print(f"Best Objective Value Found (EI): {final_best_f_ei:.4f}")
+    # Find the best point among all evaluated points
+    final_best_idx_ei = np.argmin(evaluated_f_vals) # Index of minimum raw objective
+    final_best_U_ei = evaluated_U_np_list[final_best_idx_ei]
+    final_best_f_ei = evaluated_f_vals[final_best_idx_ei]
+    nr_evaluated_f_vals_ei = len(evaluated_f_vals) # Saved for reporting results
+    print(f"Total evaluations: {len(evaluated_f_vals)}") 
+    print(f"Best Objective Value Found: {final_best_f_ei}")
+    # Ensure U is printed correctly if it's long
+    print(f"Best U vector Found: {final_best_U_ei}")
+    # print(f"Best U vector Found (Indices of 1s): {np.where(final_best_U_ei == 1)[0]}")
+
+
+    # Verification - Recalculate Y for the best U found
+    V_sum_best = np.sum(v_star[final_best_U_ei == 1, :], axis=0)
+    Y_best_ei = X + V_sum_best
+    is_feasible = np.all(Y_best_ei >= 0)
+    if is_feasible:
+        ewt, esp = calculate_objective_serv_time_lookup(Y_best_ei, d, convolutions)
+        recalculated_obj = w * ewt + (1 - w) * esp
+        
+    else:
+        LARGE_PENALTY
+
+    print(f"\n--- Verification ---")
+    print(f"Is the best U feasible? {is_feasible}")
+    if is_feasible:
+        print(f"Resulting Y vector for best U: {Y_best_ei}")
+        print(f"Objective value (recalculated): {recalculated_obj:.4f}")
+        if not np.isclose(final_best_f_ei, recalculated_obj):
+             print(f"Warning: Stored best objective ({final_best_f_ei}) does not match recalculation ({recalculated_obj})!")
+    elif final_best_f < LARGE_PENALTY:
+         print(f"Warning: Best objective ({final_best_f_ei}) is not the penalty value, but feasibility check failed.")
+         print(f"Resulting Y vector (infeasible): {Y_best_ei}")
+    else:
+         print("Best solution found corresponds to an infeasible penalty value.")
 ```
 
 #### 5. Experiment 2: CBO with Lower Confidence Bound (LCB) - Fixed Kappa
-Applies the methodology from Deshwal et al. (2023) using LCB with fixed $\kappa$.
+Applies the methodology from @deshwal_bayesian_2023 using LCB with fixed $\kappa$.
 
-```python
-# --- LCB Specific Acquisition Function and Optimization ---
-def lower_confidence_bound(mu_pred: np.ndarray, sigma_pred: np.ndarray, kappa: float) -> np.ndarray:
-    """Computes the Lower Confidence Bound (LCB) acquisition function."""
-    sigma_pred = np.maximum(sigma_pred, 1e-9) 
-    return mu_pred - kappa * sigma_pred 
+```{python}
+# --- BO Helper Functions ---
 
-def optimize_acqf_lcb(gp_model: GaussianProcessRegressor, scaler: MinMaxScaler, 
-                      dictionary_A: np.ndarray, T_dim: int, q_batch_size: int, 
-                      num_acqf_candidates: int, kappa_val: float) -> np.ndarray:
-    """Optimizes the LCB acquisition function using HED."""
-    m_embed_dim = dictionary_A.shape[0]
-    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_acqf_candidates, T_dim))
+# --- get_fitted_model function remains the same ---
+def get_fitted_model(train_X_embedded_scaled, train_Y, m):
+    # ... (implementation is unchanged) ...
+    if train_Y.ndim > 1 and train_Y.shape[1] == 1: train_Y = train_Y.ravel()
+    kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
+             Matern(length_scale=np.ones(m), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
+    gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
+    gp_model.fit(train_X_embedded_scaled, train_Y)
+    return gp_model
+
+def lower_confidence_bound(mu, sigma, kappa=2.576):
+    """
+    Computes the Lower Confidence Bound (LCB) acquisition function.
+    Assumes maximization of this value guides the search (since mu is neg objective).
+    Higher LCB means lower predicted objective or lower penalty for uncertainty.
+
+    mu, sigma: Predicted mean and standard deviation (NumPy arrays).
+    kappa: Controls the balance between exploitation (high mu -> low original objective)
+           and exploration (low sigma).
+    """
+    # Ensure sigma is non-negative
+    sigma = np.maximum(sigma, 0)
+    return mu - kappa * sigma # <<< Sign flipped from UCB
+
+def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, num_candidates, kappa):
+    """
+    Optimizes LCB acquisition function by sampling random binary candidates,
+    embedding, SCALING, predicting with GP, and calculating LCB.
+    Selects the top q candidates based on LCB.
+    Returns candidates as a numpy array (q x T).
+    """
+    m = dictionary_A.shape[0]
+
+    # 1. Generate Random Binary Candidates
+    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_candidates, T))
+
+    # 2. Embed the Candidates
     embedded_candidates_np = embed_batch(candidate_u_vectors_np, dictionary_A)
+
+    # 3. Scale the Embedded Candidates
     embedded_candidates_scaled_np = scaler.transform(embedded_candidates_np)
-    mu_pred, std_pred = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
-    acq_values = lower_confidence_bound(mu_pred, std_pred, kappa=kappa_val)
-    top_indices = np.argsort(acq_values)[-q_batch_size:][::-1]
+
+    # 4. Predict Mean and Std Dev using the GP Model
+    mu, std = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
+
+    # 5. Calculate Acquisition Function (Lower Confidence Bound) <<< CHANGED HERE
+    acq_values = lower_confidence_bound(mu, std, kappa=kappa) # Use LCB
+
+    # 6. Select Top Candidates (based on highest LCB) <<< COMMENT UPDATED
+    # We maximize LCB = mu - kappa*sigma, where mu is neg_objective
+    top_indices = np.argsort(acq_values)[-q:]
+    top_indices = top_indices[::-1] # Ensure descending order of LCB
+
     return candidate_u_vectors_np[top_indices, :]
 
-# --- LCB (Fixed Kappa) BO Loop ---
-print("\n--- Starting Experiment 2: CBO with LCB (Fixed Kappa) ---")
-KAPPA_FIXED = 2.576 # Standard value for ~99% confidence
+# --- BO Loop ---
 
-evaluated_U_np_list_lcb_fixed = []
-evaluated_f_vals_lcb_fixed = []
-train_Y_list_lcb_fixed = []
+# Parameters
+KAPPA = 2.576 # Exploration parameter for LCB. Adjust as needed.
+N_INITIAL = 20
+N_ITERATIONS = 20
+BATCH_SIZE_q = 5
+NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
+m = 128 # Dimension of the embedding space
 
-# Initialization
-print(f"Generating {N_INITIAL_POINTS} initial random points for LCB (Fixed Kappa)...")
-initial_candidates_lcb_fixed = []
-while len(initial_candidates_lcb_fixed) < N_INITIAL_POINTS:
-    U_init_candidate = np.random.randint(0, 2, size=T)
-    if not any(np.array_equal(U_init_candidate, u) for u in initial_candidates_lcb_fixed):
-        initial_candidates_lcb_fixed.append(U_init_candidate)
+# Store evaluated points (using NumPy arrays)
+evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
+evaluated_f_vals = []    # List to store raw objective values (lower is better)
+train_Y_list = []        # List to store NEGATED objective values for GP (higher is better)
 
-for U_init in initial_candidates_lcb_fixed:
-    f_val = evaluate_objective(U_init, X_initial_schedule, v_star, convolutions, d, w)
+# 1. Initialization
+for U_init in initial_candidates:
+    f_val = evaluate_objective(U_init, X, v_star, convolutions, d, w)
     neg_f_val = -f_val
-    evaluated_U_np_list_lcb_fixed.append(U_init)
-    evaluated_f_vals_lcb_fixed.append(f_val)
-    train_Y_list_lcb_fixed.append(neg_f_val)
+    evaluated_U_np_list.append(U_init)
+    evaluated_f_vals.append(f_val)
+    train_Y_list.append(neg_f_val)
+  
+# Convert lists to NumPy arrays for GP fitting
+train_Y = np.array(train_Y_list).reshape(-1, 1) # Keep as column vector initially
 
-best_obj_so_far_lcb_fixed = min(evaluated_f_vals_lcb_fixed) if evaluated_f_vals_lcb_fixed else float('inf')
-print(f"Initial best objective value (LCB Fixed Kappa): {best_obj_so_far_lcb_fixed:.4f}")
+best_obj_so_far = min(evaluated_f_vals) if evaluated_f_vals else float('inf')
+initial_best_obj_so_far_lcb = best_obj_so_far # Saved for reporting results
+print(f"Initial best objective value: {best_obj_so_far}")
+if not np.isfinite(best_obj_so_far):
+     print("Warning: Initial best objective is infinite, possibly all initial points were infeasible.")
 
-# BO Iterations
-for iteration in range(N_BO_ITERATIONS):
-    iter_start_time = time.time()
-    print(f"\n--- LCB (Fixed Kappa) Iteration {iteration + 1}/{N_BO_ITERATIONS} ---")
-    current_dictionary_A_lcb_fixed = generate_diverse_random_dictionary(T, M_EMBED_DIM)
-    if not evaluated_U_np_list_lcb_fixed: continue
-    evaluated_U_np_array_lcb_fixed = np.array(evaluated_U_np_list_lcb_fixed)
-    embedded_train_X_lcb_fixed = embed_batch(evaluated_U_np_array_lcb_fixed, current_dictionary_A_lcb_fixed)
-    scaler_lcb_fixed = MinMaxScaler()
-    if embedded_train_X_lcb_fixed.shape[0] > 0:
-        embedded_train_X_scaled_lcb_fixed = scaler_lcb_fixed.fit_transform(embedded_train_X_lcb_fixed)
-    else: embedded_train_X_scaled_lcb_fixed = embedded_train_X_lcb_fixed
-    train_Y_for_fit_lcb_fixed = np.array(train_Y_list_lcb_fixed)
-    if embedded_train_X_scaled_lcb_fixed.shape[0] > 0 and train_Y_for_fit_lcb_fixed.shape[0] == embedded_train_X_scaled_lcb_fixed.shape[0]:
-        gp_model_lcb_fixed = get_fitted_model(embedded_train_X_scaled_lcb_fixed, train_Y_for_fit_lcb_fixed, M_EMBED_DIM)
-    else: continue
-    next_U_candidates_np_lcb_fixed = optimize_acqf_lcb(
-        gp_model_lcb_fixed, scaler_lcb_fixed, current_dictionary_A_lcb_fixed, T, BATCH_SIZE_Q, NUM_ACQF_CANDIDATES, KAPPA_FIXED
+# 2. BO Iterations
+for iteration in range(N_ITERATIONS):
+    start_time = time.time()
+    print(f"\n--- Iteration {iteration + 1}/{N_ITERATIONS} ---")
+
+    # a. Generate dictionary A (remains the same)
+    current_dictionary_A = generate_diverse_random_dictionary(T, m)
+
+    # b. Embed ALL evaluated U vectors (remains the same)
+    if not evaluated_U_np_list: continue
+    evaluated_U_np_array = np.array(evaluated_U_np_list)
+    embedded_train_X = embed_batch(evaluated_U_np_array, current_dictionary_A)
+
+    # c. Scale the embedded training data (remains the same)
+    scaler = MinMaxScaler()
+    if embedded_train_X.shape[0] > 0: embedded_train_X_scaled = scaler.fit_transform(embedded_train_X)
+    else: embedded_train_X_scaled = embedded_train_X
+
+    # Ensure train_Y is NumPy array
+    train_Y_for_fit = np.array(train_Y_list)
+
+    # d. Fit GP Model (remains the same)
+    print("Fitting GP model...")
+    if embedded_train_X_scaled.shape[0] > 0 and train_Y_for_fit.shape[0] == embedded_train_X_scaled.shape[0]:
+        gp_model = get_fitted_model(embedded_train_X_scaled, train_Y_for_fit, m)
+        print("GP model fitted.")
+    else:
+        print("Warning: Not enough data or data mismatch to fit GP model. Skipping iteration.")
+        continue
+
+    # e. Determine current best neg value (useful for tracking, not directly used in LCB calculation)
+    current_best_neg_f_val = np.max(train_Y_for_fit) if train_Y_for_fit.size > 0 else -float('inf')
+    if current_best_neg_f_val <= -LARGE_PENALTY / 2 and np.isfinite(current_best_neg_f_val):
+        print(f"Warning: Current best NEGATIVE objective value ({current_best_neg_f_val:.2f}) is very low (likely from penalties).")
+
+    # f. Optimize Acquisition Function (LCB) <<< MODIFIED CALL & COMMENT
+    print("Optimizing acquisition function (LCB)...") # Comment updated
+    next_U_candidates_np = optimize_acqf_discrete_via_embedding(
+        gp_model=gp_model,
+        scaler=scaler,
+        dictionary_A=current_dictionary_A,
+        T=T,
+        q=BATCH_SIZE_q,
+        num_candidates=NUM_CANDIDATES_Acqf,
+        kappa=KAPPA # Pass kappa
     )
-    for i_cand in range(next_U_candidates_np_lcb_fixed.shape[0]):
-        next_U = next_U_candidates_np_lcb_fixed[i_cand, :]
-        if any(np.array_equal(next_U, u) for u in evaluated_U_np_list_lcb_fixed): continue
-        next_f = evaluate_objective(next_U, X_initial_schedule, v_star, convolutions, d, w)
-        evaluated_U_np_list_lcb_fixed.append(next_U)
-        evaluated_f_vals_lcb_fixed.append(next_f)
-        train_Y_list_lcb_fixed.append(-next_f)
-        if next_f < best_obj_so_far_lcb_fixed: best_obj_so_far_lcb_fixed = next_f
-    print(f"Best objective (LCB Fixed Kappa) so far: {best_obj_so_far_lcb_fixed:.4f}")
+    print(f"Selected {next_U_candidates_np.shape[0]} candidate(s).")
 
-# --- Results for LCB (Fixed Kappa) ---
-print("\n--- LCB (Fixed Kappa) Optimization Finished ---")
-if not evaluated_f_vals_lcb_fixed:
-    final_best_f_lcb_fixed = float('inf'); final_best_U_lcb_fixed = None
+    # g. Evaluate Objective (remains the same)
+    newly_evaluated_U = []; newly_evaluated_f = []; newly_evaluated_neg_f = []
+    for i in range(next_U_candidates_np.shape[0]):
+        next_U = next_U_candidates_np[i, :]
+        already_evaluated = any(np.array_equal(next_U, u) for u in evaluated_U_np_list)
+        if already_evaluated: print(f"  Candidate {i} was already evaluated. Skipping."); continue
+
+        next_f = evaluate_objective(next_U, X, v_star, convolutions, d, w)
+        next_neg_f = -next_f
+        print(f"  Candidate {i}: Obj = {next_f:.4f}")
+        newly_evaluated_U.append(next_U); newly_evaluated_f.append(next_f); newly_evaluated_neg_f.append(next_neg_f)
+        if next_f < best_obj_so_far: best_obj_so_far = next_f
+
+    # h. Augment Dataset (remains the same)
+    evaluated_U_np_list.extend(newly_evaluated_U); evaluated_f_vals.extend(newly_evaluated_f); train_Y_list.extend(newly_evaluated_neg_f)
+    train_Y = np.array(train_Y_list).reshape(-1, 1)
+
+    iter_time = time.time() - start_time
+    print(f"Best objective value found so far: {best_obj_so_far:.4f}")
+    print(f"Total points evaluated: {len(evaluated_f_vals)}")
+    print(f"Iteration {iteration + 1} completed in {iter_time:.2f} seconds.")
+
+
+# --- Results ---
+print("\n--- Optimization Finished ---")
+if not evaluated_f_vals: print("No points were successfully evaluated.")
 else:
-    final_best_idx_lcb_fixed = np.argmin(evaluated_f_vals_lcb_fixed)
-    final_best_U_lcb_fixed = evaluated_U_np_list_lcb_fixed[final_best_idx_lcb_fixed]
-    final_best_f_lcb_fixed = evaluated_f_vals_lcb_fixed[final_best_idx_lcb_fixed]
-    print(f"Total evaluations (LCB Fixed Kappa): {len(evaluated_f_vals_lcb_fixed)}")
-    print(f"Best Objective Value Found (LCB Fixed Kappa): {final_best_f_lcb_fixed:.4f}")
-```
+    final_best_idx_lcb = np.argmin(evaluated_f_vals)
+    final_best_U_lcb = evaluated_U_np_list[final_best_idx_lcb]
+    final_best_f_lcb = evaluated_f_vals[final_best_idx_lcb]
+    nr_evaluated_f_vals_lcb = len(evaluated_f_vals) # Saved for reporting results
+    print(f"Total evaluations: {nr_evaluated_f_vals_lcb}")
+    print(f"Best Objective Value Found: {final_best_f_lcb}")
+    print(f"Best U vector Found: {final_best_U_lcb}")
 
-#### 6. Experiment 3: CBO with Lower Confidence Bound (LCB) - Increasing Kappa
-Applies the methodology from Deshwal et al. (2023) using LCB with dynamic $\kappa$.
+    # Verification
+    V_sum_best = np.sum(v_star[final_best_U_lcb == 1, :], axis=0)
+    Y_best_lcb = X + V_sum_best
+    is_feasible = np.all(Y_best_lcb >= 0)
+    recalculated_obj = LARGE_PENALTY
+    if is_feasible:
+        ewt, esp = calculate_objective_serv_time_lookup(Y_best_lcb, d, convolutions)
+        recalculated_obj = w * ewt + (1 - w) * esp
 
-```python
-# --- LCB (Increasing Kappa) BO Loop ---
-print("\n--- Starting Experiment 3: CBO with LCB (Increasing Kappa) ---")
-INITIAL_KAPPA_DYNAMIC = 3.75
-KAPPA_INCREASE_FACTOR = 1.3
-# MAX_KAPPA_DYNAMIC = 15.0 # Optional cap
-
-evaluated_U_np_list_lcb_dyn = []
-evaluated_f_vals_lcb_dyn = []
-train_Y_list_lcb_dyn = []
-current_kappa_dynamic = INITIAL_KAPPA_DYNAMIC
-
-# Initialization
-print(f"Generating {N_INITIAL_POINTS} initial random points for LCB (Increasing Kappa)...")
-initial_candidates_lcb_dyn = []
-while len(initial_candidates_lcb_dyn) < N_INITIAL_POINTS:
-    U_init_candidate = np.random.randint(0, 2, size=T)
-    if not any(np.array_equal(U_init_candidate, u) for u in initial_candidates_lcb_dyn):
-        initial_candidates_lcb_dyn.append(U_init_candidate)
-
-for U_init in initial_candidates_lcb_dyn:
-    f_val = evaluate_objective(U_init, X_initial_schedule, v_star, convolutions, d, w)
-    neg_f_val = -f_val
-    evaluated_U_np_list_lcb_dyn.append(U_init)
-    evaluated_f_vals_lcb_dyn.append(f_val)
-    train_Y_list_lcb_dyn.append(neg_f_val)
-
-best_obj_so_far_lcb_dyn = min(evaluated_f_vals_lcb_dyn) if evaluated_f_vals_lcb_dyn else float('inf')
-print(f"Initial best objective value (LCB Increasing Kappa): {best_obj_so_far_lcb_dyn:.4f}")
-print(f"Initial Kappa: {current_kappa_dynamic:.3f}")
-
-# BO Iterations
-for iteration in range(N_BO_ITERATIONS):
-    iter_start_time = time.time()
-    print(f"\n--- LCB (Increasing Kappa) Iteration {iteration + 1}/{N_BO_ITERATIONS} ---")
-    current_dictionary_A_lcb_dyn = generate_diverse_random_dictionary(T, M_EMBED_DIM)
-    if not evaluated_U_np_list_lcb_dyn: continue
-    evaluated_U_np_array_lcb_dyn = np.array(evaluated_U_np_list_lcb_dyn)
-    embedded_train_X_lcb_dyn = embed_batch(evaluated_U_np_array_lcb_dyn, current_dictionary_A_lcb_dyn)
-    scaler_lcb_dyn = MinMaxScaler()
-    if embedded_train_X_lcb_dyn.shape[0] > 0:
-        embedded_train_X_scaled_lcb_dyn = scaler_lcb_dyn.fit_transform(embedded_train_X_lcb_dyn)
-    else: embedded_train_X_scaled_lcb_dyn = embedded_train_X_lcb_dyn
-    train_Y_for_fit_lcb_dyn = np.array(train_Y_list_lcb_dyn)
-    if embedded_train_X_scaled_lcb_dyn.shape[0] > 0 and train_Y_for_fit_lcb_dyn.shape[0] == embedded_train_X_scaled_lcb_dyn.shape[0]:
-        gp_model_lcb_dyn = get_fitted_model(embedded_train_X_scaled_lcb_dyn, train_Y_for_fit_lcb_dyn, M_EMBED_DIM)
-    else: continue
-    next_U_candidates_np_lcb_dyn = optimize_acqf_lcb(
-        gp_model_lcb_dyn, scaler_lcb_dyn, current_dictionary_A_lcb_dyn, T, BATCH_SIZE_Q, NUM_ACQF_CANDIDATES, current_kappa_dynamic
-    )
-    improvement_found_in_batch = False
-    for i_cand in range(next_U_candidates_np_lcb_dyn.shape[0]):
-        next_U = next_U_candidates_np_lcb_dyn[i_cand, :]
-        if any(np.array_equal(next_U, u) for u in evaluated_U_np_list_lcb_dyn): continue
-        next_f = evaluate_objective(next_U, X_initial_schedule, v_star, convolutions, d, w)
-        evaluated_U_np_list_lcb_dyn.append(next_U)
-        evaluated_f_vals_lcb_dyn.append(next_f)
-        train_Y_list_lcb_dyn.append(-next_f)
-        if next_f < best_obj_so_far_lcb_dyn:
-            best_obj_so_far_lcb_dyn = next_f
-            old_kappa = current_kappa_dynamic
-            current_kappa_dynamic *= KAPPA_INCREASE_FACTOR
-            # current_kappa_dynamic = min(current_kappa_dynamic, MAX_KAPPA_DYNAMIC) # Optional cap
-            improvement_found_in_batch = True
-    print(f"Best objective (LCB Increasing Kappa) so far: {best_obj_so_far_lcb_dyn:.4f}")
-    # print(f"Kappa for next iteration: {current_kappa_dynamic:.3f}")
-
-# --- Results for LCB (Increasing Kappa) ---
-print("\n--- LCB (Increasing Kappa) Optimization Finished ---")
-if not evaluated_f_vals_lcb_dyn:
-    final_best_f_lcb_dyn = float('inf'); final_best_U_lcb_dyn = None
-else:
-    final_best_idx_lcb_dyn = np.argmin(evaluated_f_vals_lcb_dyn)
-    final_best_U_lcb_dyn = evaluated_U_np_list_lcb_dyn[final_best_idx_lcb_dyn]
-    final_best_f_lcb_dyn = evaluated_f_vals_lcb_dyn[final_best_idx_lcb_dyn]
-    print(f"Total evaluations (LCB Increasing Kappa): {len(evaluated_f_vals_lcb_dyn)}")
-    print(f"Best Objective Value Found (LCB Increasing Kappa): {final_best_f_lcb_dyn:.4f}")
-    print(f"Final Kappa value reached: {current_kappa_dynamic:.3f}")
+    print(f"\n--- Verification ---")
+    print(f"Is the best U feasible? {is_feasible}")
+    if is_feasible:
+        print(f"Resulting Y vector for best U: {Y_best_lcb}")
+        print(f"Objective value (recalculated): {recalculated_obj:.4f}")
+        if not np.isclose(final_best_f_lcb, recalculated_obj): print(f"Warning: Stored best objective ({final_best_f:.4f}) does not match recalculation ({recalculated_obj:.4f})!")
+    elif final_best_f_lcb < LARGE_PENALTY: print(f"Warning: Best objective ({final_best_f_lcb:.4f}) is not the penalty value, but feasibility check failed."); print(f"Resulting Y vector (infeasible): {Y_best_lcb}")
+    else: print("Best solution found corresponds to an infeasible penalty value.")
 ```
 
 ## Results
 
-The initial schedule, derived using the Bailey-Welch method (Kaandorp and Koole, 2007), serves as a baseline. The objective function $C(\mathbf{x})$ combines Expected Waiting Time ($EWT$) and Expected Staff Penalty ($ESP$). Lower values of $C(\mathbf{x})$ are preferable. Each experiment consisted of $N_{INITIAL} = 20$ initial random evaluations followed by $N_{ITERATIONS} = 25$ Bayesian optimization iterations, with $BATCH\_SIZE_q = 5$ evaluations per iteration, totaling approximately $20 + 25 \times 5 = 145$ evaluations per experiment. The optimization operates on the binary perturbation vector $\mathbf{U}$, using the HED embedding (Deshwal et al., 2023).
+The initial schedule, derived using the Bailey-Welch method (bailey1952study), serves as a baseline. The objective function $C(\mathbf{x})$ combines Expected Waiting Time ($EWT$) and Expected Staff Penalty ($ESP$). Lower values of $C(\mathbf{x})$ are preferable. Each experiment consisted of $N_{INITIAL} = 20$ initial random evaluations followed by $N_{ITERATIONS} =20$ Bayesian optimization iterations, with $BATCH\_SIZE_q = 5$ evaluations per iteration, totaling approximately $20 + 20 \times 5 = 120$ evaluations per experiment. The optimization operates on the binary perturbation vector $\mathbf{U}$, using the HED embedding [@deshwal_bayesian_2023].
 
 The key performance metric is the best (minimum) objective function value found.
 
 ### Experiment 1: CBO with Expected Improvement (EI)
--   **Initial Best Objective (after random search)**: $73.6389$
--   **Final Best Objective Found**: $68.2348$
--   **Total Evaluations**: $145$
--   **Best Perturbation Vector $\mathbf{U}_{EI}^*$**: `[0 0 0 1 0 0 0 1 0 0 0 1 1 0 1 0 0 1 0 1]`
--   **Resulting Optimal Schedule $\mathbf{x}_{EI}^*$**: `[2 1 1 0 1 0 2 0 0 1 1 1 0 1 0 1 1 0 1 7]`
+-   **Initial Best Objective (after random search)**: `{python} initial_best_obj_so_far_ei`
+-   **Final Best Objective Found**: `{python} final_best_f_ei`
+-   **Total Evaluations**: `{python} nr_evaluated_f_vals_ei`
+-   **Best Perturbation Vector $\mathbf{U}_{EI}^*$**: `{python} final_best_U_ei`
+-   **Resulting Optimal Schedule $\mathbf{x}_{EI}^*$**: `{python} Y_best_ei`
 
-### Experiment 2: CBO with Lower Confidence Bound (LCB) - Fixed Kappa ($\kappa = 2.576$)
--   **Initial Best Objective (after random search)**: $68.0201$
--   **Final Best Objective Found**: $66.9201$
--   **Total Evaluations**: $143$
--   **Best Perturbation Vector $\mathbf{U}_{LCB\_fixed}^*$**: `[0 0 0 1 0 0 1 1 0 1 0 1 1 0 1 1 0 1 1 1]`
--   **Resulting Optimal Schedule $\mathbf{x}_{LCB\_fixed}^*$**: `[2 1 1 0 1 1 1 0 1 0 1 1 0 1 1 0 1 1 0 7]`
-
-### Experiment 3: CBO with Lower Confidence Bound (LCB) - Increasing Kappa
--   **Initial Best Objective (after random search)**: $74.0010$
--   **Final Best Objective Found**: $68.0497$
--   **Total Evaluations**: $145$
--   **Best Perturbation Vector $\mathbf{U}_{LCB\_dyn}^*$**: `[0 0 0 1 0 0 1 1 0 0 0 1 1 0 1 1 0 1 0 1]`
--   **Resulting Optimal Schedule $\mathbf{x}_{LCB\_dyn}^*$**: `[2 1 1 0 1 1 1 0 0 1 1 1 0 1 1 0 1 0 1 7]`
--   **Initial $\kappa$**: $3.750$
--   **Final $\kappa$**: $39.767$
+### Experiment 2: CBO with Lower Confidence Bound (LCB) - $\kappa =$ `{python} KAPPA`
+-   **Initial Best Objective (after random search)**: `{python} initial_best_obj_so_far_lcb`
+-   **Final Best Objective Found**: `{python} final_best_f_lcb`
+-   **Total Evaluations**: `{python} nr_evaluated_f_vals_lcb`
+-   **Best Perturbation Vector $\mathbf{U}_{LCB\_fixed}^*$**: `{python} final_best_U_lcb`
+-   **Resulting Optimal Schedule $\mathbf{x}_{LCB\_fixed}^*$**: `{python} Y_best_lcb`
 
 ### Summary of Best Objectives
 | Experiment                       | Best Objective $C(\mathbf{x}^*)$ |
 |----------------------------------|-----------------------------------|
-| CBO with EI                      | $68.2348$                         |
-| CBO with LCB (Fixed $\kappa=2.576$) | $66.9201$                         |
-| CBO with LCB (Increasing $\kappa$) | $68.0497$                         |
+| CBO with EI                      | `{python} final_best_f_ei`                         |
+| CBO with LCB (Fixed $\kappa=$ `{python} KAPPA`) |`{python} final_best_f_lcb`                         |
 
 ## Discussion
 
-The experiments aimed to compare three CBO strategies, leveraging the HED embedding technique (Deshwal et al., 2023), for optimizing the outpatient appointment scheduling problem formulated by Kaandorp and Koole (2007). All three methods successfully improved upon their respective initial random search results, demonstrating the applicability of BO with HED to this combinatorial problem.
+The experiments aimed to compare two CBO strategies, leveraging the HED embedding technique [@deshwal_bayesian_2023], for optimizing the outpatient appointment scheduling problem formulated by @kaandorp_optimal_2007. Both methods successfully improved upon their respective initial random search results, demonstrating the applicability of BO with HED to this combinatorial problem.
 
-1.  **Performance Comparison**: The CBO strategy employing LCB with a fixed $\kappa = 2.576$ yielded the lowest objective function value ($66.9201$), indicating the best performance among the tested methods for this specific problem instance and parameter settings. EI achieved a final objective of $68.2348$, while LCB with increasing $\kappa$ reached $68.0497$.
+1.  **Performance Comparison**: 
 
 2.  **Hypothesis Evaluation**:
-    -   Hypothesis 1 was supported: All CBO strategies found significantly better schedules than the initial random points.
-    -   Hypothesis 2 received partial support: LCB with fixed $\kappa$ outperformed EI, but LCB with increasing $\kappa$ did not significantly outperform EI.
-    -   Hypothesis 3 was not supported: The dynamic $\kappa$ strategy, despite adapting its exploration parameter substantially (from $3.750$ to $39.767$), did not achieve the best result, being outperformed by the fixed $\kappa$ LCB.
+    -   Hypothesis 1 
+    -   Hypothesis 2 
 
-3.  **Exploration vs. Exploitation**: The fixed $\kappa$ LCB strategy appears to strike an effective balance for this problem. The dynamic $\kappa$ strategy, becoming increasingly explorative upon finding improvements, might have explored too broadly after initial gains, potentially moving away from the most promising regions identified earlier. The EI strategy's focus on immediate expected improvement was less effective than the fixed LCB's balanced approach. The effectiveness of the HED embedding, combined with ARD in the GP kernel (as discussed by Deshwal et al., 2023), likely played a crucial role in enabling the GP to model the complex objective landscape effectively.
+3.  **Exploration vs. Exploitation**: 
 
-4.  **Computational Effort**: All methods required a similar number of expensive objective function evaluations (~145). The main computational overhead per iteration, beyond function evaluation, involves HED embedding, GP fitting, and acquisition function optimization.
+4.  **Computational Effort**: 
 
 5.  **Limitations and Future Work**:
-    -   The optimality guarantee mentioned by Kaandorp and Koole (2007) applies to their specific local search algorithm operating directly on the schedule space $\mathcal{F}$, leveraging multimodularity. Our BO approach operates on the perturbation vector space $\mathbf{U}$ via HED embeddings. While BO aims for global optimization, it doesn't inherit the same theoretical guarantee of finding the global optimum as the original local search, especially given the stochastic nature of GP modeling and acquisition function optimization.
+    -   The optimality guarantee mentioned by @kaandorp_optimal_2007 applies to their specific local search algorithm operating directly on the schedule space $\mathcal{F}$, leveraging multimodularity. Our BO approach operates on the perturbation vector space $\mathbf{U}$ via HED embeddings. While BO aims for global optimization, it doesn't inherit the same theoretical guarantee of finding the global optimum as the original local search, especially given the stochastic nature of GP modeling and acquisition function optimization.
     -   The performance is likely sensitive to BO hyperparameters (dictionary size $m$, $\kappa$ values, number of candidates for acquisition optimization).
-    -   The mock implementation of `functions.py` needs replacement with actual scheduling logic for accurate results.
     -   Further investigation into different dictionary construction methods (e.g., binary wavelets as mentioned in Deshwal et al., 2023) or adaptive $\kappa$ schedules could be beneficial.
 
 In conclusion, applying CBO with HED embeddings appears promising for this scheduling problem. The LCB acquisition function with a fixed, well-chosen $\kappa$ demonstrated the best performance in this study.
 
 ## Timeline
 
--   **Experiment Setup and Code Implementation**: (Specify Date Range)
--   **Initial Parameter Tuning (if any)**: (Specify Date Range)
--   **Execution of Experiment 1 (EI)**: (Specify Date)
--   **Execution of Experiment 2 (LCB Fixed Kappa)**: (Specify Date)
--   **Execution of Experiment 3 (LCB Increasing Kappa)**: (Specify Date)
--   **Results Analysis and Report Compilation**: (Specify Date Range)
+-   **Experiment Setup and Code Implementation**: 30-04-2025
+-   **Results Analysis and Report Compilation**: 07-05-2025
 
 ## References
 
--   Deshwal, A., Ament, S., Balandat, M., Bakshy, E., Doppa, J. R., & Eriksson, D. (2023). Bayesian Optimization over High-Dimensional Combinatorial Spaces via Dictionary-based Embeddings. *Proceedings of the 26th International Conference on Artificial Intelligence and Statistics (AISTATS)*, PMLR 206:5141-5168.
--   Kaandorp, G. C., & Koole, G. (2007). Optimal outpatient appointment scheduling. *Health Care Management Science*, 10(3), 217–229. https://doi.org/10.1007/s10729-007-9015-x
--   (Placeholder for Bailey-Welch algorithm reference, e.g., Bailey, N. T. J. (1952). A study of queues and appointment systems in hospital out-patient departments, with special reference to waiting-times. *Journal of the Royal Statistical Society: Series B (Methodological)*, 14(2), 185-199.)
--   (Placeholder for Gaussian Process literature, e.g., Rasmussen, C. E., & Williams, C. K. I. (2006). *Gaussian Processes for Machine Learning*. MIT Press.)
-
-```
-
-Ik heb de verwijzingen naar (Kaandorp and Koole, 2007) en (Deshwal et al., 2023) toegevoegd in de secties Objective, Background, Methodology, Discussion en References. De tekst is aangepast om de bijdragen van elk paper aan het huidige experiment te verduidelijk
+::: {#refs}
+:::
