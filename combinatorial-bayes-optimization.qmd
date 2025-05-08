@@ -102,6 +102,7 @@ Import necessary libraries and configure warning filters.
 # Core Libraries
 import numpy as np
 import time
+import math
 import warnings
 from scipy.optimize import minimize
 from typing import List, Dict, Tuple, Callable, Optional, Union, Any, Iterable
@@ -129,13 +130,13 @@ Definition of problem parameters and initial configuration.
 # --- Problem Definition ---
 
 # Fixed Data (Use your actual data)
-N = 21 # Total number of patients
+N = 24 # Total number of patients
 T = 20 # Dimension of the binary vector U
-d = 5 # Length of each interval
-max_s = 20 # Maximum service time
+d = 10 # Length of each interval
+max_s = 30 # Maximum service time
 q = 0.20 # Probability of a scheduled patient not showing up
 w = 0.1 # Weight for the waiting time in objective function
-l = 10
+l = 14
 v_star = get_v_star(T) # Get the V* matrix(T x T)
 # Create service time distribution
 def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
@@ -274,13 +275,17 @@ def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]
     # Return the final array with the sorted probability distribution
     return values
 
-i = 5  # First 5 highest values in ascending order, rest in descending order
+i = 10  # First 5 highest values in ascending order, rest in descending order
 s = generate_weighted_list(max_s, l, i)
 print(f"Average generated service time: {np.dot(np.arange(len(s)), s)}")
 convolutions = compute_convolutions(s, N, q)
 X = np.array(bailey_welch_schedule(T, d, N, s))
+print(f"Initial schedule: {X}")
 # Objective Function Calculation
 LARGE_PENALTY = 1e10 # Penalty for infeasible solutions
+ewt, esp = calculate_objective_serv_time_lookup(X, d, convolutions)
+initial_objective_value = w * ewt + (1 - w) * esp
+print(f"Initial objective value: {initial_objective_value}")
 ```
 
 #### 3. Common Functions (Objective Evaluation and HED)
@@ -461,11 +466,11 @@ def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, n
 # --- BO Loop ---
 
 # Parameters
-N_INITIAL = 20
-N_ITERATIONS = 20
+N_INITIAL = 49
+N_ITERATIONS = 25
 BATCH_SIZE_q = 5
-NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
-m = 128 # Dimension of the embedding space
+NUM_CANDIDATES_Acqf = T*3*1024 # Might need more for higher T
+m = math.ceil(T/4) # Dimension of the embedding space
 
 # Store evaluated points (using NumPy arrays)
 evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
@@ -474,8 +479,8 @@ train_Y_list = []        # List to store NEGATED objective values for GP (higher
 
 # 1. Initialization
 print(f"Generating {N_INITIAL} initial points...")
-initial_candidates = []
-while len(initial_candidates) < N_INITIAL:
+initial_candidates = [np.zeros(T, dtype=int)]
+while len(initial_candidates) < N_INITIAL + 1: # +1 for the zero vector = initial X
     U_init = np.random.randint(0, 2, size=T)
     # Ensure unique initial points
     is_duplicate = any(np.array_equal(U_init, u) for u in initial_candidates)
@@ -582,8 +587,9 @@ for iteration in range(N_ITERATIONS):
         # Evaluate the objective
         next_f = evaluate_objective(next_U, X, v_star, convolutions, d, w)
         next_neg_f = -next_f
-        print(f"  Candidate {i}: Obj = {next_f:.4f}")
-
+        V_sum = np.sum(v_star[next_U == 1, :], axis=0)
+        Y = X + V_sum
+        print(f"  Candidate {i}: Obj = {next_f:.4f}, schedule = {Y}")
         # Add to temporary lists for this iteration
         newly_evaluated_U.append(next_U)
         newly_evaluated_f.append(next_f)
@@ -716,11 +722,11 @@ def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, n
 
 # Parameters
 KAPPA = 2.576 # Exploration parameter for LCB. Adjust as needed.
-N_INITIAL = 20
-N_ITERATIONS = 20
+N_INITIAL = 49 # The initial schedule will always be included
+N_ITERATIONS = 25
 BATCH_SIZE_q = 5
-NUM_CANDIDATES_Acqf = T*1024 # Might need more for higher T
-m = 128 # Dimension of the embedding space
+NUM_CANDIDATES_Acqf = T*3*1024 # Might need more for higher T
+m = math.ceil(T/4) # Dimension of the embedding space
 
 # Store evaluated points (using NumPy arrays)
 evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
@@ -801,7 +807,9 @@ for iteration in range(N_ITERATIONS):
 
         next_f = evaluate_objective(next_U, X, v_star, convolutions, d, w)
         next_neg_f = -next_f
-        print(f"  Candidate {i}: Obj = {next_f:.4f}")
+        V_sum = np.sum(v_star[next_U == 1, :], axis=0)
+        Y = X + V_sum
+        print(f"  Candidate {i}: Obj = {next_f:.4f}, schedule = {Y}")
         newly_evaluated_U.append(next_U); newly_evaluated_f.append(next_f); newly_evaluated_neg_f.append(next_neg_f)
         if next_f < best_obj_so_far: best_obj_so_far = next_f
 
