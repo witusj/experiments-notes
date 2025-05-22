@@ -13,6 +13,7 @@ book:
     - xgboost-pairwise-ranking-large-w-bailey-welch.qmd
     - local-search-ranking-large.qmd
     - combinatorial-bayes-optimization.qmd
+    - preferential-bayesian-optimization.qmd
     - references.qmd
     - part: "Function documentation"
       chapters:

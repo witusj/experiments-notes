@@ -1,0 +1,481 @@
+---
+title: "preferential-bayesian-optimization"
+format: html
+jupyter: python3
+---
+
+## Background
+
+We consider an outpatient appointment scheduling problem as described by @kaandorp_optimal_2007 where the schedule is represented by a vector $\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T$. This vector comprises $T$ components, where $x_j$ denotes the non-negative allocation (number of patients) to time slot $j$, for $j = 0, \ldots, T-1$. A fundamental constraint is that the total allocation across all time slots must equal a fixed constant $N$: $$\sum_{j=0}^{T-1} x_j = N$$ We require $x_j \ge 0$ for all $j = 0, \ldots, T-1$. Consequently, a valid schedule $\mathbf{x}$ belongs to the feasible set $\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}$, where $\mathbb{D}$ is the set of non-negative integers ($\mathbb{Z}_{\ge 0}$).
+
+@kaandorp_optimal_2007 define a neighborhood structure for local search based on perturbation vectors derived from a set of $T$ basis change vectors, $v_i \in \mathbb{D}^{T}$, for $i = 0, \ldots, T-1$. These basis vectors represent elementary shifts of allocation between time slots:
+
+-   $v_0 = (-1, 0, \ldots, 0, 1)$ (Shift unit *from* slot 0 *to* slot $T-1$)
+-   $v_1 = (1, -1, 0, \ldots, 0)$ (Shift unit *from* slot 1 *to* slot 0)
+-   $v_i = (0, \ldots, 0, \underbrace{1}_{\text{pos } i-1}, \underbrace{-1}_{\text{pos } i}, 0, \ldots, 0)$ for $i = 2, \ldots, T-1$ (Shift unit *from* slot $i$ *to* slot $i-1$)
+
+A key property of these basis vectors is that the sum of components for each vector is zero: $\sum_{j=0}^{T-1} v_{ij} = 0$ for all $i=0, \ldots, T-1$.
+
+Perturbations are constructed using a binary selection vector $\mathbf{U} = (u_0, u_1, \ldots, u_{T-1})$, where $u_i \in \{0, 1\}$. Each $u_i$ indicates whether the basis change $v_i$ is included in the perturbation. The resulting perturbation vector $\mathbf{r}(\mathbf{U}) \in \mathbb{D}^{T}$ is the linear combination: $$\mathbf{r}(\mathbf{U}) := \sum_{i=0}^{T-1} u_i v_i$$
+
+Since each $v_i$ sums to zero, any perturbation $\mathbf{r}(\mathbf{U})$ also sums to zero: $\sum_{j=0}^{T-1} r_j(\mathbf{U}) = 0$. This ensures that applying such a perturbation to a valid schedule $\mathbf{x}$ preserves the total allocation $N$.
+
+The neighborhood of a schedule $\mathbf{x} \in \mathcal{F}$, denoted by $\mathcal{N}(\mathbf{x})$, comprises all distinct, feasible schedules $\mathbf{x}'$ reachable by applying a non-zero perturbation $\mathbf{r}(\mathbf{U})$ (@kaandorp_optimal_2007, use a slightly different but related neighborhood definition based on combinations of these basis vectors).
+
+The objective function to be minimized is a weighted sum of Expected Waiting Time (EWT) and Expected Staff Penalty (ESP), as defined by @kaandorp_optimal_2007:
+$$C(\mathbf{x}) = w \cdot EWT(\mathbf{x}) + (1-w) \cdot ESP(\mathbf{x})$$
+@kaandorp_optimal_2007 prove that this objective function is multimodular, which guarantees that a local search algorithm using their defined neighborhood converges to the global optimum.
+
+However, evaluating $C(\mathbf{x})$ can be computationally expensive, especially for large $N$ and $T$. Furthermore, the search space defined by the binary vectors $\mathbf{U}$ is high-dimensional ($2^T - 2$ possibilities, excluding $\mathbf{0}$ and $\mathbf{1}$). Bayesian Optimization (BO) is a suitable framework for optimizing such expensive black-box functions. Standard BO methods often struggle with high-dimensional combinatorial spaces. @deshwal_bayesian_2023 propose a method using dictionary-based embeddings (Hamming Embedding via Dictionaries - HED) to map the high-dimensional binary space of $\mathbf{U}$ vectors into a lower-dimensional continuous space, where standard Gaussian Process (GP) models can be effectively applied. This experiment applies the HED approach within a BO framework to solve the scheduling problem formulated by @kaandorp_optimal_2007.
+
+## Setup
+
+```{python}
+import torch
+import numpy as np
+import gpytorch
+from botorch.models.pairwise_gp import PairwiseGP, PairwiseLaplaceMarginalLogLikelihood
+from botorch.fit import fit_gpytorch_mll
+from botorch.models.transforms.input import Normalize
+from scipy.linalg import hadamard
+from scipy.optimize import minimize
+import random
+from typing import List, Tuple, Dict, Optional, Union
+
+from functions import (
+    bailey_welch_schedule,
+    get_v_star,
+    compute_convolutions,
+    calculate_objective_serv_time_lookup,
+)
+```
+
+## Helper Functions
+
+```{python}
+# --- Helper: generate_weighted_list (from prompt) ---
+def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
+    if not isinstance(max_s, int) or max_s <= 0: return None
+    if not isinstance(l, (int, float)) or not (1 <= l <= max_s): return None
+    if not isinstance(i, int) or not (0 <= i < max_s): return None
+    def objective_fn(x: np.ndarray) -> float:
+        return (np.dot(np.arange(1, max_s + 1), x) - l) ** 2
+    constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0})
+    bounds = [(0, 1)] * max_s
+    initial_guess = np.random.dirichlet(np.ones(max_s))
+    try:
+        result = minimize(objective_fn, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints, options={'maxiter': 300, 'ftol': 1e-9})
+        if not result.success: return None
+        optimized_probs = result.x
+        optimized_probs[optimized_probs < 0] = 0
+        current_sum = np.sum(optimized_probs)
+        if not np.isclose(current_sum, 1.0):
+            if current_sum > 1e-8: optimized_probs /= current_sum
+            else: return None
+    except Exception: return None
+    first_part_probs = optimized_probs[:i] if i > 0 else np.array([])
+    second_part_probs = optimized_probs[i:]
+    values = np.zeros(max_s + 1)
+    if i > 0: values[1 : i + 1] = np.sort(first_part_probs)
+    values[i + 1 : max_s + 1] = np.sort(second_part_probs)[::-1]
+    final_sum = np.sum(values[1:])
+    if not np.isclose(final_sum, 1.0):
+        if final_sum > 1e-8: values[1:] /= final_sum
+        else: return None
+    return values
+```
+
+## Problem Setup
+
+```{python}
+N_patients = 50
+T_param = 48
+d_interval_len = 10
+max_s_time = 30
+q_no_show = 0.20
+w_weight = 0.1
+l_target_avg_service_time = 14.0
+i_sorting_split = 10
+
+v_star_matrix = get_v_star(T_param)
+s_dist = generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)
+if s_dist is None: raise ValueError("Failed to generate service time distribution.")
+print(f"Service time distribution (s): {s_dist.tolist()}")
+print(f"Average generated service time: {np.dot(np.arange(len(s_dist)), s_dist):.4f}")
+convolutions_dict = compute_convolutions(s_dist.tolist(), N_patients, q_no_show)
+X_initial_schedule = np.array(bailey_welch_schedule(T_param, d_interval_len, N_patients, s_dist))
+print(f"Initial base schedule (X_vec): {X_initial_schedule.tolist()}")
+print(f"Sum of patients in X_vec: {np.sum(X_initial_schedule)}")
+LARGE_PENALTY_VAL = 1e10
+```
+## Objective Function
+
+```{python}
+def evaluate_objective(U_np: Union[np.ndarray, List[int]], X_vec: np.ndarray, v_star: np.ndarray,
+                       conv_dict: Dict[int, np.ndarray], d_len: int, w_val: float) -> float:
+    if not isinstance(U_np, np.ndarray): U_np = np.array(U_np, dtype=int)
+    if U_np.ndim != 1: raise ValueError("Input U must be 1-dimensional")
+    if U_np.shape[0] != v_star.shape[0]: raise ValueError(f"U length {U_np.shape[0]} != V* rows {v_star.shape[0]}.")
+    if X_vec.shape[0] != v_star.shape[1]: raise ValueError(f"X length {X_vec.shape[0]} != V* columns {v_star.shape[1]}.")
+    if not np.all((U_np == 0) | (U_np == 1)): raise ValueError("Input U must be binary.")
+    V_sum = np.sum(v_star[U_np == 1, :], axis=0)
+    Y_schedule = X_vec + V_sum
+    if np.all(Y_schedule >= 0) and np.sum(Y_schedule) == np.sum(X_vec):
+        ewt, esp = calculate_objective_serv_time_lookup(Y_schedule.tolist(), d_len, conv_dict)
+        return w_val * ewt + (1 - w_val) * esp
+    return LARGE_PENALTY_VAL
+
+U_zeros = np.zeros(T_param, dtype=int)
+initial_obj_val = evaluate_objective(U_zeros, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+print(f"Initial objective value (U=zeros): {initial_obj_val:.4f}")
+```
+
+## PBO Setup
+
+```{python}
+# --- HED: Binary Wavelet Dictionary Construction ---
+def get_binary_wavelet_dictionary(T_dim_U: int, m_dict_size: int) -> np.ndarray:
+    d_hadamard = 1
+    while d_hadamard < T_dim_U: d_hadamard *= 2
+    H = hadamard(d_hadamard)
+    if m_dict_size > d_hadamard: m_dict_size = d_hadamard
+    dictionary = np.zeros((m_dict_size, T_dim_U), dtype=int)
+    for i in range(m_dict_size):
+        dictionary[i, :] = (H[i, :T_dim_U] + 1) // 2
+    return dictionary
+
+def embed_HED(U_np: np.ndarray, dictionary: np.ndarray) -> np.ndarray:
+    U_np_reshaped = U_np.reshape(1, -1) if U_np.ndim == 1 else U_np
+    hamming_distances = np.sum(dictionary != U_np_reshaped[:, np.newaxis, :], axis=2).T
+    return hamming_distances.flatten().astype(float) if U_np.ndim == 1 else hamming_distances.astype(float)
+
+m_dictionary_size = min(T_param * 2, 32 if T_param <=20 else 64)
+hed_dictionary = get_binary_wavelet_dictionary(T_param, m_dictionary_size)
+print(f"HED dictionary shape: {hed_dictionary.shape}")
+
+num_total_initial_pairs = 10
+num_initial_U_zeros_comparisons = 3 # Number of times to compare U_zeros with random U
+num_purely_random_initial_pairs = num_total_initial_pairs - num_initial_U_zeros_comparisons
+
+num_pbo_iterations = 50
+n_candidates_for_thompson = 200
+n_thompson_posterior_samples = 20
+
+all_U_vectors_list = []
+all_U_embeddings_tensor = None
+comparison_pairs_indices = []
+
+def add_U_to_master_list(U_np: np.ndarray, embedding: np.ndarray) -> int:
+    global all_U_vectors_list, all_U_embeddings_tensor
+    U_np = U_np.astype(int) # Ensure consistent type
+    for i, existing_U_np_item in enumerate(all_U_vectors_list):
+        if np.array_equal(existing_U_np_item, U_np): return i
+    new_index = len(all_U_vectors_list)
+    all_U_vectors_list.append(U_np.copy())
+    if embedding.ndim > 1: embedding = embedding.flatten()
+    embedding_tensor = torch.from_numpy(embedding).double().unsqueeze(0)
+    if all_U_embeddings_tensor is None: all_U_embeddings_tensor = embedding_tensor
+    else: all_U_embeddings_tensor = torch.cat([all_U_embeddings_tensor, embedding_tensor], dim=0)
+    return new_index
+
+def generate_random_U_vector(dim: int) -> np.ndarray:
+    return np.random.randint(0, 2, size=dim, dtype=int)
+
+def get_hamming_neighbors(U_vector: np.ndarray, num_neighbors: int, max_flips: int = 1) -> List[np.ndarray]:
+    neighbors = []
+    dim = len(U_vector)
+    if dim == 0: return []
+    for _ in range(num_neighbors):
+        neighbor = U_vector.copy()
+        actual_flips = np.random.randint(1, max_flips + 1)
+        flip_indices = np.random.choice(dim, size=min(actual_flips, dim), replace=False)
+        for idx in flip_indices: neighbor[idx] = 1 - neighbor[idx]
+        neighbors.append(neighbor)
+    return neighbors
+
+print("Starting PBO Initialization...")
+best_U_overall = U_zeros.copy() # Start with U_zeros as initial best
+best_obj_overall = initial_obj_val
+best_iter_found = 0 # 0 for initial U_zeros evaluation
+
+# Add U_zeros to the master list first
+idx_U_zeros = add_U_to_master_list(U_zeros, embed_HED(U_zeros, hed_dictionary))
+obj_U_zeros = initial_obj_val # Already calculated
+
+# --- Initial comparisons involving U_zeros ---
+print(f"Generating {num_initial_U_zeros_comparisons} initial comparisons involving U_zeros...")
+for i in range(num_initial_U_zeros_comparisons):
+    U_competitor = generate_random_U_vector(T_param)
+    attempts = 0
+    while np.array_equal(U_competitor, U_zeros) and attempts < 100: # Avoid comparing U_zeros to itself
+        U_competitor = generate_random_U_vector(T_param)
+        attempts += 1
+    if np.array_equal(U_competitor, U_zeros): continue
+
+    obj_competitor = evaluate_objective(U_competitor, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"  Init U_zeros vs U_rand_{i}: Obj_U_zeros={obj_U_zeros:.4f}, Obj_U_rand={obj_competitor:.4f}")
+
+    if obj_competitor < best_obj_overall:
+        best_obj_overall = obj_competitor
+        best_U_overall = U_competitor.copy()
+        best_iter_found = 0 # Still initialization phase
+
+    idx_competitor = add_U_to_master_list(U_competitor, embed_HED(U_competitor, hed_dictionary))
+    
+    if not np.isclose(obj_U_zeros, obj_competitor):
+        pref_pair = None
+        if obj_U_zeros < obj_competitor: pref_pair = [idx_U_zeros, idx_competitor]
+        elif obj_competitor < obj_U_zeros: pref_pair = [idx_competitor, idx_U_zeros]
+        
+        if pref_pair and pref_pair not in comparison_pairs_indices:
+            comparison_pairs_indices.append(pref_pair)
+
+# --- Purely random initial comparisons (excluding U_zeros unless randomly picked again) ---
+print(f"Generating {num_purely_random_initial_pairs} purely random initial comparisons...")
+for i in range(num_purely_random_initial_pairs):
+    U_A = generate_random_U_vector(T_param)
+    U_B = generate_random_U_vector(T_param)
+    attempts = 0
+    while np.array_equal(U_A, U_B) and attempts < 100:
+        U_B = generate_random_U_vector(T_param)
+        attempts += 1
+    if np.array_equal(U_A, U_B): continue
+
+    obj_A = evaluate_objective(U_A, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    obj_B = evaluate_objective(U_B, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"  Init U_randA_{i} vs U_randB_{i}: Obj_A={obj_A:.4f}, Obj_B={obj_B:.4f}")
+
+
+    if obj_A < best_obj_overall: best_obj_overall = obj_A; best_U_overall = U_A.copy(); best_iter_found = 0
+    if obj_B < best_obj_overall: best_obj_overall = obj_B; best_U_overall = U_B.copy(); best_iter_found = 0
+
+    idx_A = add_U_to_master_list(U_A, embed_HED(U_A, hed_dictionary))
+    idx_B = add_U_to_master_list(U_B, embed_HED(U_B, hed_dictionary))
+    
+    if not np.isclose(obj_A, obj_B):
+        pref_pair = None
+        if obj_A < obj_B: pref_pair = [idx_A, idx_B]
+        elif obj_B < obj_A: pref_pair = [idx_B, idx_A]
+
+        if pref_pair and pref_pair not in comparison_pairs_indices:
+            comparison_pairs_indices.append(pref_pair)
+
+print(f"Initialization complete. Observed {len(all_U_vectors_list)} unique schedules.")
+print(f"Number of preference pairs: {len(comparison_pairs_indices)}")
+if best_U_overall is not None:
+    print(f"Best U after initialization: {best_U_overall.tolist()}, Obj: {best_obj_overall:.4f}")
+```
+
+## PBO Initialization
+
+```{python}
+print("Starting PBO Initialization...")
+best_U_overall = U_zeros.copy() # Start with U_zeros as initial best
+best_obj_overall = initial_obj_val
+best_iter_found = 0 # 0 for initial U_zeros evaluation
+
+# Add U_zeros to the master list first
+idx_U_zeros = add_U_to_master_list(U_zeros, embed_HED(U_zeros, hed_dictionary))
+obj_U_zeros = initial_obj_val # Already calculated
+
+# --- Initial comparisons involving U_zeros ---
+print(f"Generating {num_initial_U_zeros_comparisons} initial comparisons involving U_zeros...")
+for i in range(num_initial_U_zeros_comparisons):
+    U_competitor = generate_random_U_vector(T_param)
+    attempts = 0
+    while np.array_equal(U_competitor, U_zeros) and attempts < 100: # Avoid comparing U_zeros to itself
+        U_competitor = generate_random_U_vector(T_param)
+        attempts += 1
+    if np.array_equal(U_competitor, U_zeros): continue
+
+    obj_competitor = evaluate_objective(U_competitor, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"  Init U_zeros vs U_rand_{i}: Obj_U_zeros={obj_U_zeros:.4f}, Obj_U_rand={obj_competitor:.4f}")
+
+    if obj_competitor < best_obj_overall:
+        best_obj_overall = obj_competitor
+        best_U_overall = U_competitor.copy()
+        best_iter_found = 0 # Still initialization phase
+
+    idx_competitor = add_U_to_master_list(U_competitor, embed_HED(U_competitor, hed_dictionary))
+    
+    if not np.isclose(obj_U_zeros, obj_competitor):
+        pref_pair = None
+        if obj_U_zeros < obj_competitor: pref_pair = [idx_U_zeros, idx_competitor]
+        elif obj_competitor < obj_U_zeros: pref_pair = [idx_competitor, idx_U_zeros]
+        
+        if pref_pair and pref_pair not in comparison_pairs_indices:
+            comparison_pairs_indices.append(pref_pair)
+
+# --- Purely random initial comparisons (excluding U_zeros unless randomly picked again) ---
+print(f"Generating {num_purely_random_initial_pairs} purely random initial comparisons...")
+for i in range(num_purely_random_initial_pairs):
+    U_A = generate_random_U_vector(T_param)
+    U_B = generate_random_U_vector(T_param)
+    attempts = 0
+    while np.array_equal(U_A, U_B) and attempts < 100:
+        U_B = generate_random_U_vector(T_param)
+        attempts += 1
+    if np.array_equal(U_A, U_B): continue
+
+    obj_A = evaluate_objective(U_A, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    obj_B = evaluate_objective(U_B, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"  Init U_randA_{i} vs U_randB_{i}: Obj_A={obj_A:.4f}, Obj_B={obj_B:.4f}")
+
+
+    if obj_A < best_obj_overall: best_obj_overall = obj_A; best_U_overall = U_A.copy(); best_iter_found = 0
+    if obj_B < best_obj_overall: best_obj_overall = obj_B; best_U_overall = U_B.copy(); best_iter_found = 0
+
+    idx_A = add_U_to_master_list(U_A, embed_HED(U_A, hed_dictionary))
+    idx_B = add_U_to_master_list(U_B, embed_HED(U_B, hed_dictionary))
+    
+    if not np.isclose(obj_A, obj_B):
+        pref_pair = None
+        if obj_A < obj_B: pref_pair = [idx_A, idx_B]
+        elif obj_B < obj_A: pref_pair = [idx_B, idx_A]
+
+        if pref_pair and pref_pair not in comparison_pairs_indices:
+            comparison_pairs_indices.append(pref_pair)
+
+print(f"Initialization complete. Observed {len(all_U_vectors_list)} unique schedules.")
+print(f"Number of preference pairs: {len(comparison_pairs_indices)}")
+if best_U_overall is not None:
+    print(f"Best U after initialization: {best_U_overall.tolist()}, Obj: {best_obj_overall:.4f}")
+```
+
+## PBO Loop
+
+```{python}
+pairwise_model = None
+
+for pbo_iter in range(num_pbo_iterations):
+    print(f"\n--- PBO Iteration {pbo_iter + 1}/{num_pbo_iterations} ---")
+    if len(comparison_pairs_indices) < 1 or all_U_embeddings_tensor is None or all_U_embeddings_tensor.shape[0] < 2 :
+        print("Not enough data for GP. Generating a random pair to add to comparisons.")
+        # (Simplified fallback: add one random comparison)
+        U_A_fallback = generate_random_U_vector(T_param)
+        U_B_fallback = generate_random_U_vector(T_param)
+        attempts = 0
+        while np.array_equal(U_A_fallback, U_B_fallback) and attempts < 100: U_B_fallback = generate_random_U_vector(T_param); attempts+=1
+        if np.array_equal(U_A_fallback, U_B_fallback): continue
+
+        obj_A_fb = evaluate_objective(U_A_fallback, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+        obj_B_fb = evaluate_objective(U_B_fallback, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+        if obj_A_fb < best_obj_overall: best_obj_overall = obj_A_fb; best_U_overall = U_A_fallback.copy(); best_iter_found = pbo_iter + 1
+        if obj_B_fb < best_obj_overall: best_obj_overall = obj_B_fb; best_U_overall = U_B_fallback.copy(); best_iter_found = pbo_iter + 1
+        idx_A_fb = add_U_to_master_list(U_A_fallback, embed_HED(U_A_fallback, hed_dictionary))
+        idx_B_fb = add_U_to_master_list(U_B_fallback, embed_HED(U_B_fallback, hed_dictionary))
+        if not np.isclose(obj_A_fb, obj_B_fb):
+            pref_pair_fb = [idx_A_fb, idx_B_fb] if obj_A_fb < obj_B_fb else [idx_B_fb, idx_A_fb]
+            if pref_pair_fb not in comparison_pairs_indices: comparison_pairs_indices.append(pref_pair_fb)
+        if len(comparison_pairs_indices) < 1 or all_U_embeddings_tensor.shape[0] < 2: continue
+
+    train_X_gp = all_U_embeddings_tensor.double()
+    train_Y_gp = torch.tensor(comparison_pairs_indices, dtype=torch.long)
+    min_bounds = torch.zeros(train_X_gp.shape[-1], dtype=torch.double)
+    max_bounds = torch.full((train_X_gp.shape[-1],), float(T_param), dtype=torch.double)
+    input_transform = Normalize(d=train_X_gp.shape[-1], bounds=torch.stack([min_bounds, max_bounds]))
+
+    pairwise_model = PairwiseGP(train_X_gp, train_Y_gp, input_transform=input_transform,
+        covar_module=gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu=2.5, ard_num_dims=train_X_gp.shape[-1])))
+    mll = PairwiseLaplaceMarginalLogLikelihood(pairwise_model.likelihood, pairwise_model)
+    
+    U_query1, U_query2 = None, None
+    try:
+        fit_gpytorch_mll(mll)
+        U_cand_pool_list = []
+        for _ in range(n_candidates_for_thompson // 2): U_cand_pool_list.append(generate_random_U_vector(T_param))
+        if best_U_overall is not None:
+            U_cand_pool_list.extend(get_hamming_neighbors(best_U_overall, n_candidates_for_thompson // 2, max_flips=2))
+        else:
+            for _ in range(n_candidates_for_thompson // 2): U_cand_pool_list.append(generate_random_U_vector(T_param))
+        
+        unique_U_cand_tuples = {tuple(u.tolist()) for u in U_cand_pool_list}
+        U_cand_pool_np = np.array([list(t) for t in unique_U_cand_tuples], dtype=int)
+        if len(U_cand_pool_np) == 0: raise ValueError("Candidate pool is empty.")
+
+        embedded_candidates_np = np.array([embed_HED(u, hed_dictionary) for u in U_cand_pool_np])
+        embedded_candidates_torch = torch.from_numpy(embedded_candidates_np).double()
+
+        pairwise_model.eval()
+        with torch.no_grad(), gpytorch.settings.fast_pred_var():
+            posterior_f = pairwise_model.posterior(input_transform(embedded_candidates_torch))
+            f_samples = posterior_f.sample(torch.Size([n_thompson_posterior_samples]))
+        
+        best_indices_per_sample = torch.argmax(f_samples, dim=1)
+        query_idx1_in_cand_pool = best_indices_per_sample[0].item()
+        U_query1 = U_cand_pool_np[query_idx1_in_cand_pool]
+        query_idx2_in_cand_pool = -1
+
+        if len(U_cand_pool_np) > 1:
+            if len(best_indices_per_sample) > 1:
+                for i in range(1, len(best_indices_per_sample)):
+                    if best_indices_per_sample[i].item() != query_idx1_in_cand_pool:
+                        query_idx2_in_cand_pool = best_indices_per_sample[i].item(); break
+            if query_idx2_in_cand_pool == -1 or query_idx1_in_cand_pool == query_idx2_in_cand_pool :
+                rand_indices = np.arange(len(U_cand_pool_np)); np.random.shuffle(rand_indices)
+                for rand_idx in rand_indices:
+                    if rand_idx != query_idx1_in_cand_pool: query_idx2_in_cand_pool = rand_idx; break
+                U_query2 = U_cand_pool_np[query_idx2_in_cand_pool] if query_idx2_in_cand_pool != -1 else generate_random_U_vector(T_param)
+            else: U_query2 = U_cand_pool_np[query_idx2_in_cand_pool]
+        else: U_query2 = generate_random_U_vector(T_param)
+    except Exception as e:
+        print(f"Error in GP/TS: {e}. Falling back to random.")
+        U_query1 = generate_random_U_vector(T_param)
+        U_query2 = generate_random_U_vector(T_param)
+    
+    attempts = 0
+    while np.array_equal(U_query1, U_query2) and attempts < 100: U_query2 = generate_random_U_vector(T_param); attempts+=1
+    if np.array_equal(U_query1, U_query2): continue
+
+    obj_q1 = evaluate_objective(U_query1, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    obj_q2 = evaluate_objective(U_query2, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"  Query 1 (U): {U_query1.tolist()}, Obj: {obj_q1:.4f}")
+    print(f"  Query 2 (U): {U_query2.tolist()}, Obj: {obj_q2:.4f}")
+
+    if obj_q1 < best_obj_overall:
+        best_obj_overall = obj_q1; best_U_overall = U_query1.copy(); best_iter_found = pbo_iter + 1
+        print(f"  New best U from Q1: {best_U_overall.tolist()}, Obj: {best_obj_overall:.4f} (Iter: {best_iter_found})")
+    if obj_q2 < best_obj_overall:
+        best_obj_overall = obj_q2; best_U_overall = U_query2.copy(); best_iter_found = pbo_iter + 1
+        print(f"  New best U from Q2: {best_U_overall.tolist()}, Obj: {best_obj_overall:.4f} (Iter: {best_iter_found})")
+
+    idx_q1 = add_U_to_master_list(U_query1, embed_HED(U_query1, hed_dictionary))
+    idx_q2 = add_U_to_master_list(U_query2, embed_HED(U_query2, hed_dictionary))
+
+    if not np.isclose(obj_q1, obj_q2):
+        pref_pair_iter = [idx_q1, idx_q2] if obj_q1 < obj_q2 else [idx_q2, idx_q1]
+        print(f"  Preference: {'Q1 > Q2' if obj_q1 < obj_q2 else 'Q2 > Q1'}")
+        if pref_pair_iter not in comparison_pairs_indices: comparison_pairs_indices.append(pref_pair_iter)
+        else: print("  (Preference already recorded)")
+    else: print(f"  Preference: Tie")
+    print(f"  Total unique Us: {len(all_U_vectors_list)}, Total preference pairs: {len(comparison_pairs_indices)}")
+
+print("\n--- PBO Experiment Finished ---")
+if best_U_overall is not None:
+    print(f"Best U vector found (by direct evaluation): {best_U_overall.tolist()}")
+    final_Y_schedule = X_initial_schedule + np.sum(v_star_matrix[best_U_overall == 1, :], axis=0)
+    print(f"Corresponding Y schedule: {final_Y_schedule.tolist()}")
+    print(f"Objective value: {best_obj_overall:.4f}")
+    iter_str = "during initialization (before PBO iterations)" if best_iter_found == 0 else f"at PBO iteration {best_iter_found}"
+    print(f"Found {iter_str}")
+    print(f"Patient count in final Y schedule: {np.sum(final_Y_schedule)}")
+else: print("No valid U vector found.")
+
+if pairwise_model is not None and all_U_embeddings_tensor is not None and len(all_U_embeddings_tensor) > 0:
+    pairwise_model.eval()
+    transformed_all_U_embeddings = input_transform(all_U_embeddings_tensor)
+    with torch.no_grad(), gpytorch.settings.fast_pred_var():
+        posterior_f_all = pairwise_model.posterior(transformed_all_U_embeddings)
+        mean_f_all = posterior_f_all.mean
+    best_idx_model = torch.argmax(mean_f_all).item()
+    U_reco_model = all_U_vectors_list[best_idx_model]
+    obj_reco_model = evaluate_objective(U_reco_model, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)
+    print(f"\nRecommendation based on GP model (highest posterior mean utility over all {len(all_U_vectors_list)} evaluated Us):")
+    print(f"  U vector: {U_reco_model.tolist()}")
+    Y_reco = X_initial_schedule + np.sum(v_star_matrix[U_reco_model == 1, :], axis=0)
+    print(f"  Corresponding Y schedule: {Y_reco.tolist()}")
+    print(f"  Objective value of this GP recommended U: {obj_reco_model:.4f}")
+    print(f"  GP's posterior mean utility for this U: {mean_f_all[best_idx_model].item():.4f}")
+else: print("\nGP model not available for recommendation.")
+```
+

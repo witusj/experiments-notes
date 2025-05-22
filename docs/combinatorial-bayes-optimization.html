@@ -84,7 +84,7 @@ div.csl-indent {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./references.html" rel="next">
+<link href="./preferential-bayesian-optimization.html" rel="next">
 <link href="./local-search-ranking-large.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -227,8 +227,14 @@ window.Quarto = {
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
+  <a href="./preferential-bayesian-optimization.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Preferential Bayesian Optimization for Outpatient Appointment Scheduling</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
   <a href="./references.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">References</span></span></a>
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">References</span></span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
@@ -429,7 +435,7 @@ window.Quarto = {
 <section id="setup" class="level4" data-number="6.4.6.1">
 <h4 data-number="6.4.6.1" class="anchored" data-anchor-id="setup"><span class="header-section-number">6.4.6.1</span> 1. Setup</h4>
 <p>Import necessary libraries and configure warning filters.</p>
-<div id="057169ca" class="cell" data-execution_count="1">
+<div id="c76e3f8c" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Core Libraries</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> time</span>
@@ -457,7 +463,7 @@ window.Quarto = {
 <section id="constants" class="level4" data-number="6.4.6.2">
 <h4 data-number="6.4.6.2" class="anchored" data-anchor-id="constants"><span class="header-section-number">6.4.6.2</span> 2. Constants</h4>
 <p>Definition of problem parameters and initial configuration.</p>
-<div id="991b2712" class="cell" data-execution_count="2">
+<div id="a9a7bd97" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Problem Definition ---</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Fixed Data (Use your actual data)</span></span>
@@ -618,16 +624,16 @@ window.Quarto = {
 <span id="cb2-158"><a href="#cb2-158" aria-hidden="true" tabindex="-1"></a>initial_objective_value <span class="op">=</span> w <span class="op">*</span> ewt <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> esp</span>
 <span id="cb2-159"><a href="#cb2-159" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial objective value: </span><span class="sc">{</span>initial_objective_value<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Average generated service time: 11.580595871401593
+<pre><code>Average generated service time: 11.558314786302535
 Initial schedule: [2 1 1 1 1 1 1 0 1 1 1 1 1 1 0 1 1 1 1 6]
-Initial objective value: 84.24388467366066</code></pre>
+Initial objective value: 81.35141062237113</code></pre>
 </div>
 </div>
 </section>
 <section id="common-functions-objective-evaluation-and-hed" class="level4" data-number="6.4.6.3">
 <h4 data-number="6.4.6.3" class="anchored" data-anchor-id="common-functions-objective-evaluation-and-hed"><span class="header-section-number">6.4.6.3</span> 3. Common Functions (Objective Evaluation and HED)</h4>
 <p>Objective evaluation implements <span class="math inline">\(C(\mathbf{x})\)</span> from <span class="citation" data-cites="kaandorp_optimal_2007">Kaandorp and Koole (<a href="combinatorial-bayes-optimization.html#ref-kaandorp_optimal_2007" role="doc-biblioref">2007</a>)</span>. HED implementation follows <span class="citation" data-cites="deshwal_bayesian_2023">Deshwal et al. (<a href="combinatorial-bayes-optimization.html#ref-deshwal_bayesian_2023" role="doc-biblioref">2023</a>)</span>.</p>
-<div id="b037e10d" class="cell" data-execution_count="3">
+<div id="f1c77046" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Target function: Evaluates objective for a single binary numpy array U.</span></span>
@@ -674,35 +680,116 @@ Initial objective value: 84.24388467366066</code></pre>
 <span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a>        dictionary_A[i, :] <span class="op">=</span> row</span>
 <span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dictionary_A</span>
 <span id="cb4-46"><a href="#cb4-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_vector(U_np, dictionary_A):</span>
-<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Embeds a single binary vector U using HED."""</span></span>
-<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> dictionary_A.shape[<span class="dv">0</span>]</span>
-<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a>    embedding_phi <span class="op">=</span> np.zeros(m, dtype<span class="op">=</span><span class="bu">float</span>) <span class="co"># Use float for GP</span></span>
-<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(m):</span>
-<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a>        embedding_phi[i] <span class="op">=</span> hamming_distance(U_np, dictionary_A[i, :])</span>
-<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> embedding_phi</span>
-<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_batch(U_batch_np, dictionary_A):</span>
-<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Embeds a batch of binary vectors U."""</span></span>
-<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Input U_batch_np is expected to be a NumPy array</span></span>
-<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> dictionary_A.shape[<span class="dv">0</span>]</span>
-<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> U_batch_np.ndim <span class="op">==</span> <span class="dv">1</span>: <span class="co"># Handle single vector case</span></span>
-<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        U_batch_np <span class="op">=</span> U_batch_np.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
-<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>    batch_size <span class="op">=</span> U_batch_np.shape[<span class="dv">0</span>]</span>
-<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>    embeddings_np <span class="op">=</span> np.zeros((batch_size, m), dtype<span class="op">=</span><span class="bu">float</span>) <span class="co"># Use float for GP</span></span>
+<span id="cb4-47"><a href="#cb4-47" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _generate_binary_hadamard_matrix_recursive(dim):</span>
+<span id="cb4-48"><a href="#cb4-48" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-49"><a href="#cb4-49" aria-hidden="true" tabindex="-1"></a><span class="co">    Generates a binary (0/1) Hadamard-like matrix of size dim x dim.</span></span>
+<span id="cb4-50"><a href="#cb4-50" aria-hidden="true" tabindex="-1"></a><span class="co">    'dim' must be a power of 2.</span></span>
+<span id="cb4-51"><a href="#cb4-51" aria-hidden="true" tabindex="-1"></a><span class="co">    This uses the Sylvester's construction H_2n = [[H_n, H_n], [H_n, 1-H_n]]</span></span>
+<span id="cb4-52"><a href="#cb4-52" aria-hidden="true" tabindex="-1"></a><span class="co">    starting with H_1 = [[1]].</span></span>
+<span id="cb4-53"><a href="#cb4-53" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-54"><a href="#cb4-54" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> (dim <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> (dim <span class="op">&amp;</span> (dim <span class="op">-</span> <span class="dv">1</span>) <span class="op">==</span> <span class="dv">0</span>)): <span class="co"># Checks if dim is a power of 2</span></span>
+<span id="cb4-55"><a href="#cb4-55" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Dimension must be a power of 2."</span>)</span>
+<span id="cb4-56"><a href="#cb4-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-57"><a href="#cb4-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> dim <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb4-58"><a href="#cb4-58" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> np.array([[<span class="dv">1</span>]], dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb4-59"><a href="#cb4-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-60"><a href="#cb4-60" aria-hidden="true" tabindex="-1"></a>        h_prev <span class="op">=</span> _generate_binary_hadamard_matrix_recursive(dim <span class="op">//</span> <span class="dv">2</span>)</span>
+<span id="cb4-61"><a href="#cb4-61" aria-hidden="true" tabindex="-1"></a>        h_top <span class="op">=</span> np.hstack((h_prev, h_prev))</span>
+<span id="cb4-62"><a href="#cb4-62" aria-hidden="true" tabindex="-1"></a>        h_bottom <span class="op">=</span> np.hstack((h_prev, <span class="dv">1</span> <span class="op">-</span> h_prev)) <span class="co"># 1-H_n for binary</span></span>
+<span id="cb4-63"><a href="#cb4-63" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> np.vstack((h_top, h_bottom))</span>
 <span id="cb4-64"><a href="#cb4-64" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(batch_size):</span>
-<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>        embeddings_np[j, :] <span class="op">=</span> embed_vector(U_batch_np[j, :], dictionary_A)</span>
-<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return NumPy array directly</span></span>
-<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> embeddings_np</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-65"><a href="#cb4-65" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_wavelet_dictionary(T, m):</span>
+<span id="cb4-66"><a href="#cb4-66" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb4-67"><a href="#cb4-67" aria-hidden="true" tabindex="-1"></a><span class="co">    Generates a dictionary A of size m x T using the subsampled binary wavelet approach.</span></span>
+<span id="cb4-68"><a href="#cb4-68" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-69"><a href="#cb4-69" aria-hidden="true" tabindex="-1"></a><span class="co">    Args:</span></span>
+<span id="cb4-70"><a href="#cb4-70" aria-hidden="true" tabindex="-1"></a><span class="co">        T (int): The dimensionality of the input space (number of columns in dictionary).</span></span>
+<span id="cb4-71"><a href="#cb4-71" aria-hidden="true" tabindex="-1"></a><span class="co">        m (int): The desired number of dictionary elements (number of rows).</span></span>
+<span id="cb4-72"><a href="#cb4-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-73"><a href="#cb4-73" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb4-74"><a href="#cb4-74" aria-hidden="true" tabindex="-1"></a><span class="co">        np.ndarray: An m x T integer numpy array representing the dictionary.</span></span>
+<span id="cb4-75"><a href="#cb4-75" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb4-76"><a href="#cb4-76" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> T <span class="op">&lt;=</span> <span class="dv">0</span>:</span>
+<span id="cb4-77"><a href="#cb4-77" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"T (dimensionality) must be positive."</span>)</span>
+<span id="cb4-78"><a href="#cb4-78" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> m <span class="op">&lt;=</span> <span class="dv">0</span>:</span>
+<span id="cb4-79"><a href="#cb4-79" aria-hidden="true" tabindex="-1"></a>        <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"m (dictionary size) must be positive."</span>)</span>
+<span id="cb4-80"><a href="#cb4-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-81"><a href="#cb4-81" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. Determine the smallest power of 2 &gt;= T for the full wavelet matrix</span></span>
+<span id="cb4-82"><a href="#cb4-82" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> T <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb4-83"><a href="#cb4-83" aria-hidden="true" tabindex="-1"></a>        n_wavelet <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb4-84"><a href="#cb4-84" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> (T <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> (T <span class="op">&amp;</span> (T <span class="op">-</span> <span class="dv">1</span>) <span class="op">==</span> <span class="dv">0</span>)): <span class="co"># T is already a power of 2</span></span>
+<span id="cb4-85"><a href="#cb4-85" aria-hidden="true" tabindex="-1"></a>        n_wavelet <span class="op">=</span> T</span>
+<span id="cb4-86"><a href="#cb4-86" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-87"><a href="#cb4-87" aria-hidden="true" tabindex="-1"></a>        n_wavelet <span class="op">=</span> <span class="dv">2</span><span class="op">**</span>math.ceil(math.log2(T))</span>
+<span id="cb4-88"><a href="#cb4-88" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-89"><a href="#cb4-89" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. Generate the full n_wavelet x n_wavelet binary Hadamard matrix</span></span>
+<span id="cb4-90"><a href="#cb4-90" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(f"Generating full wavelet matrix of size: {n_wavelet}x{n_wavelet}")</span></span>
+<span id="cb4-91"><a href="#cb4-91" aria-hidden="true" tabindex="-1"></a>    full_wavelet_matrix <span class="op">=</span> _generate_binary_hadamard_matrix_recursive(n_wavelet)</span>
+<span id="cb4-92"><a href="#cb4-92" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-93"><a href="#cb4-93" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. Subsample T columns if n_wavelet &gt; T</span></span>
+<span id="cb4-94"><a href="#cb4-94" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> n_wavelet <span class="op">&gt;</span> T:</span>
+<span id="cb4-95"><a href="#cb4-95" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Subsampling {T} columns from {n_wavelet} columns.")</span></span>
+<span id="cb4-96"><a href="#cb4-96" aria-hidden="true" tabindex="-1"></a>        col_indices <span class="op">=</span> np.random.choice(n_wavelet, size<span class="op">=</span>T, replace<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb4-97"><a href="#cb4-97" aria-hidden="true" tabindex="-1"></a>        col_indices.sort() <span class="co"># Optional: for deterministic testing if seed is set</span></span>
+<span id="cb4-98"><a href="#cb4-98" aria-hidden="true" tabindex="-1"></a>        wavelet_matrix_T_cols <span class="op">=</span> full_wavelet_matrix[:, col_indices]</span>
+<span id="cb4-99"><a href="#cb4-99" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-100"><a href="#cb4-100" aria-hidden="true" tabindex="-1"></a>        wavelet_matrix_T_cols <span class="op">=</span> full_wavelet_matrix <span class="co"># n_wavelet == T</span></span>
+<span id="cb4-101"><a href="#cb4-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-102"><a href="#cb4-102" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4. Subsample m rows</span></span>
+<span id="cb4-103"><a href="#cb4-103" aria-hidden="true" tabindex="-1"></a>    num_available_rows <span class="op">=</span> wavelet_matrix_T_cols.shape[<span class="dv">0</span>]</span>
+<span id="cb4-104"><a href="#cb4-104" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> m <span class="op">&gt;</span> num_available_rows:</span>
+<span id="cb4-105"><a href="#cb4-105" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Warning: Requested dictionary size m (</span><span class="sc">{</span>m<span class="sc">}</span><span class="ss">) is greater than "</span></span>
+<span id="cb4-106"><a href="#cb4-106" aria-hidden="true" tabindex="-1"></a>              <span class="ss">f"available unique wavelet rows (</span><span class="sc">{</span>num_available_rows<span class="sc">}</span><span class="ss">). "</span></span>
+<span id="cb4-107"><a href="#cb4-107" aria-hidden="true" tabindex="-1"></a>              <span class="ss">f"Using all available rows and repeating if necessary, or consider reducing m."</span>)</span>
+<span id="cb4-108"><a href="#cb4-108" aria-hidden="true" tabindex="-1"></a>        <span class="co"># For simplicity, if m &gt; num_available_rows, we'll sample with replacement</span></span>
+<span id="cb4-109"><a href="#cb4-109" aria-hidden="true" tabindex="-1"></a>        <span class="co"># or you could choose to error, or return fewer rows.</span></span>
+<span id="cb4-110"><a href="#cb4-110" aria-hidden="true" tabindex="-1"></a>        <span class="co"># The paper implies m should be less than or equal to the rows of B_d.</span></span>
+<span id="cb4-111"><a href="#cb4-111" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If sampling with replacement is needed:</span></span>
+<span id="cb4-112"><a href="#cb4-112" aria-hidden="true" tabindex="-1"></a>        row_indices <span class="op">=</span> np.random.choice(num_available_rows, size<span class="op">=</span>m, replace<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb4-113"><a href="#cb4-113" aria-hidden="true" tabindex="-1"></a>        <span class="co"># If strictly no replacement and m &gt; num_available_rows, one might error or cap m</span></span>
+<span id="cb4-114"><a href="#cb4-114" aria-hidden="true" tabindex="-1"></a>        <span class="co"># row_indices = np.random.choice(num_available_rows, size=min(m, num_available_rows), replace=False)</span></span>
+<span id="cb4-115"><a href="#cb4-115" aria-hidden="true" tabindex="-1"></a>        <span class="co"># if m &gt; num_available_rows:</span></span>
+<span id="cb4-116"><a href="#cb4-116" aria-hidden="true" tabindex="-1"></a>        <span class="co">#     # Handle the case where more rows are needed than available unique ones</span></span>
+<span id="cb4-117"><a href="#cb4-117" aria-hidden="true" tabindex="-1"></a>        <span class="co">#     # This might involve repeating rows or another strategy</span></span>
+<span id="cb4-118"><a href="#cb4-118" aria-hidden="true" tabindex="-1"></a>        <span class="co">#     pass</span></span>
+<span id="cb4-119"><a href="#cb4-119" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb4-120"><a href="#cb4-120" aria-hidden="true" tabindex="-1"></a>        <span class="co"># print(f"Subsampling {m} rows from {num_available_rows} available rows.")</span></span>
+<span id="cb4-121"><a href="#cb4-121" aria-hidden="true" tabindex="-1"></a>        row_indices <span class="op">=</span> np.random.choice(num_available_rows, size<span class="op">=</span>m, replace<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb4-122"><a href="#cb4-122" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-123"><a href="#cb4-123" aria-hidden="true" tabindex="-1"></a>    row_indices.sort() <span class="co"># Optional: for deterministic testing if seed is set</span></span>
+<span id="cb4-124"><a href="#cb4-124" aria-hidden="true" tabindex="-1"></a>    dictionary_A <span class="op">=</span> wavelet_matrix_T_cols[row_indices, :]</span>
+<span id="cb4-125"><a href="#cb4-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-126"><a href="#cb4-126" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dictionary_A</span>
+<span id="cb4-127"><a href="#cb4-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-128"><a href="#cb4-128" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_vector(U_np, dictionary_A):</span>
+<span id="cb4-129"><a href="#cb4-129" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Embeds a single binary vector U using HED."""</span></span>
+<span id="cb4-130"><a href="#cb4-130" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> dictionary_A.shape[<span class="dv">0</span>]</span>
+<span id="cb4-131"><a href="#cb4-131" aria-hidden="true" tabindex="-1"></a>    embedding_phi <span class="op">=</span> np.zeros(m, dtype<span class="op">=</span><span class="bu">float</span>) <span class="co"># Use float for GP</span></span>
+<span id="cb4-132"><a href="#cb4-132" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(m):</span>
+<span id="cb4-133"><a href="#cb4-133" aria-hidden="true" tabindex="-1"></a>        embedding_phi[i] <span class="op">=</span> hamming_distance(U_np, dictionary_A[i, :])</span>
+<span id="cb4-134"><a href="#cb4-134" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> embedding_phi</span>
+<span id="cb4-135"><a href="#cb4-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-136"><a href="#cb4-136" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_batch(U_batch_np, dictionary_A):</span>
+<span id="cb4-137"><a href="#cb4-137" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Embeds a batch of binary vectors U."""</span></span>
+<span id="cb4-138"><a href="#cb4-138" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Input U_batch_np is expected to be a NumPy array</span></span>
+<span id="cb4-139"><a href="#cb4-139" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> dictionary_A.shape[<span class="dv">0</span>]</span>
+<span id="cb4-140"><a href="#cb4-140" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> U_batch_np.ndim <span class="op">==</span> <span class="dv">1</span>: <span class="co"># Handle single vector case</span></span>
+<span id="cb4-141"><a href="#cb4-141" aria-hidden="true" tabindex="-1"></a>        U_batch_np <span class="op">=</span> U_batch_np.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb4-142"><a href="#cb4-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-143"><a href="#cb4-143" aria-hidden="true" tabindex="-1"></a>    batch_size <span class="op">=</span> U_batch_np.shape[<span class="dv">0</span>]</span>
+<span id="cb4-144"><a href="#cb4-144" aria-hidden="true" tabindex="-1"></a>    embeddings_np <span class="op">=</span> np.zeros((batch_size, m), dtype<span class="op">=</span><span class="bu">float</span>) <span class="co"># Use float for GP</span></span>
+<span id="cb4-145"><a href="#cb4-145" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-146"><a href="#cb4-146" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> j <span class="kw">in</span> <span class="bu">range</span>(batch_size):</span>
+<span id="cb4-147"><a href="#cb4-147" aria-hidden="true" tabindex="-1"></a>        embeddings_np[j, :] <span class="op">=</span> embed_vector(U_batch_np[j, :], dictionary_A)</span>
+<span id="cb4-148"><a href="#cb4-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-149"><a href="#cb4-149" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Return NumPy array directly</span></span>
+<span id="cb4-150"><a href="#cb4-150" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> embeddings_np</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="experiment-1-cbo-with-expected-improvement-ei" class="level4" data-number="6.4.6.4">
 <h4 data-number="6.4.6.4" class="anchored" data-anchor-id="experiment-1-cbo-with-expected-improvement-ei"><span class="header-section-number">6.4.6.4</span> 4. Experiment 1: CBO with Expected Improvement (EI)</h4>
 <p>Applies the methodology from <span class="citation" data-cites="deshwal_bayesian_2023">Deshwal et al. (<a href="combinatorial-bayes-optimization.html#ref-deshwal_bayesian_2023" role="doc-biblioref">2023</a>)</span> using EI.</p>
-<div id="e48ef856" class="cell" data-execution_count="4">
+<div id="20b21e5c" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- BO Helper Functions ---</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_fitted_model(train_X_embedded_scaled, train_Y, m):</span>
@@ -990,374 +1077,374 @@ Initial objective value: 84.24388467366066</code></pre>
 <span id="cb5-285"><a href="#cb5-285" aria-hidden="true" tabindex="-1"></a>         <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Generating 49 initial points...
-Initial best objective value: 83.23712761052458
+Initial best objective value: 80.26076921245387
 
 --- Iteration 1/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  0  2 -1  2  0  2  1  1  0  0  2  1  0  2  5]
-  Candidate 1: Obj = 94.0880, schedule = [2 0 2 1 1 0 2 0 1 0 1 2 0 1 0 2 0 1 2 6]
-  Candidate 2: Obj = 84.9788, schedule = [3 0 1 2 1 0 2 0 1 0 1 2 0 1 1 1 1 0 2 5]
-  Candidate 3: Obj = 93.5654, schedule = [2 0 1 2 1 0 1 0 2 0 2 1 1 0 0 1 2 1 1 6]
-  Candidate 4: Obj = 92.8332, schedule = [2 0 2 1 1 0 1 1 1 0 1 2 0 1 0 2 1 0 2 6]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 82.9818, schedule = [2 2 0 1 2 1 0 0 2 1 1 1 1 1 0 1 0 2 1 5]
+  Candidate 1: Obj = 84.5745, schedule = [2 1 1 2 1 0 1 0 1 2 0 2 0 1 0 1 2 0 1 6]
+  Candidate 2: Obj = 91.9830, schedule = [1 1 2 0 1 2 0 0 1 1 1 1 2 0 0 2 1 0 1 7]
+  Candidate 3: Obj = 85.4447, schedule = [2 2 1 0 2 0 2 0 1 0 1 2 0 2 0 0 2 1 0 6]
+  Candidate 4: Obj = 85.5166, schedule = [2 2 0 1 2 0 2 0 0 1 1 2 1 1 0 0 1 1 1 6]
+Best objective value found so far: 80.2608
 Total points evaluated: 55
-Iteration 1 completed in 2.13 seconds.
+Iteration 1 completed in 1.92 seconds.
 
 --- Iteration 2/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 89.3024, schedule = [2 1 0 1 1 1 2 0 1 1 0 1 1 1 1 0 2 1 1 6]
-  Candidate 1: Obj = 88.5407, schedule = [2 0 2 1 1 0 1 0 2 0 2 1 0 1 1 1 1 1 1 6]
-  Candidate 2: Obj = 81.9819, schedule = [2 2 1 1 1 0 1 1 0 2 1 1 0 1 1 1 1 1 1 5]
-  Candidate 3: Obj = 88.8958, schedule = [2 0 1 2 1 0 1 0 2 0 2 0 2 1 0 1 1 1 1 6]
-  Candidate 4: Obj = 85.9542, schedule = [3 0 1 2 1 1 1 0 1 0 2 0 2 0 0 2 1 1 1 5]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  2  1 -1  1  1  1  2  1  1  0  1  0  2  0  6]
+  Candidate 1: Obj = 84.9484, schedule = [2 1 1 1 2 1 1 0 1 0 1 2 0 2 0 0 1 2 0 6]
+  Candidate 2: Obj = 84.6933, schedule = [2 1 1 1 1 2 1 0 1 0 2 1 0 2 0 0 1 2 0 6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  2  1  0  1  0  1  2  0  2 -1  2  0  2  0  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  1  1  1  1  1  2  0  1  0  1  2  1  1 -1  2  0  2  0  7]
+Best objective value found so far: 80.2608
 Total points evaluated: 60
-Iteration 2 completed in 2.36 seconds.
+Iteration 2 completed in 2.24 seconds.
 
 --- Iteration 3/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 91.0008, schedule = [2 1 1 0 2 1 0 1 1 0 1 1 2 0 1 1 1 1 0 7]
-  Candidate 1: Obj = 93.5382, schedule = [1 2 1 1 1 0 1 1 1 0 2 0 2 1 0 1 0 2 0 7]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  1  0  2  0  2 -1  2  0  2  0  2  1  0  1  0  2  1  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  0  2  0  1  1  1  0  2  0  2  1 -1  2  0  2  1  6]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  1  2  0  2  0  2  0  1  1  1  0  2  1 -1  2  0  2  1  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  0  1  0  1  2  1  1  0  2 -1  1  2  1  1  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  0  1  1  2  1 -1  2  0  2  0  1  1  0  1  2  1  0  6]
+  Candidate 2: Obj = 84.9853, schedule = [2 2 0 2 0 2 0 0 2 1 0 1 1 1 0 1 1 2 0 6]
+  Candidate 3: Obj = 84.8303, schedule = [2 1 1 2 1 0 1 0 2 1 0 2 0 1 0 2 0 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  0  1  1  2  1 -1  1  2  1  1  0  1  0  1  2  1  0  6]
+Best objective value found so far: 80.2608
 Total points evaluated: 65
-Iteration 3 completed in 2.06 seconds.
+Iteration 3 completed in 2.09 seconds.
 
 --- Iteration 4/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.7539, schedule = [3 0 1 2 0 1 1 0 1 1 2 0 2 0 1 0 1 1 1 6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  1  1  1  1  1  2 -1  1  1  2  0  1  1  1  1  0  1  1  7]
-  Candidate 2: Obj = 92.8574, schedule = [2 0 1 1 1 1 1 0 1 1 2 0 1 1 1 0 1 2 0 7]
-  Candidate 3: Obj = 86.7284, schedule = [3 0 1 1 1 1 1 0 1 1 2 0 2 0 0 2 0 2 0 6]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  1  1  1  2 -1  1  1  2  1  0  1  0  2  0  1  2  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 92.0961, schedule = [1 1 1 2 0 2 0 1 0 1 2 1 0 1 0 1 2 1 0 7]
+  Candidate 1: Obj = 89.7569, schedule = [1 2 0 1 1 1 2 0 0 1 1 2 1 0 0 1 2 1 1 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  0  1  1  2  1  1 -1  2  0  2  1  1  0  1  0  1  1  1  7]
+  Candidate 3: Obj = 84.4368, schedule = [2 2 1 1 0 2 0 0 1 2 0 1 1 1 0 1 2 0 2 5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  1  2  1  0  2  0  1  0  2  0  2  0  2 -1  1  2  1  0  7]
+Best objective value found so far: 80.2608
 Total points evaluated: 70
-Iteration 4 completed in 2.01 seconds.
+Iteration 4 completed in 2.09 seconds.
 
 --- Iteration 5/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  2  1  1  1  0  2 -1  1  1  2  1  1  0  1  0  2  1  1  6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  2  1  1  0  1  2 -1  2  1  1  1  1  0  0  2  1  0  2  6]
-  Candidate 2: Obj = 92.2699, schedule = [1 2 1 1 0 1 2 0 0 2 1 0 1 2 0 1 1 1 0 7]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  1  1  0  1  2 -1  2  0  2  0  1  2  0  1  1  1  1  6]
-  Candidate 4: Obj = 92.9422, schedule = [1 2 1 0 1 1 2 0 1 1 1 0 2 1 0 0 2 0 2 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 86.0173, schedule = [3 0 1 2 1 0 1 0 2 0 2 1 0 2 0 0 2 0 1 6]
+  Candidate 1: Obj = 84.1792, schedule = [3 0 1 2 1 0 1 0 1 1 2 1 0 2 0 1 1 0 1 6]
+  Candidate 2: Obj = 92.0585, schedule = [2 0 1 2 1 0 1 0 1 2 0 2 0 2 0 1 0 1 1 7]
+  Candidate 3: Obj = 88.8254, schedule = [1 1 1 2 0 1 1 0 2 0 2 1 0 1 1 1 1 1 0 7]
+  Candidate 4: Obj = 84.0128, schedule = [3 0 1 2 0 1 1 1 0 2 1 1 0 2 0 0 1 1 2 5]
+Best objective value found so far: 80.2608
 Total points evaluated: 75
-Iteration 5 completed in 2.21 seconds.
+Iteration 5 completed in 2.28 seconds.
 
 --- Iteration 6/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 94.2707, schedule = [2 1 1 1 0 1 1 0 2 0 2 0 1 1 0 1 1 1 1 7]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  1  1  1  0  1  0  2  0  1  1  1  2 -1  1  1  1  1  6]
-  Candidate 2: Obj = 86.7619, schedule = [2 2 1 0 1 1 1 1 1 1 0 2 0 1 0 1 2 0 1 6]
-  Candidate 3: Obj = 87.8862, schedule = [3 0 2 1 0 2 0 1 1 0 1 2 0 1 0 1 1 1 1 6]
-  Candidate 4: Obj = 86.5448, schedule = [3 0 2 1 0 1 1 1 1 0 2 0 1 1 1 0 1 1 1 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 83.5469, schedule = [3 1 1 1 0 2 0 0 1 1 2 0 2 0 0 2 1 1 1 5]
+  Candidate 1: Obj = 89.5160, schedule = [2 1 0 2 0 2 1 0 0 1 2 0 2 0 1 1 0 2 1 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  1  0  2  0  2  1 -1  1  1  2  0  1  2  0  1  0  2  1  5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1 -1  1  1  1  1  1  2  0  1  1  1  1  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  2  1  1  1  1 -1  1  1  2  0  2  0  0  2  0  2  1  5]
+Best objective value found so far: 80.2608
 Total points evaluated: 80
-Iteration 6 completed in 2.08 seconds.
+Iteration 6 completed in 2.42 seconds.
 
 --- Iteration 7/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1  0  1  1  1  1  1  1 -1  1  2  1  1  5]
-  Candidate 1: Obj = 87.6052, schedule = [2 0 2 0 2 1 1 0 1 1 0 1 2 0 1 1 1 1 1 6]
-  Candidate 2: Obj = 91.9618, schedule = [2 1 1 1 1 0 1 1 1 1 1 0 2 1 0 0 2 0 2 6]
-  Candidate 3: Obj = 91.3368, schedule = [2 1 1 1 0 1 2 0 1 1 1 1 1 0 0 1 2 1 1 6]
-  Candidate 4: Obj = 92.8822, schedule = [2 0 2 1 1 1 1 0 1 1 1 0 1 2 0 0 2 0 2 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 85.1716, schedule = [2 1 1 2 1 1 1 0 0 2 0 2 0 2 0 0 1 1 2 5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  2  1 -1  1  2  0  2  0  1  1  0  2  1  0  6]
+  Candidate 2: Obj = 83.8569, schedule = [2 1 1 2 0 2 1 0 0 2 0 2 0 2 0 0 1 2 1 5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1 -1  2  0  1  2  0  1  1  0  2  1  0  6]
+  Candidate 4: Obj = 83.6768, schedule = [3 1 0 2 0 2 0 1 0 2 0 2 0 1 1 0 1 2 1 5]
+Best objective value found so far: 80.2608
 Total points evaluated: 85
-Iteration 7 completed in 2.28 seconds.
+Iteration 7 completed in 2.08 seconds.
 
 --- Iteration 8/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  2  0  0  1  1  1  2  0  2 -1  1  2  0  1  7]
-  Candidate 1: Obj = 87.8097, schedule = [2 1 2 1 0 2 0 0 1 2 0 2 0 1 0 1 2 1 0 6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  1  1 -1  1  2  0  1  1  1  1  0  1  2  0  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  1  2 -1  1  1  2  0  1  2  0  0  1  1  2  5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  1  2 -1  1  2  1  0  1  2  0  0  2  0  2  5]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 84.3820, schedule = [2 2 1 0 1 1 2 0 1 1 1 0 2 0 0 1 2 0 2 5]
+  Candidate 1: Obj = 84.6806, schedule = [2 1 2 0 1 2 1 0 0 1 1 2 1 1 0 0 2 0 2 5]
+  Candidate 2: Obj = 85.9228, schedule = [2 2 1 0 1 2 1 0 0 1 2 1 1 0 0 2 0 1 2 5]
+  Candidate 3: Obj = 79.1107, schedule = [2 2 1 0 1 2 0 0 1 2 0 2 0 1 1 1 1 1 1 5]
+  Candidate 4: Obj = 81.7824, schedule = [2 2 1 0 1 1 1 1 0 1 2 1 1 0 0 2 1 1 1 5]
+Best objective value found so far: 79.1107
 Total points evaluated: 90
-Iteration 8 completed in 2.42 seconds.
+Iteration 8 completed in 2.05 seconds.
 
 --- Iteration 9/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 94.0057, schedule = [2 1 0 1 2 0 1 0 2 1 1 1 0 1 0 2 1 1 0 7]
-  Candidate 1: Obj = 93.7649, schedule = [1 2 0 1 2 1 0 0 2 1 1 1 0 1 1 0 2 0 2 6]
-  Candidate 2: Obj = 91.6848, schedule = [2 1 0 1 2 0 2 0 0 1 1 2 0 1 1 1 1 1 0 7]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  0  1  2  1  1 -1  2  1  1  0  1  1  0  1  2  1  0  7]
-  Candidate 4: Obj = 93.5515, schedule = [2 1 0 1 1 1 2 0 1 0 1 2 0 2 0 0 2 1 0 7]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  1  1  1  1  0  1  2  1  1 -1  2  1  0  1  6]
+  Candidate 1: Obj = 88.2387, schedule = [2 0 1 1 2 1 0 1 1 1 1 0 1 1 1 0 1 2 1 6]
+  Candidate 2: Obj = 91.6603, schedule = [1 1 1 2 1 0 1 1 1 0 2 1 0 1 0 2 1 0 1 7]
+  Candidate 3: Obj = 89.9350, schedule = [2 0 2 0 1 2 0 1 0 1 1 1 1 1 1 1 0 2 0 7]
+  Candidate 4: Obj = 92.1003, schedule = [2 1 0 1 1 2 1 0 0 2 1 1 1 0 1 0 2 1 0 7]
+Best objective value found so far: 79.1107
 Total points evaluated: 95
-Iteration 9 completed in 2.56 seconds.
+Iteration 9 completed in 2.24 seconds.
 
 --- Iteration 10/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  1  2  0  0  2  0  1  2  1 -1  2  1  1  0  6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  0  2  0  1  1  1  1  0  2  0  2  1  1 -1  2  0  2  0  6]
-  Candidate 2: Obj = 94.9512, schedule = [2 1 0 1 1 1 2 0 0 1 2 0 2 0 0 2 0 2 0 7]
-  Candidate 3: Obj = 94.9512, schedule = [2 1 0 1 1 1 2 0 0 1 2 0 2 0 0 2 0 2 0 7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  1  2  0  1  1  0  1  2  1 -1  2  0  2  0  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 89.6081, schedule = [2 1 1 1 0 2 0 0 1 2 0 1 2 1 0 1 0 2 1 6]
+  Candidate 1: Obj = 90.8005, schedule = [2 1 1 0 1 2 0 1 1 1 1 0 2 0 0 2 1 1 0 7]
+  Candidate 2: Obj = 91.6358, schedule = [2 1 1 0 2 1 1 0 1 1 0 1 2 0 1 0 2 0 1 7]
+  Candidate 3: Obj = 88.0905, schedule = [2 1 1 0 1 2 0 1 0 2 1 1 0 1 1 0 2 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  0  2  1 -1  2  1  0  1  2  1  0  1  0  1  1  7]
+Best objective value found so far: 79.1107
 Total points evaluated: 100
-Iteration 10 completed in 2.25 seconds.
+Iteration 10 completed in 2.47 seconds.
 
 --- Iteration 11/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  1  1  1  0  2  0  0  1  1  1  2  0  2 -1  1  1  1  1  6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  0  2  0  2  1  0  0  1  1  2  0  2 -1  1  1  1  1  6]
-  Candidate 2: Obj = 93.9039, schedule = [1 2 0 2 0 1 2 0 0 1 1 2 1 0 1 0 1 1 2 6]
-  Candidate 3: Obj = 94.3445, schedule = [2 1 1 1 0 1 1 0 2 0 1 2 1 0 1 0 1 1 1 7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  0  2  0  1  2 -1  1  2  0  2  1  0  1  0  1  1  2  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 91.2686, schedule = [1 2 0 1 1 1 2 0 0 1 1 2 1 1 0 0 1 1 2 6]
+  Candidate 1: Obj = 82.4938, schedule = [2 2 1 1 0 1 1 0 1 2 1 1 1 0 1 1 1 0 2 5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  0  1  2  0  2 -1  2  0  1  1  2  0  0  1  2  1  1  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  1  1  1  1 -1  1  2  0  2  1  0  1  1  0  1  1  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  1  1  1  1  1  0  0  2  0  1  2  1 -1  2  0  1  1  6]
+Best objective value found so far: 79.1107
 Total points evaluated: 105
-Iteration 11 completed in 2.28 seconds.
+Iteration 11 completed in 2.48 seconds.
 
 --- Iteration 12/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 95.0025, schedule = [1 2 1 1 0 2 0 0 1 1 2 0 1 1 0 2 1 0 1 7]
-  Candidate 1: Obj = 94.0944, schedule = [1 1 1 2 1 1 0 0 1 1 2 0 1 1 1 0 2 1 0 7]
-  Candidate 2: Obj = 95.3611, schedule = [1 1 2 1 1 0 1 0 1 1 2 1 0 1 0 2 0 2 0 7]
-  Candidate 3: Obj = 95.4112, schedule = [1 2 1 0 1 2 0 0 1 1 2 1 0 1 0 2 0 2 0 7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  0  2  1  1  1 -1  1  1  2  1  0  1  0  2  1  1  1  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  0  1  1  2  1  0  0  1  1  1  2  1  1 -1  2  1  0  2  6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  2  1  0  2  1  0  1  0  1  1  2  0  2 -1  2  0  1  2  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  1  2 -1  2  0  2  1  1  1 -1  2  0  2  1  6]
+  Candidate 3: Obj = 78.3668, schedule = [2 2 0 1 2 0 2 0 1 1 1 0 2 1 0 1 1 1 1 5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  1  2 -1  1  1  2  1  1  1 -1  2  1  1  1  5]
+Best objective value found so far: 78.3668
 Total points evaluated: 110
-Iteration 12 completed in 2.42 seconds.
+Iteration 12 completed in 2.75 seconds.
 
 --- Iteration 13/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.2579, schedule = [3 1 0 2 0 1 2 0 1 1 1 1 0 2 0 0 1 2 1 5]
-  Candidate 1: Obj = 87.0524, schedule = [2 1 2 1 1 1 0 1 0 2 0 2 0 1 0 2 1 0 2 5]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  1  1  0  1  0  1  1  1  1  1  2 -1  2  0  1  2  5]
-  Candidate 3: Obj = 91.7797, schedule = [1 2 1 0 1 2 0 0 2 1 1 0 2 0 1 0 2 1 1 6]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  0  1  2  0  1  0  2  0  2  0  1  2 -1  1  1  1  2  6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 92.4942, schedule = [2 1 0 1 2 0 2 0 0 1 2 1 1 0 0 1 1 1 2 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  1  2  0  1  1  0  2  0  2 -1  2  0  1  2  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  1  1  2  0  0  1  2  0  1  2  1 -1  1  2  0  1  6]
+  Candidate 3: Obj = 85.2769, schedule = [3 1 0 1 1 2 0 0 2 1 1 1 1 1 0 1 0 1 1 6]
+  Candidate 4: Obj = 84.4387, schedule = [3 1 1 0 2 1 0 0 2 0 1 2 1 1 0 1 0 2 1 5]
+Best objective value found so far: 78.3668
 Total points evaluated: 115
-Iteration 13 completed in 2.70 seconds.
+Iteration 13 completed in 2.76 seconds.
 
 --- Iteration 14/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  2  0  2  1 -1  1  2  0  2  0  1  1  1  0  2  1  5]
-  Candidate 1: Obj = 84.3683, schedule = [3 0 1 2 0 2 0 0 1 2 0 1 1 1 1 1 0 2 1 5]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  1  2  0  2  1 -1  1  2  0  1  1  1  0  2  0  2  1  5]
-  Candidate 3: Obj = 86.6696, schedule = [2 1 1 2 0 2 1 0 1 0 1 2 0 1 0 2 0 1 2 5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  1  2  0  2  1 -1  1  2  0  1  1  1  0  2  0  2  1  5]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 82.6746, schedule = [3 0 1 1 1 2 0 1 1 0 1 1 2 0 1 0 1 1 2 5]
+  Candidate 1: Obj = 83.6815, schedule = [2 1 1 1 2 1 0 1 0 2 0 2 0 1 1 0 2 1 0 6]
+  Candidate 2: Obj = 85.4795, schedule = [3 0 2 0 2 0 1 0 2 1 1 0 1 2 0 0 1 1 1 6]
+  Candidate 3: Obj = 82.1555, schedule = [2 1 1 2 0 1 1 1 0 1 1 1 1 2 0 1 0 1 1 6]
+  Candidate 4: Obj = 83.1749, schedule = [3 0 2 0 1 1 1 1 0 1 2 0 2 0 0 1 1 2 1 5]
+Best objective value found so far: 78.3668
 Total points evaluated: 120
-Iteration 14 completed in 2.45 seconds.
+Iteration 14 completed in 2.59 seconds.
 
 --- Iteration 15/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 87.1586, schedule = [3 0 1 1 2 0 1 1 0 2 0 1 2 0 0 1 1 1 1 6]
-  Candidate 1: Obj = 84.4175, schedule = [2 1 1 1 1 1 1 1 0 2 0 1 1 1 1 0 1 1 1 6]
-  Candidate 2: Obj = 95.9628, schedule = [1 2 0 2 1 1 0 1 0 2 0 2 1 1 0 0 1 2 0 7]
-  Candidate 3: Obj = 88.7241, schedule = [2 1 1 1 1 1 0 1 1 1 1 1 1 0 1 0 2 1 1 6]
-  Candidate 4: Obj = 96.2558, schedule = [1 2 0 2 1 1 1 0 0 2 0 1 2 1 0 0 1 2 0 7]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 85.7431, schedule = [3 1 1 0 1 1 2 0 1 0 2 1 1 0 1 0 2 0 1 6]
+  Candidate 1: Obj = 81.0383, schedule = [3 0 1 1 1 2 0 0 1 1 1 1 1 2 0 0 2 1 1 5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  2  1  0  0  2  0  1  2  1 -1  1  2  0  2  5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  1  2  0  0  2  1  0  1  2 -1  2  1  0  2  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  2  0  2  0  2 -1  1  2  1  1  1  0  0  2  1  0  2  5]
+Best objective value found so far: 78.3668
 Total points evaluated: 125
-Iteration 15 completed in 2.94 seconds.
+Iteration 15 completed in 2.31 seconds.
 
 --- Iteration 16/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 85.1576, schedule = [2 1 2 1 0 2 1 0 1 0 2 0 2 0 1 1 0 2 1 5]
-  Candidate 1: Obj = 85.7600, schedule = [2 1 2 1 0 2 1 0 0 1 2 1 1 0 1 1 1 0 2 5]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1 -1  1  2  1  1  1  0  1  1  0  2  0  6]
-  Candidate 3: Obj = 93.7588, schedule = [2 0 2 0 1 2 1 0 1 0 2 0 2 0 1 1 0 2 0 7]
-  Candidate 4: Obj = 85.0247, schedule = [2 1 2 0 1 2 1 0 0 2 1 1 1 0 1 1 0 2 1 5]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 85.0120, schedule = [2 1 1 2 1 1 0 1 1 1 1 1 1 0 0 1 2 1 0 6]
+  Candidate 1: Obj = 80.1555, schedule = [3 1 1 0 2 1 0 1 0 2 1 1 1 1 0 1 1 1 1 5]
+  Candidate 2: Obj = 92.0401, schedule = [1 2 1 0 2 0 1 1 0 2 1 0 2 0 1 0 1 2 0 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  0  2  0  1  1  2  0  0  1  1  2  1  1 -1  2  0  1  2  6]
+  Candidate 4: Obj = 86.5249, schedule = [2 1 1 0 1 1 2 0 1 1 1 1 1 0 1 1 0 2 1 6]
+Best objective value found so far: 78.3668
 Total points evaluated: 130
-Iteration 16 completed in 2.50 seconds.
+Iteration 16 completed in 2.65 seconds.
 
 --- Iteration 17/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 94.0349, schedule = [2 0 1 1 1 1 1 1 0 1 2 0 2 0 0 2 0 2 0 7]
-  Candidate 1: Obj = 85.6551, schedule = [2 1 1 2 0 1 1 1 0 1 2 0 2 0 1 0 2 1 0 6]
-  Candidate 2: Obj = 86.1742, schedule = [2 1 1 2 1 0 1 1 0 2 1 0 2 0 1 1 0 2 0 6]
-  Candidate 3: Obj = 87.4303, schedule = [3 1 0 1 1 2 0 1 0 1 2 0 2 0 0 2 1 1 0 6]
-  Candidate 4: Obj = 91.9631, schedule = [1 2 0 2 1 0 1 1 0 1 2 0 1 1 0 1 2 1 1 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 86.7453, schedule = [2 0 1 1 1 2 0 1 1 1 0 1 1 1 1 1 1 0 2 6]
+  Candidate 1: Obj = 89.2001, schedule = [2 1 0 1 1 2 0 1 1 0 1 2 0 1 1 1 1 0 1 7]
+  Candidate 2: Obj = 83.3455, schedule = [3 0 1 1 2 0 2 0 0 2 1 1 0 1 1 1 0 1 2 5]
+  Candidate 3: Obj = 84.2823, schedule = [3 1 0 1 1 2 0 1 1 1 0 2 0 2 0 1 0 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  1  1  2  1 -1  1  2  0  2  0  2 -1  2  1  0  2  6]
+Best objective value found so far: 78.3668
 Total points evaluated: 135
-Iteration 17 completed in 3.48 seconds.
+Iteration 17 completed in 2.40 seconds.
 
 --- Iteration 18/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 93.7413, schedule = [2 0 2 1 1 0 1 1 0 1 1 2 0 2 0 0 1 1 2 6]
-  Candidate 1: Obj = 94.3956, schedule = [2 0 1 2 1 0 2 0 0 1 1 2 0 2 0 0 1 1 2 6]
-  Candidate 2: Obj = 94.6428, schedule = [2 0 2 1 1 0 1 0 1 1 1 2 1 1 0 0 1 1 2 6]
-  Candidate 3: Obj = 91.7989, schedule = [2 1 1 1 1 0 2 0 0 2 0 2 1 1 0 1 1 0 2 6]
-  Candidate 4: Obj = 91.8177, schedule = [1 2 1 0 2 0 2 0 1 0 1 2 1 1 0 1 1 0 2 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 85.4370, schedule = [3 1 1 0 1 2 0 0 1 1 1 2 0 1 0 1 2 0 1 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  1  1 -1  2  0  2  0  2  1 -1  2  1  1  1  6]
+  Candidate 2: Obj = 82.9192, schedule = [2 2 0 2 0 1 1 0 2 0 2 0 1 1 1 0 1 1 2 5]
+  Candidate 3: Obj = 83.5745, schedule = [3 0 1 2 0 1 1 0 1 1 1 1 2 1 0 1 0 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  2  1  1  1  0  0  1  2  1  1  1  1 -1  2  1  1  1  5]
+Best objective value found so far: 78.3668
 Total points evaluated: 140
-Iteration 18 completed in 4.11 seconds.
+Iteration 18 completed in 3.17 seconds.
 
 --- Iteration 19/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 88.4001, schedule = [3 0 1 2 1 0 1 0 2 0 2 1 0 1 0 1 2 0 1 6]
-  Candidate 1: Obj = 87.5077, schedule = [3 0 1 1 2 0 1 0 2 0 2 1 0 1 0 1 2 1 0 6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  0  2 -1  2  1  1  0  1  1  0  1  2  0  1  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  0  2 -1  2  1  1  0  1  1  0  1  2  0  1  6]
-  Candidate 4: Obj = 86.6677, schedule = [3 0 1 1 2 0 1 1 1 0 2 0 1 1 0 2 0 2 0 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 83.8089, schedule = [2 1 2 0 2 0 1 0 2 1 0 2 0 1 0 2 1 0 2 5]
+  Candidate 1: Obj = 81.9889, schedule = [2 1 1 1 2 0 1 0 2 1 1 1 0 1 0 1 2 1 1 5]
+  Candidate 2: Obj = 81.9889, schedule = [2 1 1 1 2 0 1 0 2 1 1 1 0 1 0 1 2 1 1 5]
+  Candidate 3: Obj = 84.9637, schedule = [2 1 2 0 2 0 1 0 2 1 1 1 0 1 0 1 2 1 0 6]
+  Candidate 4: Obj = 93.0675, schedule = [2 1 0 1 1 2 0 0 1 2 1 0 2 0 0 2 0 1 1 7]
+Best objective value found so far: 78.3668
 Total points evaluated: 145
-Iteration 19 completed in 3.49 seconds.
+Iteration 19 completed in 2.84 seconds.
 
 --- Iteration 20/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  0  2  0  1  2  1 -1  1  1  2  0  1  1  1  0  1  1  2  6]
-  Candidate 1: Obj = 84.7534, schedule = [2 1 2 0 2 0 1 1 1 1 1 1 1 1 0 1 0 1 2 5]
-  Candidate 2: Obj = 86.2553, schedule = [3 1 0 1 1 1 1 0 1 1 1 1 1 2 0 0 2 0 1 6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  1  2 -1  2  1  0  1  2  1 -1  1  1  1  2  5]
-  Candidate 4: Obj = 88.3015, schedule = [3 0 1 2 0 2 0 0 2 1 0 1 2 0 0 1 2 1 0 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 82.6684, schedule = [2 1 1 1 2 1 0 1 1 1 1 0 2 0 1 0 2 0 2 5]
+  Candidate 1: Obj = 92.2956, schedule = [1 1 1 2 1 0 1 0 1 2 1 1 0 2 0 0 2 1 0 7]
+  Candidate 2: Obj = 91.8837, schedule = [1 1 1 2 0 1 1 0 2 1 1 0 2 1 0 0 2 1 0 7]
+  Candidate 3: Obj = 84.5348, schedule = [2 1 1 1 2 1 0 0 2 1 1 0 2 1 0 0 2 0 2 5]
+  Candidate 4: Obj = 84.8724, schedule = [2 1 1 2 0 2 0 1 0 1 2 1 1 1 0 0 2 1 0 6]
+Best objective value found so far: 78.3668
 Total points evaluated: 150
-Iteration 20 completed in 3.73 seconds.
+Iteration 20 completed in 3.69 seconds.
 
 --- Iteration 21/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  2  0  2  0  2  0  0  1  1  1  2  0  2 -1  1  2  1  0  7]
-  Candidate 1: Obj = 86.0073, schedule = [3 1 1 0 1 1 1 1 1 1 1 0 1 1 0 1 1 1 2 5]
-  Candidate 2: Obj = 93.8576, schedule = [2 0 2 0 1 1 2 0 0 2 1 0 1 1 0 1 1 1 2 6]
-  Candidate 3: Obj = 86.4664, schedule = [3 1 0 1 1 1 2 0 1 0 2 0 1 1 0 1 1 1 2 5]
-  Candidate 4: Obj = 86.4436, schedule = [2 1 1 1 2 0 2 0 1 1 1 0 1 1 0 2 0 1 1 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 86.4644, schedule = [2 2 1 1 0 1 2 0 0 1 2 1 1 0 0 1 2 1 0 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  1  1  0  1  2 -1  1  1  1  2  1  0  0  1  1  1  1  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  1  1  1  1  1  2 -1  1  2  0  2  0  1  1  1  0  1  1  7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  1  0  0  2  0  2  1  1 -1  2  1  0  2  5]
+  Candidate 4: Obj = 90.9452, schedule = [1 1 1 1 1 1 2 0 0 2 0 2 0 1 1 0 1 1 1 7]
+Best objective value found so far: 78.3668
 Total points evaluated: 155
-Iteration 21 completed in 3.28 seconds.
+Iteration 21 completed in 3.23 seconds.
 
 --- Iteration 22/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  1  0  2  0  2  0  1  1  1  0  1  1  2 -1  2  0  2  1  5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  1  1  0  1  1  0  2  0  2 -1  1  1  2  0  6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  0  2  1  1  1 -1  2  0  1  2  0  1  0  2  0  2  1  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  1  0  2  0  2  0  1  0  2  0  2  0  2 -1  2  0  2  1  5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  1  1  0  1  0  1  2  0  2 -1  1  1  2  1  5]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  2  1  1  0  1  1  0  2  1  0  1  2 -1  2  0  2  0  6]
+  Candidate 1: Obj = 85.0493, schedule = [3 0 1 2 1 0 1 1 0 2 1 0 2 1 0 1 0 1 1 6]
+  Candidate 2: Obj = 85.5210, schedule = [3 1 0 2 1 1 0 0 1 1 2 1 0 1 1 1 0 2 0 6]
+  Candidate 3: Obj = 84.3257, schedule = [2 1 2 1 1 0 1 1 0 2 1 0 1 2 0 1 0 2 0 6]
+  Candidate 4: Obj = 84.4336, schedule = [3 0 1 2 1 0 1 1 0 1 2 1 1 0 1 1 0 2 0 6]
+Best objective value found so far: 78.3668
 Total points evaluated: 160
-Iteration 22 completed in 5.99 seconds.
+Iteration 22 completed in 3.65 seconds.
 
 --- Iteration 23/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 91.4725, schedule = [1 1 2 0 2 0 1 0 2 1 0 1 1 2 0 1 0 2 1 6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  0  2 -1  1  1  1  1  1  1  0  1  1  1  2  6]
-  Candidate 2: Obj = 85.3348, schedule = [3 0 2 1 1 1 0 1 0 1 1 1 2 0 1 1 0 2 1 5]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  1  1  2  0  1  2 -1  2  1  0  1  2  0  1  0  2  0  1  7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  1  1  1  2  1  1 -1  1  2  0  1  2  1 -1  2  0  1  1  7]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  0  2 -1  2  0  2  0  1  1  1  1  1  1  0  6]
+  Candidate 1: Obj = 92.6595, schedule = [1 2 0 2 1 0 1 0 2 1 1 0 2 0 1 0 2 0 1 7]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  0  2 -1  2  0  2  0  1  2  0  1  1  0  1  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  0  2  0  1  2 -1  1  1  2  1  0  1  1  1  1  0  1  7]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  1 -1  2  0  2  0  2  0  0  2  1  0  1  6]
+Best objective value found so far: 78.3668
 Total points evaluated: 165
-Iteration 23 completed in 3.85 seconds.
+Iteration 23 completed in 4.21 seconds.
 
 --- Iteration 24/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 89.4837, schedule = [1 2 1 0 2 1 0 0 1 2 0 1 2 1 0 1 1 1 1 6]
-  Candidate 1: Obj = 88.9082, schedule = [2 0 2 1 1 0 1 0 1 2 0 1 2 1 0 1 1 1 1 6]
-  Candidate 2: Obj = 88.0252, schedule = [2 1 1 1 1 0 1 0 1 2 0 1 1 2 0 1 1 1 1 6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  1  2  1  1  1  1 -1  1  1  1  1  2  1  0  1  1  1  1  6]
-  Candidate 4: Obj = 88.8519, schedule = [1 2 1 1 1 0 1 0 1 2 0 1 2 1 0 1 1 1 1 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 85.5095, schedule = [3 0 2 1 0 2 0 0 1 1 2 1 0 1 1 0 1 2 0 6]
+  Candidate 1: Obj = 83.6072, schedule = [2 1 1 1 1 2 0 0 2 0 2 1 0 2 0 0 2 0 2 5]
+  Candidate 2: Obj = 83.2180, schedule = [3 1 0 2 0 1 1 0 1 1 2 0 1 2 0 0 1 2 1 5]
+  Candidate 3: Obj = 81.5585, schedule = [2 2 0 2 0 2 0 0 1 1 2 0 1 1 1 0 2 1 1 5]
+  Candidate 4: Obj = 92.2424, schedule = [1 2 0 2 0 1 1 0 2 0 2 0 1 2 0 0 1 2 0 7]
+Best objective value found so far: 78.3668
 Total points evaluated: 170
-Iteration 24 completed in 4.55 seconds.
+Iteration 24 completed in 3.86 seconds.
 
 --- Iteration 25/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 88.1685, schedule = [2 1 1 1 0 2 1 0 0 2 0 2 0 1 1 1 1 1 1 6]
-  Candidate 1: Obj = 85.6514, schedule = [3 1 1 1 1 0 2 0 1 1 1 0 1 2 0 0 2 1 1 5]
-  Candidate 2: Obj = 87.8027, schedule = [2 1 1 1 0 1 2 0 0 2 1 0 1 2 0 1 1 1 1 6]
-  Candidate 3: Obj = 88.9815, schedule = [2 1 1 1 0 2 0 1 1 1 1 1 0 1 1 0 2 1 1 6]
-  Candidate 4: Obj = 89.8366, schedule = [2 1 1 0 1 2 1 0 1 1 1 1 0 1 0 2 1 1 1 6]
-Best objective value found so far: 81.9819
+  Candidate 0: Obj = 88.7852, schedule = [2 1 1 0 2 0 2 0 1 0 2 0 1 2 0 1 1 0 2 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  0  1  1  2 -1  1  1  2  0  1  2  0  0  1  1  2  6]
+  Candidate 2: Obj = 90.4729, schedule = [1 1 1 1 1 1 1 0 1 1 1 2 1 0 1 0 1 1 1 7]
+  Candidate 3: Obj = 86.2014, schedule = [2 2 1 1 1 1 0 0 2 0 2 0 1 1 0 1 2 1 0 6]
+  Candidate 4: Obj = 89.2481, schedule = [1 2 0 1 2 1 1 0 1 0 1 1 2 0 1 1 1 1 0 7]
+Best objective value found so far: 78.3668
 Total points evaluated: 175
-Iteration 25 completed in 4.11 seconds.
+Iteration 25 completed in 4.00 seconds.
 
 --- Optimization Finished ---
 Total evaluations: 175
-Best Objective Value Found: 81.98185637033471
-Best U vector Found: [0 0 1 1 1 1 0 0 1 0 1 1 1 0 0 1 1 1 1 1]
+Best Objective Value Found: 78.36675144139465
+Best U vector Found: [0 0 1 0 0 1 0 1 1 1 1 1 0 1 1 1 1 1 1 1]
 
 --- Verification ---
 Is the best U feasible? True
-Resulting Y vector for best U: [2 2 1 1 1 0 1 1 0 2 1 1 0 1 1 1 1 1 1 5]
-Objective value (recalculated): 81.9819</code></pre>
+Resulting Y vector for best U: [2 2 0 1 2 0 2 0 1 1 1 0 2 1 0 1 1 1 1 5]
+Objective value (recalculated): 78.3668</code></pre>
 </div>
 </div>
 </section>
 <section id="experiment-2-cbo-with-lower-confidence-bound-lcb---fixed-kappa" class="level4" data-number="6.4.6.5">
 <h4 data-number="6.4.6.5" class="anchored" data-anchor-id="experiment-2-cbo-with-lower-confidence-bound-lcb---fixed-kappa"><span class="header-section-number">6.4.6.5</span> 5. Experiment 2: CBO with Lower Confidence Bound (LCB) - Fixed Kappa</h4>
 <p>Applies the methodology from <span class="citation" data-cites="deshwal_bayesian_2023">Deshwal et al. (<a href="combinatorial-bayes-optimization.html#ref-deshwal_bayesian_2023" role="doc-biblioref">2023</a>)</span> using LCB with fixed <span class="math inline">\(\kappa\)</span>.</p>
-<div id="d0a7d146" class="cell" data-execution_count="5">
+<div id="702f5ce4" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- BO Helper Functions ---</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co"># --- get_fitted_model function remains the same ---</span></span>
@@ -1424,7 +1511,7 @@ Objective value (recalculated): 81.9819</code></pre>
 <span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>N_INITIAL <span class="op">=</span> <span class="dv">49</span> <span class="co"># The initial schedule will always be included</span></span>
 <span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a>N_ITERATIONS <span class="op">=</span> <span class="dv">25</span></span>
 <span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a>BATCH_SIZE_q <span class="op">=</span> <span class="dv">5</span></span>
-<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a>NUM_CANDIDATES_Acqf <span class="op">=</span> T<span class="op">*</span><span class="dv">3</span><span class="op">*</span><span class="dv">1024</span> <span class="co"># Might need more for higher T</span></span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a>NUM_CANDIDATES_Acqf <span class="op">=</span> T<span class="op">*</span><span class="dv">5</span><span class="op">*</span><span class="dv">1024</span> <span class="co"># Might need more for higher T</span></span>
 <span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> math.ceil(T<span class="op">/</span><span class="dv">4</span>) <span class="co"># Dimension of the embedding space</span></span>
 <span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a><span class="co"># Store evaluated points (using NumPy arrays)</span></span>
@@ -1552,367 +1639,928 @@ Objective value (recalculated): 81.9819</code></pre>
 <span id="cb7-192"><a href="#cb7-192" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> final_best_f_lcb <span class="op">&lt;</span> LARGE_PENALTY: <span class="bu">print</span>(<span class="ss">f"Warning: Best objective (</span><span class="sc">{</span>final_best_f_lcb<span class="sc">:.4f}</span><span class="ss">) is not the penalty value, but feasibility check failed."</span>)<span class="op">;</span> <span class="bu">print</span>(<span class="ss">f"Resulting Y vector (infeasible): </span><span class="sc">{</span>Y_best_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb7-193"><a href="#cb7-193" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Initial best objective value: 83.23712761052458
+<pre><code>Initial best objective value: 80.26076921245387
 
 --- Iteration 1/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  0  1  1  1  0  2  1  1  1 -1  2  1  0  1  6]
-  Candidate 1: Obj = 88.5573, schedule = [3 1 0 2 1 0 1 1 1 1 1 1 1 0 0 1 2 0 1 6]
-  Candidate 2: Obj = 94.2078, schedule = [2 1 0 1 2 0 1 1 0 2 1 1 1 0 0 2 0 1 2 6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  0  1  2  0  2  0  0  2  1  1  1  1  1 -1  2  0  1  1  7]
-  Candidate 4: Obj = 94.6824, schedule = [2 1 0 2 0 1 1 1 0 2 1 1 1 1 0 0 1 1 1 7]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 90.8186, schedule = [1 1 2 0 1 1 1 1 1 1 0 1 2 0 0 1 2 1 0 7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  0  2  0  1  1  2  0  1  1  0  1  2  1 -1  1  1  1  1  6]
+  Candidate 2: Obj = 84.9946, schedule = [2 2 1 0 1 1 2 0 1 1 0 1 2 0 0 1 1 2 0 6]
+  Candidate 3: Obj = 83.6669, schedule = [2 1 2 0 1 1 2 0 1 1 1 0 1 1 0 1 2 1 0 6]
+  Candidate 4: Obj = 84.0734, schedule = [2 1 2 1 0 1 2 0 1 1 0 1 1 1 0 1 2 1 0 6]
+Best objective value found so far: 80.2608
 Total points evaluated: 55
-Iteration 1 completed in 2.32 seconds.
+Iteration 1 completed in 3.13 seconds.
 
 --- Iteration 2/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 92.4652, schedule = [1 2 0 1 1 2 0 1 1 0 1 2 1 1 0 1 0 1 2 6]
-  Candidate 1: Obj = 88.1097, schedule = [3 1 1 1 1 1 0 1 0 1 2 0 2 0 1 1 0 2 0 6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  2  0  1  1  0  1  1  1  2 -1  2  0  1  2  5]
-  Candidate 3: Obj = 92.7454, schedule = [1 1 1 1 2 0 1 1 1 0 1 1 2 1 0 1 0 2 0 7]
-  Candidate 4: Obj = 87.1375, schedule = [2 1 1 2 1 1 0 1 0 2 0 1 1 1 0 1 2 0 1 6]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 91.4562, schedule = [2 1 0 1 2 1 0 1 0 1 1 2 0 1 0 2 1 1 0 7]
+  Candidate 1: Obj = 82.3877, schedule = [2 2 0 2 0 2 0 1 0 1 1 2 0 2 0 1 1 0 2 5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  1  0  0  1  1  2  1  1  1 -1  2  1  0  2  5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  0  1  2  1  0  0  1  1  2  0  1  2 -1  2  1  1  1  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  0  2  1  1  0  0  1  1  1  1  1  2 -1  2  1  1  1  6]
+Best objective value found so far: 80.2608
 Total points evaluated: 60
-Iteration 2 completed in 2.09 seconds.
+Iteration 2 completed in 3.22 seconds.
 
 --- Iteration 3/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 92.1617, schedule = [1 2 1 1 0 1 1 0 1 2 1 0 2 1 0 0 2 1 1 6]
-  Candidate 1: Obj = 91.8116, schedule = [2 1 1 1 1 0 2 0 0 2 0 1 1 1 1 0 1 2 1 6]
-  Candidate 2: Obj = 92.4596, schedule = [2 0 2 0 2 1 0 0 1 2 1 0 2 0 1 0 2 1 1 6]
-  Candidate 3: Obj = 93.1002, schedule = [1 1 2 1 1 1 0 0 1 2 1 0 2 0 1 1 1 1 0 7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  1  1  1  1  1 -1  1  2  0  2  1  0  1  0  1  2  0  7]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 90.5161, schedule = [1 1 1 1 1 1 2 0 0 2 0 2 1 0 1 0 1 1 2 6]
+  Candidate 1: Obj = 93.1284, schedule = [2 0 2 0 1 1 2 0 0 2 0 2 1 0 0 1 1 1 1 7]
+  Candidate 2: Obj = 86.1632, schedule = [3 0 1 1 1 2 1 0 0 2 0 2 1 0 0 2 0 1 1 6]
+  Candidate 3: Obj = 85.5516, schedule = [2 1 1 2 0 2 1 0 1 0 1 2 1 0 0 2 0 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  1  1  2  1 -1  1  2  0  2  1  0  0  2  0  1  1  7]
+Best objective value found so far: 80.2608
 Total points evaluated: 65
-Iteration 3 completed in 2.30 seconds.
+Iteration 3 completed in 3.62 seconds.
 
 --- Iteration 4/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 84.1589, schedule = [2 2 0 2 0 2 0 1 1 1 0 2 0 1 1 1 1 0 2 5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  1  1 -1  2  1  0  2  1  0  1  0  2  0  1  6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  0  1  1  1  0  2  0  2 -1  2  1  0  1  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  0  0  2  1  1  1  1  1 -1  1  2  0  1  6]
-  Candidate 4: Obj = 84.5385, schedule = [2 2 0 2 0 2 0 1 1 1 0 2 0 1 1 1 1 1 0 6]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  1  1  1  0  1  2  1  0  2 -1  1  2  1  0  6]
+  Candidate 1: Obj = 84.5043, schedule = [2 1 1 2 1 0 1 1 0 1 2 1 0 1 0 1 2 0 1 6]
+  Candidate 2: Obj = 84.5725, schedule = [3 1 0 1 1 1 1 0 1 1 2 0 2 0 0 1 2 1 0 6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  1  1  0  1  1  2  0  1  2 -1  2  1  1  0  6]
+  Candidate 4: Obj = 82.9011, schedule = [2 1 1 1 1 1 1 1 1 0 2 1 0 1 0 1 2 1 0 6]
+Best objective value found so far: 80.2608
 Total points evaluated: 70
-Iteration 4 completed in 2.18 seconds.
+Iteration 4 completed in 3.07 seconds.
 
 --- Iteration 5/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 87.3377, schedule = [3 1 0 2 0 1 1 0 1 2 1 1 0 1 0 1 1 1 2 5]
-  Candidate 1: Obj = 94.6656, schedule = [1 2 0 2 0 1 1 1 0 2 1 1 0 1 0 1 1 1 1 7]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  0  2 -1  1  2  0  1  2  0  0  1  1  1  2  5]
-  Candidate 3: Obj = 92.5110, schedule = [1 2 0 1 2 0 1 1 1 0 1 1 1 1 0 2 0 1 2 6]
-  Candidate 4: Obj = 94.7469, schedule = [1 2 1 0 1 1 1 1 0 2 1 0 2 0 0 1 1 1 1 7]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 90.7822, schedule = [2 0 1 1 1 2 0 0 2 1 0 1 2 0 0 1 1 2 1 6]
+  Candidate 1: Obj = 88.2773, schedule = [1 1 1 1 1 1 1 1 1 0 1 2 1 0 0 1 2 1 1 6]
+  Candidate 2: Obj = 89.6582, schedule = [1 2 0 1 1 1 1 1 1 0 1 2 1 0 0 1 1 2 1 6]
+  Candidate 3: Obj = 89.5468, schedule = [1 2 0 1 1 1 1 0 2 0 2 0 2 0 0 1 2 1 1 6]
+  Candidate 4: Obj = 89.6582, schedule = [1 2 0 1 1 1 1 1 1 0 1 2 1 0 0 1 1 2 1 6]
+Best objective value found so far: 80.2608
 Total points evaluated: 75
-Iteration 5 completed in 2.10 seconds.
+Iteration 5 completed in 3.39 seconds.
 
 --- Iteration 6/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.4551, schedule = [2 0 2 1 0 2 1 0 1 1 1 1 0 1 1 1 1 1 1 6]
-  Candidate 1: Obj = 92.1165, schedule = [2 1 1 1 1 1 1 0 1 0 2 0 1 2 0 1 0 1 2 6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  0  2 -1  2  0  1  2  0  2 -1  1  2  1  1  5]
-  Candidate 3: Obj = 83.4836, schedule = [3 0 1 2 1 1 1 0 0 2 1 1 0 2 0 1 1 1 1 5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  2  1  0  2  1 -1  1  2  1  0  2  0  1  1  0  2  1  6]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  1  1  1  2  0  2 -1  2  1  1  0  1  1  1  0  1  2  0  7]
+  Candidate 1: Obj = 90.9837, schedule = [1 1 1 1 1 1 2 0 0 2 0 2 0 1 0 2 1 1 0 7]
+  Candidate 2: Obj = 89.9309, schedule = [2 0 1 1 1 1 2 0 0 2 0 1 1 1 1 1 0 2 0 7]
+  Candidate 3: Obj = 76.8680, schedule = [2 1 1 1 1 1 1 0 1 2 1 1 0 1 1 1 1 1 1 5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  1  2  0  2 -1  2  1  0  2  0  1  0  1  1  2  0  7]
+Best objective value found so far: 76.8680
 Total points evaluated: 80
-Iteration 6 completed in 2.31 seconds.
+Iteration 6 completed in 3.42 seconds.
 
 --- Iteration 7/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 95.6580, schedule = [1 1 2 1 0 2 1 0 0 1 2 1 1 0 0 1 2 0 2 6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  0  2 -1  1  1  2  0  2  0  1  0  2  0  1  7]
-  Candidate 2: Obj = 95.8615, schedule = [2 0 2 1 1 1 0 0 1 1 2 1 1 0 1 0 2 0 1 7]
-  Candidate 3: Obj = 95.3259, schedule = [2 0 2 1 0 2 1 0 0 1 2 0 2 0 0 1 2 0 2 6]
-  Candidate 4: Obj = 89.1949, schedule = [3 0 2 1 0 2 1 0 0 1 2 1 1 0 0 1 2 0 2 5]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 82.1038, schedule = [2 2 1 1 1 0 1 0 2 1 0 1 1 1 1 1 0 2 1 5]
+  Candidate 1: Obj = 89.0025, schedule = [1 1 1 2 1 1 0 0 1 2 1 0 1 1 1 1 0 2 1 6]
+  Candidate 2: Obj = 85.1878, schedule = [1 2 0 2 1 1 0 1 0 1 1 1 2 0 1 1 1 1 1 6]
+  Candidate 3: Obj = 91.4930, schedule = [1 2 1 0 2 1 0 0 2 1 0 1 1 1 1 1 0 2 0 7]
+  Candidate 4: Obj = 80.1997, schedule = [2 2 1 0 2 1 0 0 1 2 0 2 1 0 1 1 1 1 1 5]
+Best objective value found so far: 76.8680
 Total points evaluated: 85
-Iteration 7 completed in 2.07 seconds.
+Iteration 7 completed in 3.08 seconds.
 
 --- Iteration 8/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  2  0  2  0  1  1  0  1  1  2  0  1  2 -1  1  1  2  1  5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  0  2  1  0  2  0  1  1  1  1  0  2 -1  2  1  1  1  6]
-  Candidate 2: Obj = 90.4518, schedule = [2 1 1 0 2 0 1 1 1 0 2 1 1 1 0 1 0 2 1 6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  2  0  0  1  2  0  1  1  2 -1  1  1  1  2  5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  1  0  2  1  1 -1  2  0  2  1  1  0  1  1  1  1  1  6]
-Best objective value found so far: 83.2371
+  Candidate 0: Obj = 83.6103, schedule = [3 0 1 1 1 2 1 0 0 2 1 0 1 1 0 1 1 2 1 5]
+  Candidate 1: Obj = 84.0617, schedule = [3 0 1 1 1 2 1 0 0 1 2 0 2 0 0 1 1 2 1 5]
+  Candidate 2: Obj = 85.3058, schedule = [3 0 1 2 1 1 1 0 0 1 2 0 2 0 0 1 1 2 1 5]
+  Candidate 3: Obj = 85.3058, schedule = [3 0 1 2 1 1 1 0 0 1 2 0 2 0 0 1 1 2 1 5]
+  Candidate 4: Obj = 86.3524, schedule = [3 0 2 0 1 2 1 0 0 1 2 0 2 0 0 1 1 2 0 6]
+Best objective value found so far: 76.8680
 Total points evaluated: 90
-Iteration 8 completed in 2.53 seconds.
+Iteration 8 completed in 3.21 seconds.
 
 --- Iteration 9/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.3845, schedule = [2 1 2 1 0 2 0 1 0 2 1 1 0 2 0 1 0 1 2 5]
-  Candidate 1: Obj = 84.9894, schedule = [2 1 2 0 2 1 0 1 0 2 1 0 1 2 0 1 0 2 1 5]
-  Candidate 2: Obj = 82.2091, schedule = [2 1 2 1 0 2 0 0 1 2 1 1 0 1 1 1 1 1 1 5]
-  Candidate 3: Obj = 87.0490, schedule = [3 0 2 1 0 2 0 1 0 2 0 2 0 2 0 0 1 2 1 5]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  2  1  1  1  1 -1  1  2  1  1  0  1  1  0  1  2  1  5]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  0  2 -1  2  0  1  2  1  0  0  2  0  2  0  6]
+  Candidate 1: Obj = 86.8420, schedule = [3 0 2 1 1 0 1 0 1 2 0 2 1 0 0 2 0 2 0 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  0  2  1  1 -1  1  1  1  2  1  0  0  2  0  2  0  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  1  1 -1  1  1  1  2  1  1 -1  2  0  2  0  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  0  2 -1  1  1  2  1  1  0  1  1  0  2  0  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 95
-Iteration 9 completed in 2.22 seconds.
+Iteration 9 completed in 3.60 seconds.
 
 --- Iteration 10/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 94.2739, schedule = [2 1 1 1 0 2 1 0 1 1 0 2 0 2 0 0 1 2 0 7]
-  Candidate 1: Obj = 85.0317, schedule = [2 1 1 1 2 0 1 0 1 2 0 2 0 1 1 0 2 0 2 5]
-  Candidate 2: Obj = 93.5907, schedule = [2 1 1 1 1 1 1 0 0 2 1 1 1 0 1 1 0 2 0 7]
-  Candidate 3: Obj = 86.7247, schedule = [2 1 1 1 2 1 0 0 2 1 0 1 1 1 0 1 1 1 1 6]
-  Candidate 4: Obj = 88.2813, schedule = [2 1 2 0 2 0 1 0 2 1 0 2 1 0 0 1 2 0 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 80.7306, schedule = [3 0 1 2 0 1 1 1 0 1 2 0 1 1 1 1 0 2 1 5]
+  Candidate 1: Obj = 81.6732, schedule = [3 0 1 2 0 2 0 0 1 1 2 0 1 1 1 1 0 2 1 5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  1  2 -1  1  2  1  0  2  0  1  1  0  1  2  5]
+  Candidate 3: Obj = 81.6621, schedule = [3 0 1 1 2 0 1 1 1 0 2 0 1 1 1 0 1 2 1 5]
+  Candidate 4: Obj = 84.2516, schedule = [2 1 1 2 0 1 2 0 0 2 1 1 0 1 1 0 1 2 0 6]
+Best objective value found so far: 76.8680
 Total points evaluated: 100
-Iteration 10 completed in 2.57 seconds.
+Iteration 10 completed in 3.44 seconds.
 
 --- Iteration 11/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 87.5645, schedule = [2 1 1 0 1 1 2 0 0 1 2 1 0 1 1 1 1 1 1 6]
-  Candidate 1: Obj = 91.7914, schedule = [2 1 0 1 1 2 1 0 0 2 1 0 1 2 0 1 1 0 2 6]
-  Candidate 2: Obj = 82.2744, schedule = [3 0 2 0 2 0 2 0 1 0 2 1 0 1 1 1 1 1 1 5]
-  Candidate 3: Obj = 91.0605, schedule = [2 1 0 1 1 2 0 1 1 0 2 0 2 1 0 0 2 1 1 6]
-  Candidate 4: Obj = 82.9018, schedule = [3 1 1 0 1 1 2 0 0 1 2 1 0 2 0 1 1 1 1 5]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 80.3954, schedule = [3 0 2 0 2 1 0 0 2 0 2 0 2 0 1 1 1 1 1 5]
+  Candidate 1: Obj = 90.4055, schedule = [1 2 1 1 1 1 0 0 1 1 1 2 0 2 0 1 1 1 0 7]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  0  1  0  1  1  2  0  2 -1  2  1  1  0  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  0  1  2  0  0  2  0  1  2  1  1 -1  1  2  1  1  5]
+  Candidate 4: Obj = 83.8202, schedule = [3 0 2 1 0 2 0 0 1 2 1 1 0 2 0 0 2 1 1 5]
+Best objective value found so far: 76.8680
 Total points evaluated: 105
-Iteration 11 completed in 2.33 seconds.
+Iteration 11 completed in 3.87 seconds.
 
 --- Iteration 12/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 94.2156, schedule = [1 2 1 0 2 1 0 0 1 2 1 1 1 0 0 1 2 1 1 6]
-  Candidate 1: Obj = 92.2693, schedule = [2 1 1 1 1 0 1 1 0 2 1 1 1 0 0 1 2 1 1 6]
-  Candidate 2: Obj = 93.7232, schedule = [2 1 1 1 1 1 0 1 0 2 1 1 0 1 0 2 1 1 0 7]
-  Candidate 3: Obj = 94.8761, schedule = [1 2 1 1 1 1 0 0 1 2 1 1 0 1 1 0 2 1 0 7]
-  Candidate 4: Obj = 91.1104, schedule = [2 1 1 0 2 1 0 1 0 2 1 1 0 1 0 2 1 1 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 85.6609, schedule = [3 0 2 0 1 2 1 0 0 1 1 1 2 0 0 2 1 0 1 6]
+  Candidate 1: Obj = 84.7543, schedule = [3 1 0 1 1 2 0 1 0 1 1 2 0 1 0 2 0 1 1 6]
+  Candidate 2: Obj = 82.6230, schedule = [3 0 1 1 1 2 1 0 0 1 1 2 0 1 0 1 2 1 1 5]
+  Candidate 3: Obj = 85.6249, schedule = [3 1 1 1 0 2 1 0 0 2 0 2 0 1 0 2 0 2 1 5]
+  Candidate 4: Obj = 86.1922, schedule = [3 1 0 2 1 0 2 0 0 1 1 2 0 1 0 1 1 2 0 6]
+Best objective value found so far: 76.8680
 Total points evaluated: 110
-Iteration 12 completed in 3.14 seconds.
+Iteration 12 completed in 4.04 seconds.
 
 --- Iteration 13/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  0  1  2  1  0  1  1  1  1  1  1  1 -1  1  2  1  1  6]
-  Candidate 1: Obj = 89.0465, schedule = [3 0 1 2 1 1 1 0 1 1 0 2 1 1 0 0 1 2 0 6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  1  0  1  1  0  2  1  1  1 -1  2  0  2  1  5]
-  Candidate 3: Obj = 94.4419, schedule = [2 1 0 1 2 1 1 0 0 1 2 1 1 0 1 1 0 2 0 7]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  0  1  1  2  1  0  1  1  1  1  1  1 -1  2  1  1  1  5]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 82.8019, schedule = [3 1 1 1 0 2 1 0 1 0 1 1 1 1 1 1 1 0 2 5]
+  Candidate 1: Obj = 90.2113, schedule = [2 1 1 1 0 2 1 0 1 0 1 1 1 1 0 2 1 0 2 6]
+  Candidate 2: Obj = 88.0025, schedule = [2 1 1 0 1 1 1 0 2 0 2 0 1 1 1 1 1 0 2 6]
+  Candidate 3: Obj = 89.3526, schedule = [2 1 1 0 1 1 1 1 1 0 2 0 1 1 0 2 1 0 2 6]
+  Candidate 4: Obj = 92.3272, schedule = [2 1 1 0 1 2 1 0 1 0 1 2 0 1 0 1 2 0 1 7]
+Best objective value found so far: 76.8680
 Total points evaluated: 115
-Iteration 13 completed in 2.78 seconds.
+Iteration 13 completed in 3.43 seconds.
 
 --- Iteration 14/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.3737, schedule = [2 2 0 1 1 1 1 0 2 1 1 0 2 1 0 0 1 1 2 5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  2  1  1  1 -1  2  0  2  0  1  1  0  1  1  1  1  6]
-  Candidate 2: Obj = 87.6204, schedule = [2 2 0 1 2 1 0 1 0 1 2 0 1 2 0 0 2 0 1 6]
-  Candidate 3: Obj = 87.2879, schedule = [2 1 1 2 1 0 1 1 1 0 2 0 2 1 0 0 1 1 1 6]
-  Candidate 4: Obj = 87.4011, schedule = [2 2 1 0 2 0 1 1 0 1 2 0 1 2 0 0 1 1 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  1  1  0  1  1  2 -1  2  0  1  1  2  0  1  0  1  2  1  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  0  2  0  2 -1  2  0  1  2  1  0  1  0  1  1  2  5]
+  Candidate 2: Obj = 83.8711, schedule = [2 2 0 1 1 2 0 0 2 1 1 0 2 0 0 2 0 2 1 5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  2  1 -1  2  0  2  1  0  1  0  1  1  2  1  5]
+  Candidate 4: Obj = 85.6559, schedule = [2 2 1 0 1 2 0 0 2 1 0 2 1 0 1 0 1 2 0 6]
+Best objective value found so far: 76.8680
 Total points evaluated: 120
-Iteration 14 completed in 2.52 seconds.
+Iteration 14 completed in 3.77 seconds.
 
 --- Iteration 15/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  2  1  0  2 -1  1  2  1  0  2  0  0  1  2  0  2  5]
-  Candidate 1: Obj = 91.5920, schedule = [2 0 2 0 2 0 2 0 1 0 2 0 1 2 0 1 1 0 2 6]
-  Candidate 2: Obj = 82.3609, schedule = [2 2 0 2 1 0 1 0 2 1 1 1 0 2 0 1 1 1 1 5]
-  Candidate 3: Obj = 87.3922, schedule = [2 1 2 0 2 1 0 0 1 1 1 1 2 0 0 1 1 1 1 6]
-  Candidate 4: Obj = 83.9770, schedule = [2 1 1 2 0 1 1 1 1 0 2 1 1 1 0 0 2 1 1 5]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  2  0  1  1  1  1  0  1  2  1  1  0  2 -1  1  2  1  1  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  1  2 -1  1  2  1  1  0  1  0  2  1  0  1  6]
+  Candidate 2: Obj = 81.2971, schedule = [2 2 1 0 1 1 1 0 2 0 2 0 1 1 1 1 1 0 2 5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  1  2 -1  2  0  1  2  0  1  0  2  1  0  1  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  0  1  1  1  2 -1  1  1  1  2  1  0  1  0  2  0  2  5]
+Best objective value found so far: 76.8680
 Total points evaluated: 125
-Iteration 15 completed in 2.93 seconds.
+Iteration 15 completed in 3.94 seconds.
 
 --- Iteration 16/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 88.0301, schedule = [3 0 1 1 2 0 1 0 1 2 0 2 1 1 0 0 1 2 0 6]
-  Candidate 1: Obj = 87.3523, schedule = [2 2 0 1 2 0 1 1 1 1 0 2 1 1 0 0 2 0 1 6]
-  Candidate 2: Obj = 86.0399, schedule = [2 2 0 1 2 0 2 0 1 0 1 2 0 2 0 0 1 2 1 5]
-  Candidate 3: Obj = 87.6441, schedule = [3 0 2 0 2 0 1 1 0 1 1 2 0 2 0 0 1 2 0 6]
-  Candidate 4: Obj = 86.9407, schedule = [3 0 1 1 2 0 1 1 1 1 0 2 0 2 0 0 1 1 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  0  2 -1  2  0  2  0  1  1  1  1  1  1  0  6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  1  1 -1  1  1  2  0  2  0  0  1  2  1  1  5]
+  Candidate 2: Obj = 91.4301, schedule = [1 1 1 1 1 2 0 1 0 1 2 1 1 0 1 0 2 0 1 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  0  2 -1  1  1  2  1  1  0  0  1  1  2  1  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  1  0  0  2  0  1  2  1  1 -1  2  0  1  1  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 130
-Iteration 16 completed in 2.76 seconds.
+Iteration 16 completed in 4.20 seconds.
 
 --- Iteration 17/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  0  2  1  1  0  1  1  1  1  0  2  0  2 -1  1  2  0  1  7]
-  Candidate 1: Obj = 89.3917, schedule = [3 0 2 1 1 0 2 0 0 2 0 2 0 2 0 0 2 0 1 6]
-  Candidate 2: Obj = 95.1971, schedule = [1 2 1 1 1 0 2 0 0 2 0 1 1 2 0 0 2 0 1 7]
-  Candidate 3: Obj = 89.2915, schedule = [3 1 1 1 0 1 2 0 0 1 1 2 1 1 0 0 2 0 1 6]
-  Candidate 4: Obj = 95.1190, schedule = [2 1 1 1 0 1 2 0 0 1 1 2 1 1 0 0 1 1 1 7]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 84.1706, schedule = [3 0 2 0 2 0 1 1 0 1 1 2 1 0 1 1 0 1 1 6]
+  Candidate 1: Obj = 83.0990, schedule = [2 1 1 2 0 1 1 0 1 2 0 1 1 1 0 1 2 0 1 6]
+  Candidate 2: Obj = 82.7083, schedule = [3 1 1 1 0 1 2 0 0 1 1 1 1 1 1 1 1 1 0 6]
+  Candidate 3: Obj = 90.9462, schedule = [1 2 1 1 1 0 1 0 1 2 0 1 2 1 0 1 0 1 2 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  1  1  2  0  1  1  0  2  1  0  2 -1  1  1  2  1  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 135
-Iteration 17 completed in 3.65 seconds.
+Iteration 17 completed in 4.71 seconds.
 
 --- Iteration 18/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 88.8431, schedule = [3 1 1 1 1 1 1 0 1 0 2 0 2 1 0 0 2 0 2 5]
-  Candidate 1: Obj = 85.2716, schedule = [2 1 2 0 1 1 1 1 1 1 0 2 1 0 0 1 1 2 1 5]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  0  0  1  2  1  0  1  2 -1  1  2  0  1  6]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  1  2  0  1  2  1 -1  2  1  0  2  0  1  0  2  0  2  0  7]
-  Candidate 4: Obj = 92.4130, schedule = [1 1 2 0 1 2 1 0 0 2 0 2 1 1 0 1 0 2 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 92.8396, schedule = [2 1 1 1 1 0 1 0 1 2 1 1 0 1 0 2 0 2 0 7]
+  Candidate 1: Obj = 90.1563, schedule = [2 1 1 1 1 0 1 1 1 1 0 2 0 2 0 1 0 1 1 7]
+  Candidate 2: Obj = 89.3865, schedule = [1 1 2 1 1 0 1 0 1 2 1 0 1 2 0 0 2 1 1 6]
+  Candidate 3: Obj = 90.7047, schedule = [2 0 2 1 1 0 1 1 0 2 1 0 1 1 1 1 0 2 0 7]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  0  2  0  1  0  2  1  0  1  2 -1  1  2  0  1  7]
+Best objective value found so far: 76.8680
 Total points evaluated: 140
-Iteration 18 completed in 3.18 seconds.
+Iteration 18 completed in 4.73 seconds.
 
 --- Iteration 19/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  1  2 -1  1  2  1  0  1  2 -1  2  0  2  1  5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  1  2 -1  1  2  1  0  1  1  0  2  0  2  0  6]
-  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  1  1  1  0  2  0  1  1  2 -1  2  0  2  1  5]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  0  2 -1  2  1  1  0  1  1  1  0  1  2  1  5]
-  Candidate 4: Obj = 84.4606, schedule = [2 1 1 1 2 0 1 1 1 0 2 0 1 2 0 0 1 2 1 5]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  1  1  1  0  2  0  1  1  2 -1  1  1  1  2  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  0  1  1  2  0  1  0  2  1  0  1  2 -1  1  1  1  1  6]
+  Candidate 2: Obj = 88.1827, schedule = [2 1 0 1 2 0 1 1 1 1 0 2 1 1 0 1 1 1 0 7]
+  Candidate 3: Obj = 92.3629, schedule = [1 1 2 0 2 1 0 1 0 1 2 0 1 2 0 0 1 2 0 7]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  2  0  0  1  1  1  2  1  1 -1  1  1  1  1  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 145
-Iteration 19 completed in 3.40 seconds.
+Iteration 19 completed in 4.85 seconds.
 
 --- Iteration 20/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  1 -1  2  0  1  2  1  0  0  1  2  0  1  6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  1 -1  2  1  0  2  1  0  0  1  1  1  1  6]
-  Candidate 2: Obj = 85.5167, schedule = [2 1 1 1 0 1 1 1 1 1 1 0 1 2 0 1 1 1 1 6]
-  Candidate 3: Obj = 87.0077, schedule = [2 1 1 1 0 1 1 1 0 2 0 1 1 2 0 1 1 1 1 6]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  0  2 -1  2  1  1  0  2  0  1  0  1  2  0  6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  1  2 -1  1  1  2  1  0  2 -1  1  1  1  2  5]
+  Candidate 1: Obj = 89.2381, schedule = [1 2 0 2 1 0 1 0 1 1 1 2 0 2 0 1 0 2 1 6]
+  Candidate 2: Obj = 87.4936, schedule = [1 1 1 1 2 0 1 0 2 1 0 1 1 1 1 0 2 1 1 6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  0  1  1  1  2  0  1  0  1  1  1  2 -1  2  1  1  1  6]
+  Candidate 4: Obj = 88.1685, schedule = [1 1 1 1 1 1 1 0 2 0 2 1 0 1 1 1 1 1 0 7]
+Best objective value found so far: 76.8680
 Total points evaluated: 150
-Iteration 20 completed in 3.01 seconds.
+Iteration 20 completed in 4.17 seconds.
 
 --- Iteration 21/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.6758, schedule = [3 1 1 0 1 1 2 0 1 0 1 2 0 1 1 1 0 2 0 6]
-  Candidate 1: Obj = 86.7404, schedule = [3 1 1 0 2 0 1 1 1 1 1 0 1 2 0 1 0 2 0 6]
-  Candidate 2: Obj = 89.4326, schedule = [2 0 2 0 2 0 1 1 1 1 1 0 1 1 1 0 2 1 1 6]
-  Candidate 3: Obj = 87.8234, schedule = [1 1 2 1 1 0 1 1 0 2 0 2 0 1 1 1 1 1 1 6]
-  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  0  1  2  0  2  0  1  0  1  2  0  2 -1  2  1  1  0  7]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  1  1  0  2  0  2  1  1  1 -1  2  0  1  2  6]
+  Candidate 1: Obj = 92.5828, schedule = [1 2 0 1 2 0 2 0 0 1 2 1 1 0 0 2 0 1 2 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  0  1  1  2  1 -1  2  0  2  1  0  2 -1  1  1  2  1  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  0  2  0  2 -1  2  0  2  1  1  1 -1  1  1  1  2  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  2  0  0  2  0  2  1  0  2 -1  2  0  1  2  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 155
-Iteration 21 completed in 3.48 seconds.
+Iteration 21 completed in 4.30 seconds.
 
 --- Iteration 22/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  0  1  0  1  2  0  2  0  2 -1  2  1  0  2  5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  0  1  2  0  1  1  0  2  0  2  0  2 -1  1  1  1  2  5]
-  Candidate 2: Obj = 93.4802, schedule = [1 1 2 0 1 2 1 0 1 0 2 0 1 1 1 0 2 1 0 7]
-  Candidate 3: Obj = 93.9651, schedule = [1 1 2 1 0 2 0 1 1 0 1 1 2 0 1 0 1 2 0 7]
-  Candidate 4: Obj = 94.6652, schedule = [1 1 1 2 0 2 1 0 0 1 1 1 2 0 1 0 1 1 1 7]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  2  0  1  1  2 -1  2  0  1  2  1  0  1  1  1  0  1  6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  2  1  0  1  2 -1  1  1  2  0  2  0  1  0  2  1  0  6]
+  Candidate 2: Obj = 85.7941, schedule = [2 1 2 1 1 0 1 1 0 1 2 1 1 0 0 1 2 0 1 6]
+  Candidate 3: Obj = 85.9994, schedule = [2 2 1 1 0 2 0 0 1 1 2 1 0 2 0 0 1 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  1  0  1  1  2 -1  1  1  2  1  0  1  1  1  0  1  1  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 160
-Iteration 22 completed in 4.00 seconds.
+Iteration 22 completed in 5.34 seconds.
 
 --- Iteration 23/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  2  0  0  1  1  1  1  1  2 -1  2  0  2  0  6]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  2  0  1  1  0  1  2  1  1 -1  1  1  1  1  6]
-  Candidate 2: Obj = 94.1416, schedule = [1 2 1 1 0 1 1 1 0 1 1 1 2 0 0 2 1 0 1 7]
-  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  0  1  1  2  1 -1  1  1  2  1  0  2 -1  1  2  0  2  5]
-  Candidate 4: Obj = 87.8056, schedule = [2 2 0 2 0 1 2 0 0 1 1 1 2 1 0 0 2 0 1 6]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 92.1353, schedule = [1 2 1 0 2 1 0 0 1 2 1 0 1 1 1 0 2 1 0 7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  2  0  1  2 -1  2  0  1  2  1  1 -1  2  1  0  1  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  1  1  2  0  1  2  0  0  1  1  2  0  2 -1  2  1  0  1  7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  2  0  1  2  0  0  1  1  2  0  2 -1  1  2  0  2  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  0  1  2  0  1  1  1  0  1  1  2  1  1 -1  1  1  1  2  6]
+Best objective value found so far: 76.8680
 Total points evaluated: 165
-Iteration 23 completed in 3.45 seconds.
+Iteration 23 completed in 5.30 seconds.
 
 --- Iteration 24/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 86.9197, schedule = [2 1 2 0 2 1 1 0 0 2 1 0 1 2 0 1 0 1 2 5]
-  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  0  2  0  1  1  1  1  0  2 -1  2  1  1  0  6]
-  Candidate 2: Obj = 85.8856, schedule = [2 2 0 1 2 1 1 0 0 2 0 2 0 1 1 1 1 1 0 6]
-  Candidate 3: Obj = 95.8199, schedule = [1 2 1 0 1 2 1 0 0 2 1 1 0 2 0 0 1 1 1 7]
-  Candidate 4: Obj = 94.0938, schedule = [1 2 0 1 2 1 0 1 1 1 1 1 0 2 0 0 1 1 1 7]
-Best objective value found so far: 82.2091
+  Candidate 0: Obj = 85.4393, schedule = [3 1 0 2 1 1 0 0 1 2 0 1 1 2 0 0 2 0 2 5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  1  0  2  1  1  0  0  2  0  1  1  2  1 -1  2  1  0  1  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  1  0  2  1  1  0  1  0  1  1  1  2  1 -1  1  2  0  2  5]
+  Candidate 3: Obj = 85.9823, schedule = [3 1 0 2 1 1 0 1 0 1 2 0 2 0 0 1 2 0 2 5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  0  2  1  1  0  1  0  1  1  1  2  1 -1  1  2  0  2  5]
+Best objective value found so far: 76.8680
 Total points evaluated: 170
-Iteration 24 completed in 5.34 seconds.
+Iteration 24 completed in 5.01 seconds.
 
 --- Iteration 25/25 ---
 Fitting GP model...
 GP model fitted.
 Optimizing acquisition function (LCB)...
 Selected 5 candidate(s).
-  Candidate 0: Obj = 85.7222, schedule = [3 1 0 1 2 0 2 0 0 1 2 0 2 0 0 2 1 1 1 5]
-  Candidate 1: Obj = 85.1417, schedule = [2 2 0 1 1 1 2 0 0 1 2 1 1 1 0 1 1 1 0 6]
-  Candidate 2: Obj = 91.1185, schedule = [1 2 0 1 2 0 1 1 0 1 2 1 1 0 1 1 1 0 2 6]
-  Candidate 3: Obj = 84.9936, schedule = [3 1 0 1 2 0 1 1 0 1 2 1 1 0 1 1 1 0 2 5]
-  Candidate 4: Obj = 82.1778, schedule = [2 2 0 1 1 2 1 0 0 1 2 0 2 0 1 1 1 1 1 5]
-Best objective value found so far: 82.1778
+  Candidate 0: Obj = 92.3050, schedule = [2 0 1 1 2 0 1 0 2 1 1 1 0 1 0 1 1 1 1 7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  1  2  0  1  1  2 -1  2  1  1  0  1  1  0  1  1  2  0  7]
+  Candidate 2: Obj = 93.0397, schedule = [2 0 1 1 2 1 0 0 1 2 1 1 0 1 0 1 1 1 1 7]
+  Candidate 3: Obj = 92.8249, schedule = [1 1 2 0 1 2 0 0 1 2 1 1 0 1 0 1 1 2 0 7]
+  Candidate 4: Obj = 92.5665, schedule = [1 1 2 0 2 0 1 0 2 1 1 1 0 1 0 1 1 1 1 7]
+Best objective value found so far: 76.8680
 Total points evaluated: 175
-Iteration 25 completed in 3.14 seconds.
+Iteration 25 completed in 5.16 seconds.
 
 --- Optimization Finished ---
 Total evaluations: 175
-Best Objective Value Found: 82.17782681025894
-Best U vector Found: [0 0 1 0 0 0 1 1 1 0 0 1 0 1 0 1 1 1 1 1]
+Best Objective Value Found: 76.86799135650742
+Best U vector Found: [0 0 0 0 0 0 0 0 0 0 1 1 1 0 0 1 1 1 1 1]
 
 --- Verification ---
 Is the best U feasible? True
-Resulting Y vector for best U: [2 2 0 1 1 2 1 0 0 1 2 0 2 0 1 1 1 1 1 5]
-Objective value (recalculated): 82.1778</code></pre>
+Resulting Y vector for best U: [2 1 1 1 1 1 1 0 1 2 1 1 0 1 1 1 1 1 1 5]
+Objective value (recalculated): 76.8680</code></pre>
+</div>
+</div>
+</section>
+<section id="experiment-3-cbo-with-lcb-and-wavelet-dictionary." class="level4" data-number="6.4.6.6">
+<h4 data-number="6.4.6.6" class="anchored" data-anchor-id="experiment-3-cbo-with-lcb-and-wavelet-dictionary."><span class="header-section-number">6.4.6.6</span> 6. Experiment 3: CBO with LCB and wavelet dictionary.</h4>
+<div id="b0faf327" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- BO Helper Functions ---</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="co"># --- get_fitted_model function remains the same ---</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_fitted_model(train_X_embedded_scaled, train_Y, m):</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ... (implementation is unchanged) ...</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> train_Y.ndim <span class="op">&gt;</span> <span class="dv">1</span> <span class="kw">and</span> train_Y.shape[<span class="dv">1</span>] <span class="op">==</span> <span class="dv">1</span>: train_Y <span class="op">=</span> train_Y.ravel()</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    kernel <span class="op">=</span> ConstantKernel(<span class="fl">1.0</span>, constant_value_bounds<span class="op">=</span>(<span class="fl">1e-3</span>, <span class="fl">1e3</span>)) <span class="op">*</span> <span class="op">\</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>             Matern(length_scale<span class="op">=</span>np.ones(m), length_scale_bounds<span class="op">=</span>(<span class="fl">1e-2</span>, <span class="fl">1e2</span>), nu<span class="op">=</span><span class="fl">2.5</span>) <span class="op">+</span> <span class="op">\</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>             WhiteKernel(noise_level<span class="op">=</span><span class="fl">1e-10</span>, <span class="co"># Small value for numerical stability</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>                         noise_level_bounds<span class="op">=</span><span class="st">"fixed"</span>) <span class="co"># Bounds for noise optimization</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    gp_model <span class="op">=</span> GaussianProcessRegressor(kernel<span class="op">=</span>kernel, alpha<span class="op">=</span><span class="fl">1e-10</span>, n_restarts_optimizer<span class="op">=</span><span class="dv">10</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    gp_model.fit(train_X_embedded_scaled, train_Y)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> gp_model</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> lower_confidence_bound(mu, sigma, kappa<span class="op">=</span><span class="fl">2.576</span>):</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co">    Computes the Lower Confidence Bound (LCB) acquisition function.</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co">    Assumes maximization of this value guides the search (since mu is neg objective).</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co">    Higher LCB means lower predicted objective or lower penalty for uncertainty.</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co">    mu, sigma: Predicted mean and standard deviation (NumPy arrays).</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="co">    kappa: Controls the balance between exploitation (high mu -&gt; low original objective)</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co">           and exploration (low sigma).</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ensure sigma is non-negative</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>    sigma <span class="op">=</span> np.maximum(sigma, <span class="dv">0</span>)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> mu <span class="op">-</span> kappa <span class="op">*</span> sigma <span class="co"># &lt;&lt;&lt; Sign flipped from UCB</span></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, num_candidates, kappa):</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="co">    Optimizes LCB acquisition function by sampling random binary candidates,</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="co">    embedding, SCALING, predicting with GP, and calculating LCB.</span></span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="co">    Selects the top q candidates based on LCB.</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns candidates as a numpy array (q x T).</span></span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>    m <span class="op">=</span> dictionary_A.shape[<span class="dv">0</span>]</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 1. Generate Random Binary Candidates</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>    candidate_u_vectors_np <span class="op">=</span> np.random.randint(<span class="dv">0</span>, <span class="dv">2</span>, size<span class="op">=</span>(num_candidates, T))</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 2. Embed the Candidates</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    embedded_candidates_np <span class="op">=</span> embed_batch(candidate_u_vectors_np, dictionary_A)</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 3. Scale the Embedded Candidates</span></span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>    embedded_candidates_scaled_np <span class="op">=</span> scaler.transform(embedded_candidates_np)</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 4. Predict Mean and Std Dev using the GP Model</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a>    mu, std <span class="op">=</span> gp_model.predict(embedded_candidates_scaled_np, return_std<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 5. Calculate Acquisition Function (Lower Confidence Bound) &lt;&lt;&lt; CHANGED HERE</span></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>    acq_values <span class="op">=</span> lower_confidence_bound(mu, std, kappa<span class="op">=</span>kappa) <span class="co"># Use LCB</span></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a>    <span class="co"># 6. Select Top Candidates (based on highest LCB) &lt;&lt;&lt; COMMENT UPDATED</span></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>    <span class="co"># We maximize LCB = mu - kappa*sigma, where mu is neg_objective</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>    top_indices <span class="op">=</span> np.argsort(acq_values)[<span class="op">-</span>q:]</span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a>    top_indices <span class="op">=</span> top_indices[::<span class="op">-</span><span class="dv">1</span>] <span class="co"># Ensure descending order of LCB</span></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> candidate_u_vectors_np[top_indices, :]</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a><span class="co"># --- BO Loop ---</span></span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a><span class="co"># Parameters</span></span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>KAPPA <span class="op">=</span> <span class="fl">2.576</span> <span class="co"># Exploration parameter for LCB. Adjust as needed.</span></span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a>N_INITIAL <span class="op">=</span> <span class="dv">49</span> <span class="co"># The initial schedule will always be included</span></span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>N_ITERATIONS <span class="op">=</span> <span class="dv">25</span></span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>BATCH_SIZE_q <span class="op">=</span> <span class="dv">5</span></span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a>NUM_CANDIDATES_Acqf <span class="op">=</span> T<span class="op">*</span><span class="dv">5</span><span class="op">*</span><span class="dv">1024</span> <span class="co"># Might need more for higher T</span></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>m <span class="op">=</span> math.ceil(T<span class="op">/</span><span class="dv">4</span>) <span class="co"># Dimension of the embedding space</span></span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="co"># Store evaluated points (using NumPy arrays)</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>evaluated_U_np_list <span class="op">=</span> [] <span class="co"># List to store evaluated U vectors (binary)</span></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a>evaluated_f_vals <span class="op">=</span> []    <span class="co"># List to store raw objective values (lower is better)</span></span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a>train_Y_list <span class="op">=</span> []        <span class="co"># List to store NEGATED objective values for GP (higher is better)</span></span>
+<span id="cb9-74"><a href="#cb9-74" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-75"><a href="#cb9-75" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Initialization</span></span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> U_init <span class="kw">in</span> initial_candidates:</span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a>    f_val <span class="op">=</span> evaluate_objective(U_init, X, v_star, convolutions, d, w)</span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>    neg_f_val <span class="op">=</span> <span class="op">-</span>f_val</span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a>    evaluated_U_np_list.append(U_init)</span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a>    evaluated_f_vals.append(f_val)</span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a>    train_Y_list.append(neg_f_val)</span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert lists to NumPy arrays for GP fitting</span></span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a>train_Y <span class="op">=</span> np.array(train_Y_list).reshape(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>) <span class="co"># Keep as column vector initially</span></span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a>best_obj_so_far <span class="op">=</span> <span class="bu">min</span>(evaluated_f_vals) <span class="cf">if</span> evaluated_f_vals <span class="cf">else</span> <span class="bu">float</span>(<span class="st">'inf'</span>)</span>
+<span id="cb9-87"><a href="#cb9-87" aria-hidden="true" tabindex="-1"></a>initial_best_obj_so_far_lcb <span class="op">=</span> best_obj_so_far <span class="co"># Saved for reporting results</span></span>
+<span id="cb9-88"><a href="#cb9-88" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial best objective value: </span><span class="sc">{</span>best_obj_so_far<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-89"><a href="#cb9-89" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> np.isfinite(best_obj_so_far):</span>
+<span id="cb9-90"><a href="#cb9-90" aria-hidden="true" tabindex="-1"></a>     <span class="bu">print</span>(<span class="st">"Warning: Initial best objective is infinite, possibly all initial points were infeasible."</span>)</span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-92"><a href="#cb9-92" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. BO Iterations</span></span>
+<span id="cb9-93"><a href="#cb9-93" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> iteration <span class="kw">in</span> <span class="bu">range</span>(N_ITERATIONS):</span>
+<span id="cb9-94"><a href="#cb9-94" aria-hidden="true" tabindex="-1"></a>    start_time <span class="op">=</span> time.time()</span>
+<span id="cb9-95"><a href="#cb9-95" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">--- Iteration </span><span class="sc">{</span>iteration <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>N_ITERATIONS<span class="sc">}</span><span class="ss"> ---"</span>)</span>
+<span id="cb9-96"><a href="#cb9-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-97"><a href="#cb9-97" aria-hidden="true" tabindex="-1"></a>    <span class="co"># a. Generate dictionary A (remains the same)</span></span>
+<span id="cb9-98"><a href="#cb9-98" aria-hidden="true" tabindex="-1"></a>    current_dictionary_A <span class="op">=</span> generate_wavelet_dictionary(T, m)</span>
+<span id="cb9-99"><a href="#cb9-99" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-100"><a href="#cb9-100" aria-hidden="true" tabindex="-1"></a>    <span class="co"># b. Embed ALL evaluated U vectors (remains the same)</span></span>
+<span id="cb9-101"><a href="#cb9-101" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> evaluated_U_np_list: <span class="cf">continue</span></span>
+<span id="cb9-102"><a href="#cb9-102" aria-hidden="true" tabindex="-1"></a>    evaluated_U_np_array <span class="op">=</span> np.array(evaluated_U_np_list)</span>
+<span id="cb9-103"><a href="#cb9-103" aria-hidden="true" tabindex="-1"></a>    embedded_train_X <span class="op">=</span> embed_batch(evaluated_U_np_array, current_dictionary_A)</span>
+<span id="cb9-104"><a href="#cb9-104" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-105"><a href="#cb9-105" aria-hidden="true" tabindex="-1"></a>    <span class="co"># c. Scale the embedded training data (remains the same)</span></span>
+<span id="cb9-106"><a href="#cb9-106" aria-hidden="true" tabindex="-1"></a>    scaler <span class="op">=</span> MinMaxScaler()</span>
+<span id="cb9-107"><a href="#cb9-107" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> embedded_train_X.shape[<span class="dv">0</span>] <span class="op">&gt;</span> <span class="dv">0</span>: embedded_train_X_scaled <span class="op">=</span> scaler.fit_transform(embedded_train_X)</span>
+<span id="cb9-108"><a href="#cb9-108" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: embedded_train_X_scaled <span class="op">=</span> embedded_train_X</span>
+<span id="cb9-109"><a href="#cb9-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-110"><a href="#cb9-110" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ensure train_Y is NumPy array</span></span>
+<span id="cb9-111"><a href="#cb9-111" aria-hidden="true" tabindex="-1"></a>    train_Y_for_fit <span class="op">=</span> np.array(train_Y_list)</span>
+<span id="cb9-112"><a href="#cb9-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-113"><a href="#cb9-113" aria-hidden="true" tabindex="-1"></a>    <span class="co"># d. Fit GP Model (remains the same)</span></span>
+<span id="cb9-114"><a href="#cb9-114" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Fitting GP model..."</span>)</span>
+<span id="cb9-115"><a href="#cb9-115" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> embedded_train_X_scaled.shape[<span class="dv">0</span>] <span class="op">&gt;</span> <span class="dv">0</span> <span class="kw">and</span> train_Y_for_fit.shape[<span class="dv">0</span>] <span class="op">==</span> embedded_train_X_scaled.shape[<span class="dv">0</span>]:</span>
+<span id="cb9-116"><a href="#cb9-116" aria-hidden="true" tabindex="-1"></a>        gp_model <span class="op">=</span> get_fitted_model(embedded_train_X_scaled, train_Y_for_fit, m)</span>
+<span id="cb9-117"><a href="#cb9-117" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"GP model fitted."</span>)</span>
+<span id="cb9-118"><a href="#cb9-118" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>:</span>
+<span id="cb9-119"><a href="#cb9-119" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Warning: Not enough data or data mismatch to fit GP model. Skipping iteration."</span>)</span>
+<span id="cb9-120"><a href="#cb9-120" aria-hidden="true" tabindex="-1"></a>        <span class="cf">continue</span></span>
+<span id="cb9-121"><a href="#cb9-121" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-122"><a href="#cb9-122" aria-hidden="true" tabindex="-1"></a>    <span class="co"># e. Determine current best neg value (useful for tracking, not directly used in LCB calculation)</span></span>
+<span id="cb9-123"><a href="#cb9-123" aria-hidden="true" tabindex="-1"></a>    current_best_neg_f_val <span class="op">=</span> np.<span class="bu">max</span>(train_Y_for_fit) <span class="cf">if</span> train_Y_for_fit.size <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="op">-</span><span class="bu">float</span>(<span class="st">'inf'</span>)</span>
+<span id="cb9-124"><a href="#cb9-124" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> current_best_neg_f_val <span class="op">&lt;=</span> <span class="op">-</span>LARGE_PENALTY <span class="op">/</span> <span class="dv">2</span> <span class="kw">and</span> np.isfinite(current_best_neg_f_val):</span>
+<span id="cb9-125"><a href="#cb9-125" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Warning: Current best NEGATIVE objective value (</span><span class="sc">{</span>current_best_neg_f_val<span class="sc">:.2f}</span><span class="ss">) is very low (likely from penalties)."</span>)</span>
+<span id="cb9-126"><a href="#cb9-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-127"><a href="#cb9-127" aria-hidden="true" tabindex="-1"></a>    <span class="co"># f. Optimize Acquisition Function (LCB) &lt;&lt;&lt; MODIFIED CALL &amp; COMMENT</span></span>
+<span id="cb9-128"><a href="#cb9-128" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Optimizing acquisition function (LCB)..."</span>) <span class="co"># Comment updated</span></span>
+<span id="cb9-129"><a href="#cb9-129" aria-hidden="true" tabindex="-1"></a>    next_U_candidates_np <span class="op">=</span> optimize_acqf_discrete_via_embedding(</span>
+<span id="cb9-130"><a href="#cb9-130" aria-hidden="true" tabindex="-1"></a>        gp_model<span class="op">=</span>gp_model,</span>
+<span id="cb9-131"><a href="#cb9-131" aria-hidden="true" tabindex="-1"></a>        scaler<span class="op">=</span>scaler,</span>
+<span id="cb9-132"><a href="#cb9-132" aria-hidden="true" tabindex="-1"></a>        dictionary_A<span class="op">=</span>current_dictionary_A,</span>
+<span id="cb9-133"><a href="#cb9-133" aria-hidden="true" tabindex="-1"></a>        T<span class="op">=</span>T,</span>
+<span id="cb9-134"><a href="#cb9-134" aria-hidden="true" tabindex="-1"></a>        q<span class="op">=</span>BATCH_SIZE_q,</span>
+<span id="cb9-135"><a href="#cb9-135" aria-hidden="true" tabindex="-1"></a>        num_candidates<span class="op">=</span>NUM_CANDIDATES_Acqf,</span>
+<span id="cb9-136"><a href="#cb9-136" aria-hidden="true" tabindex="-1"></a>        kappa<span class="op">=</span>KAPPA <span class="co"># Pass kappa</span></span>
+<span id="cb9-137"><a href="#cb9-137" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-138"><a href="#cb9-138" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Selected </span><span class="sc">{</span>next_U_candidates_np<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss"> candidate(s)."</span>)</span>
+<span id="cb9-139"><a href="#cb9-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-140"><a href="#cb9-140" aria-hidden="true" tabindex="-1"></a>    <span class="co"># g. Evaluate Objective (remains the same)</span></span>
+<span id="cb9-141"><a href="#cb9-141" aria-hidden="true" tabindex="-1"></a>    newly_evaluated_U <span class="op">=</span> []<span class="op">;</span> newly_evaluated_f <span class="op">=</span> []<span class="op">;</span> newly_evaluated_neg_f <span class="op">=</span> []</span>
+<span id="cb9-142"><a href="#cb9-142" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(next_U_candidates_np.shape[<span class="dv">0</span>]):</span>
+<span id="cb9-143"><a href="#cb9-143" aria-hidden="true" tabindex="-1"></a>        next_U <span class="op">=</span> next_U_candidates_np[i, :]</span>
+<span id="cb9-144"><a href="#cb9-144" aria-hidden="true" tabindex="-1"></a>        already_evaluated <span class="op">=</span> <span class="bu">any</span>(np.array_equal(next_U, u) <span class="cf">for</span> u <span class="kw">in</span> evaluated_U_np_list)</span>
+<span id="cb9-145"><a href="#cb9-145" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> already_evaluated: <span class="bu">print</span>(<span class="ss">f"  Candidate </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> was already evaluated. Skipping."</span>)<span class="op">;</span> <span class="cf">continue</span></span>
+<span id="cb9-146"><a href="#cb9-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-147"><a href="#cb9-147" aria-hidden="true" tabindex="-1"></a>        next_f <span class="op">=</span> evaluate_objective(next_U, X, v_star, convolutions, d, w)</span>
+<span id="cb9-148"><a href="#cb9-148" aria-hidden="true" tabindex="-1"></a>        next_neg_f <span class="op">=</span> <span class="op">-</span>next_f</span>
+<span id="cb9-149"><a href="#cb9-149" aria-hidden="true" tabindex="-1"></a>        V_sum <span class="op">=</span> np.<span class="bu">sum</span>(v_star[next_U <span class="op">==</span> <span class="dv">1</span>, :], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-150"><a href="#cb9-150" aria-hidden="true" tabindex="-1"></a>        Y <span class="op">=</span> X <span class="op">+</span> V_sum</span>
+<span id="cb9-151"><a href="#cb9-151" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  Candidate </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: Obj = </span><span class="sc">{</span>next_f<span class="sc">:.4f}</span><span class="ss">, schedule = </span><span class="sc">{</span>Y<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-152"><a href="#cb9-152" aria-hidden="true" tabindex="-1"></a>        newly_evaluated_U.append(next_U)<span class="op">;</span> newly_evaluated_f.append(next_f)<span class="op">;</span> newly_evaluated_neg_f.append(next_neg_f)</span>
+<span id="cb9-153"><a href="#cb9-153" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> next_f <span class="op">&lt;</span> best_obj_so_far: best_obj_so_far <span class="op">=</span> next_f</span>
+<span id="cb9-154"><a href="#cb9-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-155"><a href="#cb9-155" aria-hidden="true" tabindex="-1"></a>    <span class="co"># h. Augment Dataset (remains the same)</span></span>
+<span id="cb9-156"><a href="#cb9-156" aria-hidden="true" tabindex="-1"></a>    evaluated_U_np_list.extend(newly_evaluated_U)<span class="op">;</span> evaluated_f_vals.extend(newly_evaluated_f)<span class="op">;</span> train_Y_list.extend(newly_evaluated_neg_f)</span>
+<span id="cb9-157"><a href="#cb9-157" aria-hidden="true" tabindex="-1"></a>    train_Y <span class="op">=</span> np.array(train_Y_list).reshape(<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>)</span>
+<span id="cb9-158"><a href="#cb9-158" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-159"><a href="#cb9-159" aria-hidden="true" tabindex="-1"></a>    iter_time <span class="op">=</span> time.time() <span class="op">-</span> start_time</span>
+<span id="cb9-160"><a href="#cb9-160" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best objective value found so far: </span><span class="sc">{</span>best_obj_so_far<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb9-161"><a href="#cb9-161" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total points evaluated: </span><span class="sc">{</span><span class="bu">len</span>(evaluated_f_vals)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-162"><a href="#cb9-162" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Iteration </span><span class="sc">{</span>iteration <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss"> completed in </span><span class="sc">{</span>iter_time<span class="sc">:.2f}</span><span class="ss"> seconds."</span>)</span>
+<span id="cb9-163"><a href="#cb9-163" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-164"><a href="#cb9-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-165"><a href="#cb9-165" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Results ---</span></span>
+<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">--- Optimization Finished ---"</span>)</span>
+<span id="cb9-167"><a href="#cb9-167" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> evaluated_f_vals: <span class="bu">print</span>(<span class="st">"No points were successfully evaluated."</span>)</span>
+<span id="cb9-168"><a href="#cb9-168" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb9-169"><a href="#cb9-169" aria-hidden="true" tabindex="-1"></a>    final_best_idx_lcb <span class="op">=</span> np.argmin(evaluated_f_vals)</span>
+<span id="cb9-170"><a href="#cb9-170" aria-hidden="true" tabindex="-1"></a>    final_best_U_lcb <span class="op">=</span> evaluated_U_np_list[final_best_idx_lcb]</span>
+<span id="cb9-171"><a href="#cb9-171" aria-hidden="true" tabindex="-1"></a>    final_best_f_lcb <span class="op">=</span> evaluated_f_vals[final_best_idx_lcb]</span>
+<span id="cb9-172"><a href="#cb9-172" aria-hidden="true" tabindex="-1"></a>    nr_evaluated_f_vals_lcb <span class="op">=</span> <span class="bu">len</span>(evaluated_f_vals) <span class="co"># Saved for reporting results</span></span>
+<span id="cb9-173"><a href="#cb9-173" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Total evaluations: </span><span class="sc">{</span>nr_evaluated_f_vals_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-174"><a href="#cb9-174" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best Objective Value Found: </span><span class="sc">{</span>final_best_f_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-175"><a href="#cb9-175" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best U vector Found: </span><span class="sc">{</span>final_best_U_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-176"><a href="#cb9-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-177"><a href="#cb9-177" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Verification</span></span>
+<span id="cb9-178"><a href="#cb9-178" aria-hidden="true" tabindex="-1"></a>    V_sum_best <span class="op">=</span> np.<span class="bu">sum</span>(v_star[final_best_U_lcb <span class="op">==</span> <span class="dv">1</span>, :], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb9-179"><a href="#cb9-179" aria-hidden="true" tabindex="-1"></a>    Y_best_lcb <span class="op">=</span> X <span class="op">+</span> V_sum_best</span>
+<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a>    is_feasible <span class="op">=</span> np.<span class="bu">all</span>(Y_best_lcb <span class="op">&gt;=</span> <span class="dv">0</span>)</span>
+<span id="cb9-181"><a href="#cb9-181" aria-hidden="true" tabindex="-1"></a>    recalculated_obj <span class="op">=</span> LARGE_PENALTY</span>
+<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> is_feasible:</span>
+<span id="cb9-183"><a href="#cb9-183" aria-hidden="true" tabindex="-1"></a>        ewt, esp <span class="op">=</span> calculate_objective_serv_time_lookup(Y_best_lcb, d, convolutions)</span>
+<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a>        recalculated_obj <span class="op">=</span> w <span class="op">*</span> ewt <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w) <span class="op">*</span> esp</span>
+<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">--- Verification ---"</span>)</span>
+<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Is the best U feasible? </span><span class="sc">{</span>is_feasible<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> is_feasible:</span>
+<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Resulting Y vector for best U: </span><span class="sc">{</span>Y_best_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Objective value (recalculated): </span><span class="sc">{</span>recalculated_obj<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb9-191"><a href="#cb9-191" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> np.isclose(final_best_f_lcb, recalculated_obj): <span class="bu">print</span>(<span class="ss">f"Warning: Stored best objective (</span><span class="sc">{</span>final_best_f<span class="sc">:.4f}</span><span class="ss">) does not match recalculation (</span><span class="sc">{</span>recalculated_obj<span class="sc">:.4f}</span><span class="ss">)!"</span>)</span>
+<span id="cb9-192"><a href="#cb9-192" aria-hidden="true" tabindex="-1"></a>    <span class="cf">elif</span> final_best_f_lcb <span class="op">&lt;</span> LARGE_PENALTY: <span class="bu">print</span>(<span class="ss">f"Warning: Best objective (</span><span class="sc">{</span>final_best_f_lcb<span class="sc">:.4f}</span><span class="ss">) is not the penalty value, but feasibility check failed."</span>)<span class="op">;</span> <span class="bu">print</span>(<span class="ss">f"Resulting Y vector (infeasible): </span><span class="sc">{</span>Y_best_lcb<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"Best solution found corresponds to an infeasible penalty value."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Initial best objective value: 80.26076921245387
+
+--- Iteration 1/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 82.5633, schedule = [3 1 1 0 1 2 0 0 1 2 1 0 1 1 0 2 1 1 1 5]
+  Candidate 1: Obj = 83.4964, schedule = [2 1 1 1 2 0 1 0 1 1 2 0 2 0 0 2 1 1 0 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  2  1  1  0  0  1  1  2  0  2  1 -1  1  1  2  0  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  1  1  0  2 -1  1  2  1  0  2  0  0  2  1  1  1  5]
+  Candidate 4: Obj = 87.6714, schedule = [3 1 1 1 1 1 0 0 1 2 1 0 2 0 0 1 1 2 0 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 55
+Iteration 1 completed in 3.46 seconds.
+
+--- Iteration 2/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 83.9201, schedule = [2 2 1 0 2 0 2 0 0 2 0 2 0 2 0 1 1 1 0 6]
+  Candidate 1: Obj = 88.8572, schedule = [2 0 1 1 1 1 1 0 1 2 1 1 0 2 0 1 1 1 0 7]
+  Candidate 2: Obj = 83.0792, schedule = [2 1 1 2 0 2 0 0 1 2 1 0 1 2 0 1 0 1 2 5]
+  Candidate 3: Obj = 83.4284, schedule = [2 1 1 2 0 2 0 1 0 2 0 2 1 1 0 1 0 1 2 5]
+  Candidate 4: Obj = 89.6085, schedule = [2 0 1 1 1 1 1 1 0 2 0 2 1 1 0 0 1 2 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 60
+Iteration 2 completed in 3.54 seconds.
+
+--- Iteration 3/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 84.9928, schedule = [2 2 0 2 0 1 2 0 0 2 1 1 0 1 1 0 1 2 0 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  0  1  1  1  2 -1  1  2  1  1  0  1  1  1  0  2  1  5]
+  Candidate 2: Obj = 83.9048, schedule = [3 1 0 1 1 1 2 0 0 2 1 0 1 1 1 1 0 2 0 6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  0  1  2  0  2 -1  1  2  1  1  0  1  1  0  1  2  0  7]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  1  0  1  1  2 -1  1  2  0  2  0  1  1  1  0  2  0  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 65
+Iteration 3 completed in 3.81 seconds.
+
+--- Iteration 4/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 91.0832, schedule = [1 1 1 1 1 2 0 0 1 2 1 1 1 0 1 1 0 1 1 7]
+  Candidate 1: Obj = 88.4969, schedule = [1 1 1 1 1 1 1 0 2 0 1 2 0 2 0 1 1 1 0 7]
+  Candidate 2: Obj = 84.8212, schedule = [1 1 1 1 2 1 0 1 0 2 1 0 2 0 1 1 1 1 1 6]
+  Candidate 3: Obj = 81.6991, schedule = [2 1 1 1 2 1 0 0 1 2 0 1 1 2 0 1 1 0 2 5]
+  Candidate 4: Obj = 82.7041, schedule = [2 1 2 0 1 2 0 0 1 2 1 1 0 1 0 1 2 1 1 5]
+Best objective value found so far: 80.2608
+Total points evaluated: 70
+Iteration 4 completed in 4.18 seconds.
+
+--- Iteration 5/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  1  0  2  1  0  2 -1  1  2  0  1  2  1 -1  2  1  1  1  5]
+  Candidate 1: Obj = 87.7618, schedule = [1 1 1 2 1 0 1 1 1 1 0 1 2 1 0 1 0 2 1 6]
+  Candidate 2: Obj = 86.2268, schedule = [2 1 2 1 1 1 0 0 1 2 1 1 0 1 0 1 1 2 0 6]
+  Candidate 3: Obj = 92.0534, schedule = [2 0 2 1 1 1 0 1 1 1 0 2 0 2 0 0 1 1 1 7]
+  Candidate 4: Obj = 91.5782, schedule = [1 1 1 2 0 2 0 0 1 2 0 2 0 1 1 0 2 1 0 7]
+Best objective value found so far: 80.2608
+Total points evaluated: 75
+Iteration 5 completed in 4.01 seconds.
+
+--- Iteration 6/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  1  0  1  2  1  1 -1  1  1  2  0  1  2 -1  1  2  1  1  5]
+  Candidate 1: Obj = 90.4649, schedule = [2 1 1 0 1 1 1 1 0 1 1 1 1 1 0 1 2 0 1 7]
+  Candidate 2: Obj = 90.4728, schedule = [2 0 2 0 1 1 1 1 1 0 1 1 1 1 0 1 1 2 0 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  1  1  0  0  1  2  0  1  2 -1  1  2  1  1  5]
+  Candidate 4: Obj = 92.8781, schedule = [2 1 0 2 0 2 1 0 0 1 1 1 2 0 0 1 2 1 0 7]
+Best objective value found so far: 80.2608
+Total points evaluated: 80
+Iteration 6 completed in 3.16 seconds.
+
+--- Iteration 7/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 92.7083, schedule = [1 2 0 1 2 1 0 1 1 0 2 0 2 0 0 1 1 2 0 7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  0  2  0  2 -1  2  1  0  2  1  0  0  2  1  0  1  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  1  1 -1  1  2  0  2  1  0  0  2  1  1  0  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  1  0  2  0  2 -1  1  2  0  2  0  1  0  2  1  0  2  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  1  2 -1  1  2  0  2  1  0  1  1  1  1  0  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 85
+Iteration 7 completed in 3.19 seconds.
+
+--- Iteration 8/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 85.4461, schedule = [3 0 2 1 0 2 0 0 1 2 0 2 0 2 0 0 1 1 2 5]
+  Candidate 1: Obj = 84.2691, schedule = [3 0 2 1 0 2 1 0 0 2 0 2 0 2 0 1 1 0 2 5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1 -1  1  1  1  2  0  2  0  1  1  0  2  5]
+  Candidate 3: Obj = 90.9097, schedule = [1 2 1 1 1 0 1 1 1 0 1 1 1 1 0 2 1 0 1 7]
+  Candidate 4: Obj = 84.8779, schedule = [3 0 1 1 2 0 2 0 1 0 2 0 1 1 0 1 2 0 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 90
+Iteration 8 completed in 3.61 seconds.
+
+--- Iteration 9/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  0  2  0  1  1  2 -1  2  0  2  1  0  1  0  1  2  0  2  6]
+  Candidate 1: Obj = 91.1238, schedule = [1 2 0 1 1 1 1 0 1 2 1 1 1 0 0 2 1 0 2 6]
+  Candidate 2: Obj = 92.8681, schedule = [2 1 0 1 1 2 0 0 1 2 1 0 2 0 0 1 2 1 0 7]
+  Candidate 3: Obj = 93.1361, schedule = [2 0 1 1 1 2 0 0 2 1 1 1 1 0 0 1 1 2 0 7]
+  Candidate 4: Obj = 91.3065, schedule = [2 1 0 2 0 1 1 0 1 2 1 0 1 1 0 2 1 1 0 7]
+Best objective value found so far: 80.2608
+Total points evaluated: 95
+Iteration 9 completed in 3.40 seconds.
+
+--- Iteration 10/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 84.6761, schedule = [2 2 0 2 0 2 0 0 1 2 1 1 1 0 1 0 2 0 2 5]
+  Candidate 1: Obj = 83.7661, schedule = [2 2 0 1 1 2 0 0 2 0 2 0 2 0 1 0 2 0 2 5]
+  Candidate 2: Obj = 82.5920, schedule = [2 2 1 0 1 2 0 0 1 1 2 1 1 0 1 1 1 0 2 5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  1  1  0  2  1 -1  2  0  1  2  1  0  0  1  1  1  2  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  2  1  0  1  2  1 -1  1  1  1  2  1  0  0  1  2  0  2  5]
+Best objective value found so far: 80.2608
+Total points evaluated: 100
+Iteration 10 completed in 3.48 seconds.
+
+--- Iteration 11/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 84.0210, schedule = [3 0 2 0 1 1 1 0 1 1 1 1 2 0 0 1 1 2 0 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  0  1  2  1  0  0  1  1  1  1  1  2 -1  1  1  1  1  6]
+  Candidate 2: Obj = 83.2458, schedule = [3 1 0 1 1 1 1 1 0 1 1 1 1 1 0 1 2 0 1 6]
+  Candidate 3: Obj = 83.2666, schedule = [2 2 0 1 1 1 1 1 0 1 1 2 0 1 0 1 2 0 1 6]
+  Candidate 4: Obj = 83.2666, schedule = [2 2 0 1 1 1 1 1 0 1 1 2 0 1 0 1 2 0 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 105
+Iteration 11 completed in 4.10 seconds.
+
+--- Iteration 12/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 86.2067, schedule = [2 2 0 2 1 1 0 1 0 1 2 0 2 1 0 0 1 2 0 6]
+  Candidate 1: Obj = 83.4829, schedule = [2 1 1 1 2 1 0 1 1 1 1 0 2 1 0 1 0 1 1 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  1  2  0  2  1  1 -1  1  1  2  0  2  0  1  0  1  2  0  6]
+  Candidate 3: Obj = 86.8148, schedule = [2 2 1 1 1 1 1 0 0 2 1 0 2 0 1 0 1 2 0 6]
+  Candidate 4: Obj = 84.0387, schedule = [2 1 1 1 2 1 1 0 1 1 1 0 2 1 0 1 0 2 0 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 110
+Iteration 12 completed in 4.11 seconds.
+
+--- Iteration 13/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 92.2509, schedule = [1 2 0 2 0 2 0 0 2 1 0 2 0 1 0 1 1 1 2 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  2  1  0  2  0  0  2  1  1  1  0  2 -1  1  2  0  2  5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  2  1  1  0  2  1 -1  2  1  0  1  1  2 -1  1  1  1  2  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  1  2  1  0  2  0  0  2  1  1  0  1  2 -1  1  2  0  2  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  2  0  1  1  1  0  1  1  2 -1  1  2  0  2  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 115
+Iteration 13 completed in 4.28 seconds.
+
+--- Iteration 14/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  0  1  2  0  1  1  1  1  1  0  2  1  1 -1  2  1  0  1  7]
+  Candidate 1: Obj = 88.4720, schedule = [2 1 0 1 1 1 1 0 2 0 2 0 1 2 0 1 1 0 2 6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  0  1  2  0  1  1  1  1  0  1  2  1  1 -1  2  1  0  2  6]
+  Candidate 3: Obj = 89.0001, schedule = [1 2 1 0 1 2 0 0 2 0 1 1 1 2 0 0 2 1 1 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  0  2  0  0  2  0  1  1  1  2 -1  2  1  1  1  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 120
+Iteration 14 completed in 3.95 seconds.
+
+--- Iteration 15/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  0  2 -1  1  2  1  1  1  1 -1  1  1  1  1  7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  1  1 -1  1  2  0  1  2  1 -1  2  0  1  1  7]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  0  2 -1  1  2  1  1  1  1 -1  1  1  1  1  7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  0  1  2  1  0  2 -1  1  2  1  1  0  1  1  0  1  1  1  7]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  0  2 -1  2  1  1  0  2  0  0  1  2  0  1  7]
+Best objective value found so far: 80.2608
+Total points evaluated: 125
+Iteration 15 completed in 4.00 seconds.
+
+--- Iteration 16/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  1  2  1  0  1  0  2  1  1  0  2 -1  1  2  0  1  6]
+  Candidate 1: Obj = 84.4990, schedule = [2 1 1 2 0 2 0 1 0 1 2 1 0 2 0 0 2 1 0 6]
+  Candidate 2: Obj = 85.5322, schedule = [3 1 0 1 2 0 2 0 0 1 2 1 0 1 1 0 2 0 1 6]
+  Candidate 3: Obj = 91.5836, schedule = [1 2 1 0 2 0 2 0 1 0 2 1 0 2 0 0 2 0 2 6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  1  0  1  2  0  2  0  0  1  2  1  0  2 -1  1  2  0  1  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 130
+Iteration 16 completed in 3.64 seconds.
+
+--- Iteration 17/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  0  1  1  0  2  1  1  1  1 -1  1  2  1  1  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  1  1  1  0  2  1  1  1  1 -1  1  1  1  2  5]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 3  0  1  1  1  2  1  0  0  2  1  1  1  1 -1  1  2  1  1  5]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  1  1  1  0  2  1  1  1  1 -1  1  1  2  1  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  2  0  1  0  1  2  1  1  1 -1  1  1  2  1  5]
+Best objective value found so far: 80.2608
+Total points evaluated: 135
+Iteration 17 completed in 4.75 seconds.
+
+--- Iteration 18/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 90.1191, schedule = [2 1 0 2 1 1 1 0 1 0 2 1 0 1 1 1 0 1 2 6]
+  Candidate 1: Obj = 84.4125, schedule = [2 2 0 1 2 1 0 1 1 0 2 1 0 1 0 2 0 1 2 5]
+  Candidate 2: Obj = 82.1767, schedule = [2 1 1 1 1 2 1 0 1 0 2 1 0 1 1 1 0 1 2 5]
+  Candidate 3: Obj = 83.5688, schedule = [2 2 0 2 1 0 2 0 1 0 2 1 0 1 1 1 0 1 2 5]
+  Candidate 4: Obj = 89.7336, schedule = [1 2 0 1 2 0 2 0 1 0 2 1 0 1 1 1 0 1 2 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 140
+Iteration 18 completed in 4.31 seconds.
+
+--- Iteration 19/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  2  1  1  1  1 -1  1  2  1  0  2  1  0  1  1  1  1  5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  2  1  1  1  1  1 -1  1  2  1  0  2  0  0  2  1  1  0  6]
+  Candidate 2: Obj = 91.9080, schedule = [1 1 1 2 1 0 1 1 0 2 1 0 1 1 0 2 0 2 0 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 1  2  1  1  1  1  1  0  0  2  1  1  0  2 -1  2  1  1  1  6]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  1  1  1  2  1 -1  1  2  1  0  2  0  0  2  1  1  0  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 145
+Iteration 19 completed in 5.31 seconds.
+
+--- Iteration 20/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 86.1094, schedule = [3 0 2 1 1 1 1 0 1 1 0 1 1 2 0 0 2 0 1 6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  1  1  2  1  0  0  2  1  0  1  1  2 -1  1  2  0  1  6]
+  Candidate 2: Obj = 85.0145, schedule = [3 0 2 1 1 1 0 0 1 2 0 1 1 2 0 1 1 0 1 6]
+  Candidate 3: Obj = 90.7278, schedule = [2 1 0 1 2 0 1 1 0 2 0 1 1 1 1 0 2 0 1 7]
+  Candidate 4: Obj = 90.7645, schedule = [2 1 0 1 1 1 1 1 1 1 0 1 2 1 0 0 2 0 1 7]
+Best objective value found so far: 80.2608
+Total points evaluated: 150
+Iteration 20 completed in 5.65 seconds.
+
+--- Iteration 21/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 89.2794, schedule = [1 1 1 1 2 0 1 1 1 1 1 1 0 1 1 0 2 1 0 7]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  1  1  1  2  0  2 -1  1  2  1  1  1  1  0  0  2  1  1  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 1  1  1  2  1  0  2  0  0  2  1  1  0  2 -1  1  2  0  1  7]
+  Candidate 3: Obj = 84.6372, schedule = [2 1 2 0 2 0 1 1 0 2 1 1 0 2 0 0 2 1 0 6]
+  Candidate 4: Obj = 83.7027, schedule = [1 1 1 1 2 0 2 0 1 1 0 2 0 1 1 1 1 1 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 155
+Iteration 21 completed in 7.39 seconds.
+
+--- Iteration 22/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 85.7505, schedule = [3 1 1 0 2 1 0 0 1 2 1 0 2 0 0 2 0 2 1 5]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 1  2  1  0  2  1  0  1  0  2  1  0  2  1 -1  1  1  1  2  6]
+  Candidate 2: Obj = 10000000000.0000, schedule = [ 2  0  2  1  1  1  0  1  0  2  1  1  1  1 -1  1  1  1  2  6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  0  2  1  0  0  1  2  1  0  2  1 -1  1  1  1  2  5]
+  Candidate 4: Obj = 91.3943, schedule = [2 0 2 1 1 1 0 0 1 2 1 1 1 0 1 0 1 2 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 160
+Iteration 22 completed in 4.42 seconds.
+
+--- Iteration 23/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 83.0400, schedule = [3 0 2 1 0 1 2 0 0 1 1 2 0 2 0 0 2 1 1 5]
+  Candidate 1: Obj = 83.8154, schedule = [2 1 1 2 0 1 1 1 0 2 1 0 1 2 0 0 2 0 1 6]
+  Candidate 2: Obj = 93.4708, schedule = [2 0 1 2 1 1 0 0 1 2 1 1 1 1 0 0 2 1 0 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 2  2  1  1  0  1  2 -1  1  1  1  2  0  2 -1  2  0  2  1  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  2  1 -1  1  1  1  2  0  2  0  1  0  2  1  5]
+Best objective value found so far: 80.2608
+Total points evaluated: 165
+Iteration 23 completed in 6.32 seconds.
+
+--- Iteration 24/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 2  1  1  0  2  0  1  0  1  1  2  1  0  2 -1  1  1  1  1  7]
+  Candidate 1: Obj = 88.9931, schedule = [1 2 0 1 1 1 1 1 0 1 2 0 1 2 0 1 0 1 2 6]
+  Candidate 2: Obj = 91.6085, schedule = [2 1 1 0 1 2 0 1 0 2 1 0 1 2 0 0 2 1 0 7]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  2  1  0  1  1  0  1  1  2  1  0  2 -1  1  1  2  1  5]
+  Candidate 4: Obj = 89.2500, schedule = [2 1 1 0 2 0 2 0 0 2 1 1 1 1 0 1 0 2 1 6]
+Best objective value found so far: 80.2608
+Total points evaluated: 170
+Iteration 24 completed in 5.40 seconds.
+
+--- Iteration 25/25 ---
+Fitting GP model...
+GP model fitted.
+Optimizing acquisition function (LCB)...
+Selected 5 candidate(s).
+  Candidate 0: Obj = 10000000000.0000, schedule = [ 1  2  1  0  1  2  1 -1  2  0  2  1  0  2 -1  2  1  1  1  6]
+  Candidate 1: Obj = 10000000000.0000, schedule = [ 2  1  2  0  2  1  1  0  1  0  1  1  2  1 -1  1  1  1  1  6]
+  Candidate 2: Obj = 89.9185, schedule = [1 2 1 0 2 0 2 0 1 1 1 0 2 1 0 1 0 1 2 6]
+  Candidate 3: Obj = 10000000000.0000, schedule = [ 3  0  1  2  1  1  1 -1  2  0  1  1  1  1  1  1  0  1  2  5]
+  Candidate 4: Obj = 10000000000.0000, schedule = [ 2  1  2  0  2  0  2 -1  2  0  1  2  1  0  0  2  0  1  1  6]
+Best objective value found so far: 80.2608
+Total points evaluated: 175
+Iteration 25 completed in 5.81 seconds.
+
+--- Optimization Finished ---
+Total evaluations: 175
+Best Objective Value Found: 80.26076921245387
+Best U vector Found: [0 0 0 0 0 1 0 0 1 0 1 1 0 0 0 0 1 1 1 1]
+
+--- Verification ---
+Is the best U feasible? True
+Resulting Y vector for best U: [2 1 1 1 2 0 1 1 0 2 1 0 1 1 0 2 1 1 1 5]
+Objective value (recalculated): 80.2608</code></pre>
 </div>
 </div>
 </section>
@@ -1925,21 +2573,21 @@ Objective value (recalculated): 82.1778</code></pre>
 <section id="experiment-1-cbo-with-expected-improvement-ei-1" class="level3" data-number="6.5.1">
 <h3 data-number="6.5.1" class="anchored" data-anchor-id="experiment-1-cbo-with-expected-improvement-ei-1"><span class="header-section-number">6.5.1</span> Experiment 1: CBO with Expected Improvement (EI)</h3>
 <ul>
-<li><strong>Initial Best Objective (after random search)</strong>: 83.23712761052458</li>
-<li><strong>Final Best Objective Found</strong>: 81.98185637033471</li>
+<li><strong>Initial Best Objective (after random search)</strong>: 80.26076921245387</li>
+<li><strong>Final Best Objective Found</strong>: 78.36675144139465</li>
 <li><strong>Total Evaluations</strong>: 175</li>
-<li><strong>Best Perturbation Vector <span class="math inline">\(\mathbf{U}_{EI}^*\)</span></strong>: array([0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1])</li>
-<li><strong>Resulting Optimal Schedule <span class="math inline">\(\mathbf{x}_{EI}^*\)</span></strong>: array([2, 2, 1, 1, 1, 0, 1, 1, 0, 2, 1, 1, 0, 1, 1, 1, 1, 1, 1, 5])</li>
+<li><strong>Best Perturbation Vector <span class="math inline">\(\mathbf{U}_{EI}^*\)</span></strong>: array([0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1])</li>
+<li><strong>Resulting Optimal Schedule <span class="math inline">\(\mathbf{x}_{EI}^*\)</span></strong>: array([2, 2, 0, 1, 2, 0, 2, 0, 1, 1, 1, 0, 2, 1, 0, 1, 1, 1, 1, 5])</li>
 </ul>
 </section>
 <section id="experiment-2-cbo-with-lower-confidence-bound-lcb---kappa-2.576" class="level3" data-number="6.5.2">
 <h3 data-number="6.5.2" class="anchored" data-anchor-id="experiment-2-cbo-with-lower-confidence-bound-lcb---kappa-2.576"><span class="header-section-number">6.5.2</span> Experiment 2: CBO with Lower Confidence Bound (LCB) - <span class="math inline">\(\kappa =\)</span> 2.576</h3>
 <ul>
-<li><strong>Initial Best Objective (after random search)</strong>: 83.23712761052458</li>
-<li><strong>Final Best Objective Found</strong>: 82.17782681025894</li>
+<li><strong>Initial Best Objective (after random search)</strong>: 80.26076921245387</li>
+<li><strong>Final Best Objective Found</strong>: 80.26076921245387</li>
 <li><strong>Total Evaluations</strong>: 175</li>
-<li><strong>Best Perturbation Vector <span class="math inline">\(\mathbf{U}_{LCB\_fixed}^*\)</span></strong>: array([0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1])</li>
-<li><strong>Resulting Optimal Schedule <span class="math inline">\(\mathbf{x}_{LCB\_fixed}^*\)</span></strong>: array([2, 2, 0, 1, 1, 2, 1, 0, 0, 1, 2, 0, 2, 0, 1, 1, 1, 1, 1, 5])</li>
+<li><strong>Best Perturbation Vector <span class="math inline">\(\mathbf{U}_{LCB\_fixed}^*\)</span></strong>: array([0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1])</li>
+<li><strong>Resulting Optimal Schedule <span class="math inline">\(\mathbf{x}_{LCB\_fixed}^*\)</span></strong>: array([2, 1, 1, 1, 2, 0, 1, 1, 0, 2, 1, 0, 1, 1, 0, 2, 1, 1, 1, 5])</li>
 </ul>
 </section>
 <section id="summary-of-best-objectives" class="level3" data-number="6.5.3">
@@ -1958,11 +2606,11 @@ Objective value (recalculated): 82.1778</code></pre>
 <tbody>
 <tr class="odd">
 <td>CBO with EI</td>
-<td>81.98185637033471</td>
+<td>78.36675144139465</td>
 </tr>
 <tr class="even">
 <td>CBO with LCB (Fixed <span class="math inline">\(\kappa=\)</span> 2.576)</td>
-<td>82.17782681025894</td>
+<td>80.26076921245387</td>
 </tr>
 </tbody>
 </table>
@@ -1999,6 +2647,14 @@ Objective value (recalculated): 82.1778</code></pre>
 <section id="references" class="level2" data-number="6.8">
 <h2 data-number="6.8" class="anchored" data-anchor-id="references"><span class="header-section-number">6.8</span> References</h2>
 <div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-aglietti_funbo_2024" class="csl-entry" role="listitem">
+Aglietti, Virginia, Ira Ktena, Jessica Schrouff, Eleni Sgouritsa,
+Francisco J. R. Ruiz, Alan Malek, Alexis Bellot, and Silvia Chiappa.
+2024. <span>“<span>FunBO</span>: <span>Discovering</span>
+<span>Acquisition</span> <span>Functions</span> for
+<span>Bayesian</span> <span>Optimization</span> with
+<span>FunSearch</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.2406.04824">https://doi.org/10.48550/arXiv.2406.04824</a>.
+</div>
 <div id="ref-bailey1952study" class="csl-entry" role="listitem">
 Bailey, Norman TJ. 1952. <span>“A Study of Queues and Appointment
 Systems in Hospital Out-Patient Departments, with Special Reference to
@@ -2016,10 +2672,29 @@ Janardhan Rao Doppa, and David Eriksson. 2023. <span>“Bayesian
 <span>Artificial</span> <span>Intelligence</span> and
 <span>Statistics</span></em>, 7021–39. PMLR. <a href="https://proceedings.mlr.press/v206/deshwal23a.html">https://proceedings.mlr.press/v206/deshwal23a.html</a>.
 </div>
+<div id="ref-gonzalez_preferential_2017" class="csl-entry" role="listitem">
+Gonzalez, Javier, Zhenwen Dai, Andreas Damianou, and Neil D. Lawrence.
+2017. <span>“Preferential <span>Bayesian</span>
+<span>Optimization</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.1704.03651">https://doi.org/10.48550/arXiv.1704.03651</a>.
+</div>
 <div id="ref-kaandorp_optimal_2007" class="csl-entry" role="listitem">
 Kaandorp, Guido C., and Ger Koole. 2007. <span>“Optimal Outpatient
 Appointment Scheduling.”</span> <em>Health Care Management Science</em>
 10 (3): 217–29. <a href="https://doi.org/10.1007/s10729-007-9015-x">https://doi.org/10.1007/s10729-007-9015-x</a>.
+</div>
+<div id="ref-swersky_amortized_2020" class="csl-entry" role="listitem">
+Swersky, Kevin, Yulia Rubanova, David Dohan, and Kevin Murphy. 2020.
+<span>“Amortized <span>Bayesian</span> <span>Optimization</span> over
+<span>Discrete</span> <span>Spaces</span>.”</span> In <em>Proceedings of
+the 36th <span>Conference</span> on <span>Uncertainty</span> in
+<span>Artificial</span> <span>Intelligence</span>
+(<span>UAI</span>)</em>, 769–78. PMLR. <a href="https://proceedings.mlr.press/v124/swersky20a.html">https://proceedings.mlr.press/v124/swersky20a.html</a>.
+</div>
+<div id="ref-zhang_pabbo_2025" class="csl-entry" role="listitem">
+Zhang, Xinyu, Daolang Huang, Samuel Kaski, and Julien Martinelli. 2025.
+<span>“<span>PABBO</span>: <span>Preferential</span>
+<span>Amortized</span> <span>Black</span>-<span>Box</span>
+<span>Optimization</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.2503.00924">https://doi.org/10.48550/arXiv.2503.00924</a>.
 </div>
 </div>
 
@@ -2443,8 +3118,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./references.html" class="pagination-link" aria-label="References">
-        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">References</span></span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./preferential-bayesian-optimization.html" class="pagination-link" aria-label="Preferential Bayesian Optimization for Outpatient Appointment Scheduling">
+        <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Preferential Bayesian Optimization for Outpatient Appointment Scheduling</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

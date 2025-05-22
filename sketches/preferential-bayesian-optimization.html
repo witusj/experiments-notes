@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.551">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>preferential-bayesian-optimization</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="preferential-bayesian-optimization_files/libs/clipboard/clipboard.min.js"></script>
+<script src="preferential-bayesian-optimization_files/libs/quarto-html/quarto.js"></script>
+<script src="preferential-bayesian-optimization_files/libs/quarto-html/popper.min.js"></script>
+<script src="preferential-bayesian-optimization_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="preferential-bayesian-optimization_files/libs/quarto-html/anchor.min.js"></script>
+<link href="preferential-bayesian-optimization_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="preferential-bayesian-optimization_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="preferential-bayesian-optimization_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="preferential-bayesian-optimization_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="preferential-bayesian-optimization_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">preferential-bayesian-optimization</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<div id="9a263cab" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> torch</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> gpytorch</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.models.pairwise_gp <span class="im">import</span> PairwiseGP, PairwiseLaplaceMarginalLogLikelihood</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.fit <span class="im">import</span> fit_gpytorch_mll</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> botorch.models.transforms.<span class="bu">input</span> <span class="im">import</span> Normalize</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.linalg <span class="im">import</span> hadamard</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.optimize <span class="im">import</span> minimize</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> typing <span class="im">import</span> List, Tuple, Dict, Optional, Union</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> functions <span class="im">import</span> (</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    bailey_welch_schedule,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    get_v_star,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    compute_convolutions,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    calculate_objective_serv_time_lookup,</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="helper-functions" class="level2">
+<h2 class="anchored" data-anchor-id="helper-functions">Helper Functions</h2>
+<div id="b64ddbbe" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Helper: generate_weighted_list (from prompt) ---</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_weighted_list(max_s: <span class="bu">int</span>, l: <span class="bu">float</span>, i: <span class="bu">int</span>) <span class="op">-&gt;</span> Optional[np.ndarray]:</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(max_s, <span class="bu">int</span>) <span class="kw">or</span> max_s <span class="op">&lt;=</span> <span class="dv">0</span>: <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(l, (<span class="bu">int</span>, <span class="bu">float</span>)) <span class="kw">or</span> <span class="kw">not</span> (<span class="dv">1</span> <span class="op">&lt;=</span> l <span class="op">&lt;=</span> max_s): <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(i, <span class="bu">int</span>) <span class="kw">or</span> <span class="kw">not</span> (<span class="dv">0</span> <span class="op">&lt;=</span> i <span class="op">&lt;</span> max_s): <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> objective_fn(x: np.ndarray) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> (np.dot(np.arange(<span class="dv">1</span>, max_s <span class="op">+</span> <span class="dv">1</span>), x) <span class="op">-</span> l) <span class="op">**</span> <span class="dv">2</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    constraints <span class="op">=</span> ({<span class="st">'type'</span>: <span class="st">'eq'</span>, <span class="st">'fun'</span>: <span class="kw">lambda</span> x: np.<span class="bu">sum</span>(x) <span class="op">-</span> <span class="fl">1.0</span>})</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    bounds <span class="op">=</span> [(<span class="dv">0</span>, <span class="dv">1</span>)] <span class="op">*</span> max_s</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    initial_guess <span class="op">=</span> np.random.dirichlet(np.ones(max_s))</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        result <span class="op">=</span> minimize(objective_fn, initial_guess, method<span class="op">=</span><span class="st">'SLSQP'</span>, bounds<span class="op">=</span>bounds, constraints<span class="op">=</span>constraints, options<span class="op">=</span>{<span class="st">'maxiter'</span>: <span class="dv">300</span>, <span class="st">'ftol'</span>: <span class="fl">1e-9</span>})</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> result.success: <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>        optimized_probs <span class="op">=</span> result.x</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>        optimized_probs[optimized_probs <span class="op">&lt;</span> <span class="dv">0</span>] <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>        current_sum <span class="op">=</span> np.<span class="bu">sum</span>(optimized_probs)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> np.isclose(current_sum, <span class="fl">1.0</span>):</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> current_sum <span class="op">&gt;</span> <span class="fl">1e-8</span>: optimized_probs <span class="op">/=</span> current_sum</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>: <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">Exception</span>: <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>    first_part_probs <span class="op">=</span> optimized_probs[:i] <span class="cf">if</span> i <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> np.array([])</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>    second_part_probs <span class="op">=</span> optimized_probs[i:]</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>    values <span class="op">=</span> np.zeros(max_s <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> i <span class="op">&gt;</span> <span class="dv">0</span>: values[<span class="dv">1</span> : i <span class="op">+</span> <span class="dv">1</span>] <span class="op">=</span> np.sort(first_part_probs)</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    values[i <span class="op">+</span> <span class="dv">1</span> : max_s <span class="op">+</span> <span class="dv">1</span>] <span class="op">=</span> np.sort(second_part_probs)[::<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    final_sum <span class="op">=</span> np.<span class="bu">sum</span>(values[<span class="dv">1</span>:])</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(final_sum, <span class="fl">1.0</span>):</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> final_sum <span class="op">&gt;</span> <span class="fl">1e-8</span>: values[<span class="dv">1</span>:] <span class="op">/=</span> final_sum</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>: <span class="cf">return</span> <span class="va">None</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> values</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="problem-setup" class="level2">
+<h2 class="anchored" data-anchor-id="problem-setup">Problem Setup</h2>
+<div id="7aab7ed3" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>N_patients <span class="op">=</span> <span class="dv">50</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>T_param <span class="op">=</span> <span class="dv">48</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>d_interval_len <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>max_s_time <span class="op">=</span> <span class="dv">30</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>q_no_show <span class="op">=</span> <span class="fl">0.20</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>w_weight <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>l_target_avg_service_time <span class="op">=</span> <span class="fl">14.0</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>i_sorting_split <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>v_star_matrix <span class="op">=</span> get_v_star(T_param)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>s_dist <span class="op">=</span> generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> s_dist <span class="kw">is</span> <span class="va">None</span>: <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Failed to generate service time distribution."</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Service time distribution (s): </span><span class="sc">{</span>s_dist<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Average generated service time: </span><span class="sc">{</span>np<span class="sc">.</span>dot(np.arange(<span class="bu">len</span>(s_dist)), s_dist)<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>convolutions_dict <span class="op">=</span> compute_convolutions(s_dist.tolist(), N_patients, q_no_show)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>X_initial_schedule <span class="op">=</span> np.array(bailey_welch_schedule(T_param, d_interval_len, N_patients, s_dist))</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial base schedule (X_vec): </span><span class="sc">{</span>X_initial_schedule<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Sum of patients in X_vec: </span><span class="sc">{</span>np<span class="sc">.</span><span class="bu">sum</span>(X_initial_schedule)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>LARGE_PENALTY_VAL <span class="op">=</span> <span class="fl">1e10</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Service time distribution (s): [0.0, 0.00013863437844315735, 0.001795248309478132, 0.0031493356377375117, 0.004222682222350343, 0.005277680201008763, 0.021148740481061017, 0.04089927629203436, 0.09311282266046944, 0.10180144955297978, 0.10681787774760271, 0.16369478708574417, 0.09614151560248235, 0.05573215563410365, 0.044722312908055395, 0.03574882115343291, 0.03549602794567078, 0.02876260117199533, 0.02792248744401596, 0.019572321156734695, 0.019302850920943124, 0.017123722027307862, 0.015483423149911515, 0.015270548860566313, 0.014128276333802729, 0.013031882801269847, 0.01101239084919946, 0.004993265296265417, 0.003148365393270666, 0.00023185188171849985, 0.00011664491050969973]
+Average generated service time: 12.5934
+Initial base schedule (X_vec): [2, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 11]
+Sum of patients in X_vec: 50</code></pre>
+</div>
+</div>
+</section>
+<section id="objective-function" class="level2">
+<h2 class="anchored" data-anchor-id="objective-function">Objective Function</h2>
+<div id="02314c03" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> evaluate_objective(U_np: Union[np.ndarray, List[<span class="bu">int</span>]], X_vec: np.ndarray, v_star: np.ndarray,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                       conv_dict: Dict[<span class="bu">int</span>, np.ndarray], d_len: <span class="bu">int</span>, w_val: <span class="bu">float</span>) <span class="op">-&gt;</span> <span class="bu">float</span>:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(U_np, np.ndarray): U_np <span class="op">=</span> np.array(U_np, dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> U_np.ndim <span class="op">!=</span> <span class="dv">1</span>: <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Input U must be 1-dimensional"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> U_np.shape[<span class="dv">0</span>] <span class="op">!=</span> v_star.shape[<span class="dv">0</span>]: <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"U length </span><span class="sc">{</span>U_np<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss"> != V* rows </span><span class="sc">{</span>v_star<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss">."</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> X_vec.shape[<span class="dv">0</span>] <span class="op">!=</span> v_star.shape[<span class="dv">1</span>]: <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="ss">f"X length </span><span class="sc">{</span>X_vec<span class="sc">.</span>shape[<span class="dv">0</span>]<span class="sc">}</span><span class="ss"> != V* columns </span><span class="sc">{</span>v_star<span class="sc">.</span>shape[<span class="dv">1</span>]<span class="sc">}</span><span class="ss">."</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.<span class="bu">all</span>((U_np <span class="op">==</span> <span class="dv">0</span>) <span class="op">|</span> (U_np <span class="op">==</span> <span class="dv">1</span>)): <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Input U must be binary."</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    V_sum <span class="op">=</span> np.<span class="bu">sum</span>(v_star[U_np <span class="op">==</span> <span class="dv">1</span>, :], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    Y_schedule <span class="op">=</span> X_vec <span class="op">+</span> V_sum</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.<span class="bu">all</span>(Y_schedule <span class="op">&gt;=</span> <span class="dv">0</span>) <span class="kw">and</span> np.<span class="bu">sum</span>(Y_schedule) <span class="op">==</span> np.<span class="bu">sum</span>(X_vec):</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>        ewt, esp <span class="op">=</span> calculate_objective_serv_time_lookup(Y_schedule.tolist(), d_len, conv_dict)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> w_val <span class="op">*</span> ewt <span class="op">+</span> (<span class="dv">1</span> <span class="op">-</span> w_val) <span class="op">*</span> esp</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> LARGE_PENALTY_VAL</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>U_zeros <span class="op">=</span> np.zeros(T_param, dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>initial_obj_val <span class="op">=</span> evaluate_objective(U_zeros, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initial objective value (U=zeros): </span><span class="sc">{</span>initial_obj_val<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Initial objective value (U=zeros): 191.4603</code></pre>
+</div>
+</div>
+</section>
+<section id="pbo-setup" class="level2">
+<h2 class="anchored" data-anchor-id="pbo-setup">PBO Setup</h2>
+<div id="d5132487" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># --- HED: Binary Wavelet Dictionary Construction ---</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_binary_wavelet_dictionary(T_dim_U: <span class="bu">int</span>, m_dict_size: <span class="bu">int</span>) <span class="op">-&gt;</span> np.ndarray:</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    d_hadamard <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> d_hadamard <span class="op">&lt;</span> T_dim_U: d_hadamard <span class="op">*=</span> <span class="dv">2</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    H <span class="op">=</span> hadamard(d_hadamard)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> m_dict_size <span class="op">&gt;</span> d_hadamard: m_dict_size <span class="op">=</span> d_hadamard</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    dictionary <span class="op">=</span> np.zeros((m_dict_size, T_dim_U), dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(m_dict_size):</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        dictionary[i, :] <span class="op">=</span> (H[i, :T_dim_U] <span class="op">+</span> <span class="dv">1</span>) <span class="op">//</span> <span class="dv">2</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> dictionary</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> embed_HED(U_np: np.ndarray, dictionary: np.ndarray) <span class="op">-&gt;</span> np.ndarray:</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    U_np_reshaped <span class="op">=</span> U_np.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>) <span class="cf">if</span> U_np.ndim <span class="op">==</span> <span class="dv">1</span> <span class="cf">else</span> U_np</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    hamming_distances <span class="op">=</span> np.<span class="bu">sum</span>(dictionary <span class="op">!=</span> U_np_reshaped[:, np.newaxis, :], axis<span class="op">=</span><span class="dv">2</span>).T</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> hamming_distances.flatten().astype(<span class="bu">float</span>) <span class="cf">if</span> U_np.ndim <span class="op">==</span> <span class="dv">1</span> <span class="cf">else</span> hamming_distances.astype(<span class="bu">float</span>)</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>m_dictionary_size <span class="op">=</span> <span class="bu">min</span>(T_param <span class="op">*</span> <span class="dv">2</span>, <span class="dv">32</span> <span class="cf">if</span> T_param <span class="op">&lt;=</span><span class="dv">20</span> <span class="cf">else</span> <span class="dv">64</span>)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>hed_dictionary <span class="op">=</span> get_binary_wavelet_dictionary(T_param, m_dictionary_size)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"HED dictionary shape: </span><span class="sc">{</span>hed_dictionary<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>num_total_initial_pairs <span class="op">=</span> <span class="dv">10</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>num_initial_U_zeros_comparisons <span class="op">=</span> <span class="dv">3</span> <span class="co"># Number of times to compare U_zeros with random U</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>num_purely_random_initial_pairs <span class="op">=</span> num_total_initial_pairs <span class="op">-</span> num_initial_U_zeros_comparisons</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>num_pbo_iterations <span class="op">=</span> <span class="dv">50</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>n_candidates_for_thompson <span class="op">=</span> <span class="dv">200</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>n_thompson_posterior_samples <span class="op">=</span> <span class="dv">20</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>all_U_vectors_list <span class="op">=</span> []</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>all_U_embeddings_tensor <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>comparison_pairs_indices <span class="op">=</span> []</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add_U_to_master_list(U_np: np.ndarray, embedding: np.ndarray) <span class="op">-&gt;</span> <span class="bu">int</span>:</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>    <span class="kw">global</span> all_U_vectors_list, all_U_embeddings_tensor</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>    U_np <span class="op">=</span> U_np.astype(<span class="bu">int</span>) <span class="co"># Ensure consistent type</span></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> i, existing_U_np_item <span class="kw">in</span> <span class="bu">enumerate</span>(all_U_vectors_list):</span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.array_equal(existing_U_np_item, U_np): <span class="cf">return</span> i</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    new_index <span class="op">=</span> <span class="bu">len</span>(all_U_vectors_list)</span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>    all_U_vectors_list.append(U_np.copy())</span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> embedding.ndim <span class="op">&gt;</span> <span class="dv">1</span>: embedding <span class="op">=</span> embedding.flatten()</span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>    embedding_tensor <span class="op">=</span> torch.from_numpy(embedding).double().unsqueeze(<span class="dv">0</span>)</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> all_U_embeddings_tensor <span class="kw">is</span> <span class="va">None</span>: all_U_embeddings_tensor <span class="op">=</span> embedding_tensor</span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: all_U_embeddings_tensor <span class="op">=</span> torch.cat([all_U_embeddings_tensor, embedding_tensor], dim<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> new_index</span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> generate_random_U_vector(dim: <span class="bu">int</span>) <span class="op">-&gt;</span> np.ndarray:</span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> np.random.randint(<span class="dv">0</span>, <span class="dv">2</span>, size<span class="op">=</span>dim, dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> get_hamming_neighbors(U_vector: np.ndarray, num_neighbors: <span class="bu">int</span>, max_flips: <span class="bu">int</span> <span class="op">=</span> <span class="dv">1</span>) <span class="op">-&gt;</span> List[np.ndarray]:</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>    neighbors <span class="op">=</span> []</span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>    dim <span class="op">=</span> <span class="bu">len</span>(U_vector)</span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> dim <span class="op">==</span> <span class="dv">0</span>: <span class="cf">return</span> []</span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(num_neighbors):</span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a>        neighbor <span class="op">=</span> U_vector.copy()</span>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a>        actual_flips <span class="op">=</span> np.random.randint(<span class="dv">1</span>, max_flips <span class="op">+</span> <span class="dv">1</span>)</span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a>        flip_indices <span class="op">=</span> np.random.choice(dim, size<span class="op">=</span><span class="bu">min</span>(actual_flips, dim), replace<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> idx <span class="kw">in</span> flip_indices: neighbor[idx] <span class="op">=</span> <span class="dv">1</span> <span class="op">-</span> neighbor[idx]</span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a>        neighbors.append(neighbor)</span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> neighbors</span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Starting PBO Initialization..."</span>)</span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a>best_U_overall <span class="op">=</span> U_zeros.copy() <span class="co"># Start with U_zeros as initial best</span></span>
+<span id="cb7-63"><a href="#cb7-63" aria-hidden="true" tabindex="-1"></a>best_obj_overall <span class="op">=</span> initial_obj_val</span>
+<span id="cb7-64"><a href="#cb7-64" aria-hidden="true" tabindex="-1"></a>best_iter_found <span class="op">=</span> <span class="dv">0</span> <span class="co"># 0 for initial U_zeros evaluation</span></span>
+<span id="cb7-65"><a href="#cb7-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-66"><a href="#cb7-66" aria-hidden="true" tabindex="-1"></a><span class="co"># Add U_zeros to the master list first</span></span>
+<span id="cb7-67"><a href="#cb7-67" aria-hidden="true" tabindex="-1"></a>idx_U_zeros <span class="op">=</span> add_U_to_master_list(U_zeros, embed_HED(U_zeros, hed_dictionary))</span>
+<span id="cb7-68"><a href="#cb7-68" aria-hidden="true" tabindex="-1"></a>obj_U_zeros <span class="op">=</span> initial_obj_val <span class="co"># Already calculated</span></span>
+<span id="cb7-69"><a href="#cb7-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-70"><a href="#cb7-70" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Initial comparisons involving U_zeros ---</span></span>
+<span id="cb7-71"><a href="#cb7-71" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Generating </span><span class="sc">{</span>num_initial_U_zeros_comparisons<span class="sc">}</span><span class="ss"> initial comparisons involving U_zeros..."</span>)</span>
+<span id="cb7-72"><a href="#cb7-72" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_initial_U_zeros_comparisons):</span>
+<span id="cb7-73"><a href="#cb7-73" aria-hidden="true" tabindex="-1"></a>    U_competitor <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb7-74"><a href="#cb7-74" aria-hidden="true" tabindex="-1"></a>    attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-75"><a href="#cb7-75" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> np.array_equal(U_competitor, U_zeros) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>: <span class="co"># Avoid comparing U_zeros to itself</span></span>
+<span id="cb7-76"><a href="#cb7-76" aria-hidden="true" tabindex="-1"></a>        U_competitor <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb7-77"><a href="#cb7-77" aria-hidden="true" tabindex="-1"></a>        attempts <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-78"><a href="#cb7-78" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.array_equal(U_competitor, U_zeros): <span class="cf">continue</span></span>
+<span id="cb7-79"><a href="#cb7-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-80"><a href="#cb7-80" aria-hidden="true" tabindex="-1"></a>    obj_competitor <span class="op">=</span> evaluate_objective(U_competitor, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb7-81"><a href="#cb7-81" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Init U_zeros vs U_rand_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: Obj_U_zeros=</span><span class="sc">{</span>obj_U_zeros<span class="sc">:.4f}</span><span class="ss">, Obj_U_rand=</span><span class="sc">{</span>obj_competitor<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb7-82"><a href="#cb7-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-83"><a href="#cb7-83" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_competitor <span class="op">&lt;</span> best_obj_overall:</span>
+<span id="cb7-84"><a href="#cb7-84" aria-hidden="true" tabindex="-1"></a>        best_obj_overall <span class="op">=</span> obj_competitor</span>
+<span id="cb7-85"><a href="#cb7-85" aria-hidden="true" tabindex="-1"></a>        best_U_overall <span class="op">=</span> U_competitor.copy()</span>
+<span id="cb7-86"><a href="#cb7-86" aria-hidden="true" tabindex="-1"></a>        best_iter_found <span class="op">=</span> <span class="dv">0</span> <span class="co"># Still initialization phase</span></span>
+<span id="cb7-87"><a href="#cb7-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-88"><a href="#cb7-88" aria-hidden="true" tabindex="-1"></a>    idx_competitor <span class="op">=</span> add_U_to_master_list(U_competitor, embed_HED(U_competitor, hed_dictionary))</span>
+<span id="cb7-89"><a href="#cb7-89" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-90"><a href="#cb7-90" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_U_zeros, obj_competitor):</span>
+<span id="cb7-91"><a href="#cb7-91" aria-hidden="true" tabindex="-1"></a>        pref_pair <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb7-92"><a href="#cb7-92" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_U_zeros <span class="op">&lt;</span> obj_competitor: pref_pair <span class="op">=</span> [idx_U_zeros, idx_competitor]</span>
+<span id="cb7-93"><a href="#cb7-93" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> obj_competitor <span class="op">&lt;</span> obj_U_zeros: pref_pair <span class="op">=</span> [idx_competitor, idx_U_zeros]</span>
+<span id="cb7-94"><a href="#cb7-94" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb7-95"><a href="#cb7-95" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pref_pair <span class="kw">and</span> pref_pair <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices:</span>
+<span id="cb7-96"><a href="#cb7-96" aria-hidden="true" tabindex="-1"></a>            comparison_pairs_indices.append(pref_pair)</span>
+<span id="cb7-97"><a href="#cb7-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-98"><a href="#cb7-98" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Purely random initial comparisons (excluding U_zeros unless randomly picked again) ---</span></span>
+<span id="cb7-99"><a href="#cb7-99" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Generating </span><span class="sc">{</span>num_purely_random_initial_pairs<span class="sc">}</span><span class="ss"> purely random initial comparisons..."</span>)</span>
+<span id="cb7-100"><a href="#cb7-100" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_purely_random_initial_pairs):</span>
+<span id="cb7-101"><a href="#cb7-101" aria-hidden="true" tabindex="-1"></a>    U_A <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb7-102"><a href="#cb7-102" aria-hidden="true" tabindex="-1"></a>    U_B <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb7-103"><a href="#cb7-103" aria-hidden="true" tabindex="-1"></a>    attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-104"><a href="#cb7-104" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> np.array_equal(U_A, U_B) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>:</span>
+<span id="cb7-105"><a href="#cb7-105" aria-hidden="true" tabindex="-1"></a>        U_B <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb7-106"><a href="#cb7-106" aria-hidden="true" tabindex="-1"></a>        attempts <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb7-107"><a href="#cb7-107" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.array_equal(U_A, U_B): <span class="cf">continue</span></span>
+<span id="cb7-108"><a href="#cb7-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-109"><a href="#cb7-109" aria-hidden="true" tabindex="-1"></a>    obj_A <span class="op">=</span> evaluate_objective(U_A, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb7-110"><a href="#cb7-110" aria-hidden="true" tabindex="-1"></a>    obj_B <span class="op">=</span> evaluate_objective(U_B, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb7-111"><a href="#cb7-111" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Init U_randA_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> vs U_randB_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: Obj_A=</span><span class="sc">{</span>obj_A<span class="sc">:.4f}</span><span class="ss">, Obj_B=</span><span class="sc">{</span>obj_B<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb7-112"><a href="#cb7-112" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-113"><a href="#cb7-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-114"><a href="#cb7-114" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_A <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_A<span class="op">;</span> best_U_overall <span class="op">=</span> U_A.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-115"><a href="#cb7-115" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_B <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_B<span class="op">;</span> best_U_overall <span class="op">=</span> U_B.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-116"><a href="#cb7-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-117"><a href="#cb7-117" aria-hidden="true" tabindex="-1"></a>    idx_A <span class="op">=</span> add_U_to_master_list(U_A, embed_HED(U_A, hed_dictionary))</span>
+<span id="cb7-118"><a href="#cb7-118" aria-hidden="true" tabindex="-1"></a>    idx_B <span class="op">=</span> add_U_to_master_list(U_B, embed_HED(U_B, hed_dictionary))</span>
+<span id="cb7-119"><a href="#cb7-119" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb7-120"><a href="#cb7-120" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_A, obj_B):</span>
+<span id="cb7-121"><a href="#cb7-121" aria-hidden="true" tabindex="-1"></a>        pref_pair <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb7-122"><a href="#cb7-122" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_A <span class="op">&lt;</span> obj_B: pref_pair <span class="op">=</span> [idx_A, idx_B]</span>
+<span id="cb7-123"><a href="#cb7-123" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> obj_B <span class="op">&lt;</span> obj_A: pref_pair <span class="op">=</span> [idx_B, idx_A]</span>
+<span id="cb7-124"><a href="#cb7-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-125"><a href="#cb7-125" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pref_pair <span class="kw">and</span> pref_pair <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices:</span>
+<span id="cb7-126"><a href="#cb7-126" aria-hidden="true" tabindex="-1"></a>            comparison_pairs_indices.append(pref_pair)</span>
+<span id="cb7-127"><a href="#cb7-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-128"><a href="#cb7-128" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initialization complete. Observed </span><span class="sc">{</span><span class="bu">len</span>(all_U_vectors_list)<span class="sc">}</span><span class="ss"> unique schedules."</span>)</span>
+<span id="cb7-129"><a href="#cb7-129" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of preference pairs: </span><span class="sc">{</span><span class="bu">len</span>(comparison_pairs_indices)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb7-130"><a href="#cb7-130" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> best_U_overall <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb7-131"><a href="#cb7-131" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best U after initialization: </span><span class="sc">{</span>best_U_overall<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>best_obj_overall<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>HED dictionary shape: (64, 48)
+Starting PBO Initialization...
+Generating 3 initial comparisons involving U_zeros...
+  Init U_zeros vs U_rand_0: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+  Init U_zeros vs U_rand_1: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+  Init U_zeros vs U_rand_2: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+Generating 7 purely random initial comparisons...
+  Init U_randA_0 vs U_randB_0: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_1 vs U_randB_1: Obj_A=10000000000.0000, Obj_B=195.6634
+  Init U_randA_2 vs U_randB_2: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_3 vs U_randB_3: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_4 vs U_randB_4: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_5 vs U_randB_5: Obj_A=200.6455, Obj_B=10000000000.0000
+  Init U_randA_6 vs U_randB_6: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+Initialization complete. Observed 18 unique schedules.
+Number of preference pairs: 5
+Best U after initialization: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 191.4603</code></pre>
+</div>
+</div>
+</section>
+<section id="pbo-initialization" class="level2">
+<h2 class="anchored" data-anchor-id="pbo-initialization">PBO Initialization</h2>
+<div id="5bc6baec" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Starting PBO Initialization..."</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>best_U_overall <span class="op">=</span> U_zeros.copy() <span class="co"># Start with U_zeros as initial best</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>best_obj_overall <span class="op">=</span> initial_obj_val</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>best_iter_found <span class="op">=</span> <span class="dv">0</span> <span class="co"># 0 for initial U_zeros evaluation</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Add U_zeros to the master list first</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>idx_U_zeros <span class="op">=</span> add_U_to_master_list(U_zeros, embed_HED(U_zeros, hed_dictionary))</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>obj_U_zeros <span class="op">=</span> initial_obj_val <span class="co"># Already calculated</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Initial comparisons involving U_zeros ---</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Generating </span><span class="sc">{</span>num_initial_U_zeros_comparisons<span class="sc">}</span><span class="ss"> initial comparisons involving U_zeros..."</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_initial_U_zeros_comparisons):</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    U_competitor <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> np.array_equal(U_competitor, U_zeros) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>: <span class="co"># Avoid comparing U_zeros to itself</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        U_competitor <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>        attempts <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.array_equal(U_competitor, U_zeros): <span class="cf">continue</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    obj_competitor <span class="op">=</span> evaluate_objective(U_competitor, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Init U_zeros vs U_rand_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: Obj_U_zeros=</span><span class="sc">{</span>obj_U_zeros<span class="sc">:.4f}</span><span class="ss">, Obj_U_rand=</span><span class="sc">{</span>obj_competitor<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_competitor <span class="op">&lt;</span> best_obj_overall:</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>        best_obj_overall <span class="op">=</span> obj_competitor</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>        best_U_overall <span class="op">=</span> U_competitor.copy()</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>        best_iter_found <span class="op">=</span> <span class="dv">0</span> <span class="co"># Still initialization phase</span></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    idx_competitor <span class="op">=</span> add_U_to_master_list(U_competitor, embed_HED(U_competitor, hed_dictionary))</span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_U_zeros, obj_competitor):</span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a>        pref_pair <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_U_zeros <span class="op">&lt;</span> obj_competitor: pref_pair <span class="op">=</span> [idx_U_zeros, idx_competitor]</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> obj_competitor <span class="op">&lt;</span> obj_U_zeros: pref_pair <span class="op">=</span> [idx_competitor, idx_U_zeros]</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pref_pair <span class="kw">and</span> pref_pair <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices:</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>            comparison_pairs_indices.append(pref_pair)</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Purely random initial comparisons (excluding U_zeros unless randomly picked again) ---</span></span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Generating </span><span class="sc">{</span>num_purely_random_initial_pairs<span class="sc">}</span><span class="ss"> purely random initial comparisons..."</span>)</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_purely_random_initial_pairs):</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>    U_A <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>    U_B <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> np.array_equal(U_A, U_B) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>:</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a>        U_B <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a>        attempts <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.array_equal(U_A, U_B): <span class="cf">continue</span></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a>    obj_A <span class="op">=</span> evaluate_objective(U_A, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a>    obj_B <span class="op">=</span> evaluate_objective(U_B, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Init U_randA_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss"> vs U_randB_</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">: Obj_A=</span><span class="sc">{</span>obj_A<span class="sc">:.4f}</span><span class="ss">, Obj_B=</span><span class="sc">{</span>obj_B<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_A <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_A<span class="op">;</span> best_U_overall <span class="op">=</span> U_A.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_B <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_B<span class="op">;</span> best_U_overall <span class="op">=</span> U_B.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a>    idx_A <span class="op">=</span> add_U_to_master_list(U_A, embed_HED(U_A, hed_dictionary))</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a>    idx_B <span class="op">=</span> add_U_to_master_list(U_B, embed_HED(U_B, hed_dictionary))</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_A, obj_B):</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a>        pref_pair <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_A <span class="op">&lt;</span> obj_B: pref_pair <span class="op">=</span> [idx_A, idx_B]</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a>        <span class="cf">elif</span> obj_B <span class="op">&lt;</span> obj_A: pref_pair <span class="op">=</span> [idx_B, idx_A]</span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pref_pair <span class="kw">and</span> pref_pair <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices:</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a>            comparison_pairs_indices.append(pref_pair)</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Initialization complete. Observed </span><span class="sc">{</span><span class="bu">len</span>(all_U_vectors_list)<span class="sc">}</span><span class="ss"> unique schedules."</span>)</span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of preference pairs: </span><span class="sc">{</span><span class="bu">len</span>(comparison_pairs_indices)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> best_U_overall <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best U after initialization: </span><span class="sc">{</span>best_U_overall<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>best_obj_overall<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Starting PBO Initialization...
+Generating 3 initial comparisons involving U_zeros...
+  Init U_zeros vs U_rand_0: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+  Init U_zeros vs U_rand_1: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+  Init U_zeros vs U_rand_2: Obj_U_zeros=191.4603, Obj_U_rand=10000000000.0000
+Generating 7 purely random initial comparisons...
+  Init U_randA_0 vs U_randB_0: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_1 vs U_randB_1: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_2 vs U_randB_2: Obj_A=197.9331, Obj_B=10000000000.0000
+  Init U_randA_3 vs U_randB_3: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_4 vs U_randB_4: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_5 vs U_randB_5: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+  Init U_randA_6 vs U_randB_6: Obj_A=10000000000.0000, Obj_B=10000000000.0000
+Initialization complete. Observed 35 unique schedules.
+Number of preference pairs: 9
+Best U after initialization: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 191.4603</code></pre>
+</div>
+</div>
+</section>
+<section id="pbo-loop" class="level2">
+<h2 class="anchored" data-anchor-id="pbo-loop">PBO Loop</h2>
+<div id="171ece8d" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pairwise_model <span class="op">=</span> <span class="va">None</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> pbo_iter <span class="kw">in</span> <span class="bu">range</span>(num_pbo_iterations):</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">--- PBO Iteration </span><span class="sc">{</span>pbo_iter <span class="op">+</span> <span class="dv">1</span><span class="sc">}</span><span class="ss">/</span><span class="sc">{</span>num_pbo_iterations<span class="sc">}</span><span class="ss"> ---"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(comparison_pairs_indices) <span class="op">&lt;</span> <span class="dv">1</span> <span class="kw">or</span> all_U_embeddings_tensor <span class="kw">is</span> <span class="va">None</span> <span class="kw">or</span> all_U_embeddings_tensor.shape[<span class="dv">0</span>] <span class="op">&lt;</span> <span class="dv">2</span> :</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Not enough data for GP. Generating a random pair to add to comparisons."</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        <span class="co"># (Simplified fallback: add one random comparison)</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        U_A_fallback <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>        U_B_fallback <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>        attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">while</span> np.array_equal(U_A_fallback, U_B_fallback) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>: U_B_fallback <span class="op">=</span> generate_random_U_vector(T_param)<span class="op">;</span> attempts<span class="op">+=</span><span class="dv">1</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> np.array_equal(U_A_fallback, U_B_fallback): <span class="cf">continue</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>        obj_A_fb <span class="op">=</span> evaluate_objective(U_A_fallback, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>        obj_B_fb <span class="op">=</span> evaluate_objective(U_B_fallback, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_A_fb <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_A_fb<span class="op">;</span> best_U_overall <span class="op">=</span> U_A_fallback.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> pbo_iter <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> obj_B_fb <span class="op">&lt;</span> best_obj_overall: best_obj_overall <span class="op">=</span> obj_B_fb<span class="op">;</span> best_U_overall <span class="op">=</span> U_B_fallback.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> pbo_iter <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        idx_A_fb <span class="op">=</span> add_U_to_master_list(U_A_fallback, embed_HED(U_A_fallback, hed_dictionary))</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>        idx_B_fb <span class="op">=</span> add_U_to_master_list(U_B_fallback, embed_HED(U_B_fallback, hed_dictionary))</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_A_fb, obj_B_fb):</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>            pref_pair_fb <span class="op">=</span> [idx_A_fb, idx_B_fb] <span class="cf">if</span> obj_A_fb <span class="op">&lt;</span> obj_B_fb <span class="cf">else</span> [idx_B_fb, idx_A_fb]</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> pref_pair_fb <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices: comparison_pairs_indices.append(pref_pair_fb)</span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(comparison_pairs_indices) <span class="op">&lt;</span> <span class="dv">1</span> <span class="kw">or</span> all_U_embeddings_tensor.shape[<span class="dv">0</span>] <span class="op">&lt;</span> <span class="dv">2</span>: <span class="cf">continue</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>    train_X_gp <span class="op">=</span> all_U_embeddings_tensor.double()</span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>    train_Y_gp <span class="op">=</span> torch.tensor(comparison_pairs_indices, dtype<span class="op">=</span>torch.<span class="bu">long</span>)</span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    min_bounds <span class="op">=</span> torch.zeros(train_X_gp.shape[<span class="op">-</span><span class="dv">1</span>], dtype<span class="op">=</span>torch.double)</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>    max_bounds <span class="op">=</span> torch.full((train_X_gp.shape[<span class="op">-</span><span class="dv">1</span>],), <span class="bu">float</span>(T_param), dtype<span class="op">=</span>torch.double)</span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    input_transform <span class="op">=</span> Normalize(d<span class="op">=</span>train_X_gp.shape[<span class="op">-</span><span class="dv">1</span>], bounds<span class="op">=</span>torch.stack([min_bounds, max_bounds]))</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-31"><a href="#cb11-31" aria-hidden="true" tabindex="-1"></a>    pairwise_model <span class="op">=</span> PairwiseGP(train_X_gp, train_Y_gp, input_transform<span class="op">=</span>input_transform,</span>
+<span id="cb11-32"><a href="#cb11-32" aria-hidden="true" tabindex="-1"></a>        covar_module<span class="op">=</span>gpytorch.kernels.ScaleKernel(gpytorch.kernels.MaternKernel(nu<span class="op">=</span><span class="fl">2.5</span>, ard_num_dims<span class="op">=</span>train_X_gp.shape[<span class="op">-</span><span class="dv">1</span>])))</span>
+<span id="cb11-33"><a href="#cb11-33" aria-hidden="true" tabindex="-1"></a>    mll <span class="op">=</span> PairwiseLaplaceMarginalLogLikelihood(pairwise_model.likelihood, pairwise_model)</span>
+<span id="cb11-34"><a href="#cb11-34" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb11-35"><a href="#cb11-35" aria-hidden="true" tabindex="-1"></a>    U_query1, U_query2 <span class="op">=</span> <span class="va">None</span>, <span class="va">None</span></span>
+<span id="cb11-36"><a href="#cb11-36" aria-hidden="true" tabindex="-1"></a>    <span class="cf">try</span>:</span>
+<span id="cb11-37"><a href="#cb11-37" aria-hidden="true" tabindex="-1"></a>        fit_gpytorch_mll(mll)</span>
+<span id="cb11-38"><a href="#cb11-38" aria-hidden="true" tabindex="-1"></a>        U_cand_pool_list <span class="op">=</span> []</span>
+<span id="cb11-39"><a href="#cb11-39" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n_candidates_for_thompson <span class="op">//</span> <span class="dv">2</span>): U_cand_pool_list.append(generate_random_U_vector(T_param))</span>
+<span id="cb11-40"><a href="#cb11-40" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> best_U_overall <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb11-41"><a href="#cb11-41" aria-hidden="true" tabindex="-1"></a>            U_cand_pool_list.extend(get_hamming_neighbors(best_U_overall, n_candidates_for_thompson <span class="op">//</span> <span class="dv">2</span>, max_flips<span class="op">=</span><span class="dv">2</span>))</span>
+<span id="cb11-42"><a href="#cb11-42" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>:</span>
+<span id="cb11-43"><a href="#cb11-43" aria-hidden="true" tabindex="-1"></a>            <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(n_candidates_for_thompson <span class="op">//</span> <span class="dv">2</span>): U_cand_pool_list.append(generate_random_U_vector(T_param))</span>
+<span id="cb11-44"><a href="#cb11-44" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-45"><a href="#cb11-45" aria-hidden="true" tabindex="-1"></a>        unique_U_cand_tuples <span class="op">=</span> {<span class="bu">tuple</span>(u.tolist()) <span class="cf">for</span> u <span class="kw">in</span> U_cand_pool_list}</span>
+<span id="cb11-46"><a href="#cb11-46" aria-hidden="true" tabindex="-1"></a>        U_cand_pool_np <span class="op">=</span> np.array([<span class="bu">list</span>(t) <span class="cf">for</span> t <span class="kw">in</span> unique_U_cand_tuples], dtype<span class="op">=</span><span class="bu">int</span>)</span>
+<span id="cb11-47"><a href="#cb11-47" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(U_cand_pool_np) <span class="op">==</span> <span class="dv">0</span>: <span class="cf">raise</span> <span class="pp">ValueError</span>(<span class="st">"Candidate pool is empty."</span>)</span>
+<span id="cb11-48"><a href="#cb11-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-49"><a href="#cb11-49" aria-hidden="true" tabindex="-1"></a>        embedded_candidates_np <span class="op">=</span> np.array([embed_HED(u, hed_dictionary) <span class="cf">for</span> u <span class="kw">in</span> U_cand_pool_np])</span>
+<span id="cb11-50"><a href="#cb11-50" aria-hidden="true" tabindex="-1"></a>        embedded_candidates_torch <span class="op">=</span> torch.from_numpy(embedded_candidates_np).double()</span>
+<span id="cb11-51"><a href="#cb11-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-52"><a href="#cb11-52" aria-hidden="true" tabindex="-1"></a>        pairwise_model.<span class="bu">eval</span>()</span>
+<span id="cb11-53"><a href="#cb11-53" aria-hidden="true" tabindex="-1"></a>        <span class="cf">with</span> torch.no_grad(), gpytorch.settings.fast_pred_var():</span>
+<span id="cb11-54"><a href="#cb11-54" aria-hidden="true" tabindex="-1"></a>            posterior_f <span class="op">=</span> pairwise_model.posterior(input_transform(embedded_candidates_torch))</span>
+<span id="cb11-55"><a href="#cb11-55" aria-hidden="true" tabindex="-1"></a>            f_samples <span class="op">=</span> posterior_f.sample(torch.Size([n_thompson_posterior_samples]))</span>
+<span id="cb11-56"><a href="#cb11-56" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb11-57"><a href="#cb11-57" aria-hidden="true" tabindex="-1"></a>        best_indices_per_sample <span class="op">=</span> torch.argmax(f_samples, dim<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb11-58"><a href="#cb11-58" aria-hidden="true" tabindex="-1"></a>        query_idx1_in_cand_pool <span class="op">=</span> best_indices_per_sample[<span class="dv">0</span>].item()</span>
+<span id="cb11-59"><a href="#cb11-59" aria-hidden="true" tabindex="-1"></a>        U_query1 <span class="op">=</span> U_cand_pool_np[query_idx1_in_cand_pool]</span>
+<span id="cb11-60"><a href="#cb11-60" aria-hidden="true" tabindex="-1"></a>        query_idx2_in_cand_pool <span class="op">=</span> <span class="op">-</span><span class="dv">1</span></span>
+<span id="cb11-61"><a href="#cb11-61" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-62"><a href="#cb11-62" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="bu">len</span>(U_cand_pool_np) <span class="op">&gt;</span> <span class="dv">1</span>:</span>
+<span id="cb11-63"><a href="#cb11-63" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="bu">len</span>(best_indices_per_sample) <span class="op">&gt;</span> <span class="dv">1</span>:</span>
+<span id="cb11-64"><a href="#cb11-64" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1</span>, <span class="bu">len</span>(best_indices_per_sample)):</span>
+<span id="cb11-65"><a href="#cb11-65" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> best_indices_per_sample[i].item() <span class="op">!=</span> query_idx1_in_cand_pool:</span>
+<span id="cb11-66"><a href="#cb11-66" aria-hidden="true" tabindex="-1"></a>                        query_idx2_in_cand_pool <span class="op">=</span> best_indices_per_sample[i].item()<span class="op">;</span> <span class="cf">break</span></span>
+<span id="cb11-67"><a href="#cb11-67" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> query_idx2_in_cand_pool <span class="op">==</span> <span class="op">-</span><span class="dv">1</span> <span class="kw">or</span> query_idx1_in_cand_pool <span class="op">==</span> query_idx2_in_cand_pool :</span>
+<span id="cb11-68"><a href="#cb11-68" aria-hidden="true" tabindex="-1"></a>                rand_indices <span class="op">=</span> np.arange(<span class="bu">len</span>(U_cand_pool_np))<span class="op">;</span> np.random.shuffle(rand_indices)</span>
+<span id="cb11-69"><a href="#cb11-69" aria-hidden="true" tabindex="-1"></a>                <span class="cf">for</span> rand_idx <span class="kw">in</span> rand_indices:</span>
+<span id="cb11-70"><a href="#cb11-70" aria-hidden="true" tabindex="-1"></a>                    <span class="cf">if</span> rand_idx <span class="op">!=</span> query_idx1_in_cand_pool: query_idx2_in_cand_pool <span class="op">=</span> rand_idx<span class="op">;</span> <span class="cf">break</span></span>
+<span id="cb11-71"><a href="#cb11-71" aria-hidden="true" tabindex="-1"></a>                U_query2 <span class="op">=</span> U_cand_pool_np[query_idx2_in_cand_pool] <span class="cf">if</span> query_idx2_in_cand_pool <span class="op">!=</span> <span class="op">-</span><span class="dv">1</span> <span class="cf">else</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-72"><a href="#cb11-72" aria-hidden="true" tabindex="-1"></a>            <span class="cf">else</span>: U_query2 <span class="op">=</span> U_cand_pool_np[query_idx2_in_cand_pool]</span>
+<span id="cb11-73"><a href="#cb11-73" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>: U_query2 <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-74"><a href="#cb11-74" aria-hidden="true" tabindex="-1"></a>    <span class="cf">except</span> <span class="pp">Exception</span> <span class="im">as</span> e:</span>
+<span id="cb11-75"><a href="#cb11-75" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"Error in GP/TS: </span><span class="sc">{</span>e<span class="sc">}</span><span class="ss">. Falling back to random."</span>)</span>
+<span id="cb11-76"><a href="#cb11-76" aria-hidden="true" tabindex="-1"></a>        U_query1 <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-77"><a href="#cb11-77" aria-hidden="true" tabindex="-1"></a>        U_query2 <span class="op">=</span> generate_random_U_vector(T_param)</span>
+<span id="cb11-78"><a href="#cb11-78" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb11-79"><a href="#cb11-79" aria-hidden="true" tabindex="-1"></a>    attempts <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb11-80"><a href="#cb11-80" aria-hidden="true" tabindex="-1"></a>    <span class="cf">while</span> np.array_equal(U_query1, U_query2) <span class="kw">and</span> attempts <span class="op">&lt;</span> <span class="dv">100</span>: U_query2 <span class="op">=</span> generate_random_U_vector(T_param)<span class="op">;</span> attempts<span class="op">+=</span><span class="dv">1</span></span>
+<span id="cb11-81"><a href="#cb11-81" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.array_equal(U_query1, U_query2): <span class="cf">continue</span></span>
+<span id="cb11-82"><a href="#cb11-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-83"><a href="#cb11-83" aria-hidden="true" tabindex="-1"></a>    obj_q1 <span class="op">=</span> evaluate_objective(U_query1, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb11-84"><a href="#cb11-84" aria-hidden="true" tabindex="-1"></a>    obj_q2 <span class="op">=</span> evaluate_objective(U_query2, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb11-85"><a href="#cb11-85" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Query 1 (U): </span><span class="sc">{</span>U_query1<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>obj_q1<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb11-86"><a href="#cb11-86" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Query 2 (U): </span><span class="sc">{</span>U_query2<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>obj_q2<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb11-87"><a href="#cb11-87" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-88"><a href="#cb11-88" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_q1 <span class="op">&lt;</span> best_obj_overall:</span>
+<span id="cb11-89"><a href="#cb11-89" aria-hidden="true" tabindex="-1"></a>        best_obj_overall <span class="op">=</span> obj_q1<span class="op">;</span> best_U_overall <span class="op">=</span> U_query1.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> pbo_iter <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb11-90"><a href="#cb11-90" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  New best U from Q1: </span><span class="sc">{</span>best_U_overall<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>best_obj_overall<span class="sc">:.4f}</span><span class="ss"> (Iter: </span><span class="sc">{</span>best_iter_found<span class="sc">}</span><span class="ss">)"</span>)</span>
+<span id="cb11-91"><a href="#cb11-91" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj_q2 <span class="op">&lt;</span> best_obj_overall:</span>
+<span id="cb11-92"><a href="#cb11-92" aria-hidden="true" tabindex="-1"></a>        best_obj_overall <span class="op">=</span> obj_q2<span class="op">;</span> best_U_overall <span class="op">=</span> U_query2.copy()<span class="op">;</span> best_iter_found <span class="op">=</span> pbo_iter <span class="op">+</span> <span class="dv">1</span></span>
+<span id="cb11-93"><a href="#cb11-93" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  New best U from Q2: </span><span class="sc">{</span>best_U_overall<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">, Obj: </span><span class="sc">{</span>best_obj_overall<span class="sc">:.4f}</span><span class="ss"> (Iter: </span><span class="sc">{</span>best_iter_found<span class="sc">}</span><span class="ss">)"</span>)</span>
+<span id="cb11-94"><a href="#cb11-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-95"><a href="#cb11-95" aria-hidden="true" tabindex="-1"></a>    idx_q1 <span class="op">=</span> add_U_to_master_list(U_query1, embed_HED(U_query1, hed_dictionary))</span>
+<span id="cb11-96"><a href="#cb11-96" aria-hidden="true" tabindex="-1"></a>    idx_q2 <span class="op">=</span> add_U_to_master_list(U_query2, embed_HED(U_query2, hed_dictionary))</span>
+<span id="cb11-97"><a href="#cb11-97" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-98"><a href="#cb11-98" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> np.isclose(obj_q1, obj_q2):</span>
+<span id="cb11-99"><a href="#cb11-99" aria-hidden="true" tabindex="-1"></a>        pref_pair_iter <span class="op">=</span> [idx_q1, idx_q2] <span class="cf">if</span> obj_q1 <span class="op">&lt;</span> obj_q2 <span class="cf">else</span> [idx_q2, idx_q1]</span>
+<span id="cb11-100"><a href="#cb11-100" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="ss">f"  Preference: </span><span class="sc">{</span><span class="st">'Q1 &gt; Q2'</span> <span class="cf">if</span> obj_q1 <span class="op">&lt;</span> obj_q2 <span class="cf">else</span> <span class="st">'Q2 &gt; Q1'</span><span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-101"><a href="#cb11-101" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> pref_pair_iter <span class="kw">not</span> <span class="kw">in</span> comparison_pairs_indices: comparison_pairs_indices.append(pref_pair_iter)</span>
+<span id="cb11-102"><a href="#cb11-102" aria-hidden="true" tabindex="-1"></a>        <span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"  (Preference already recorded)"</span>)</span>
+<span id="cb11-103"><a href="#cb11-103" aria-hidden="true" tabindex="-1"></a>    <span class="cf">else</span>: <span class="bu">print</span>(<span class="ss">f"  Preference: Tie"</span>)</span>
+<span id="cb11-104"><a href="#cb11-104" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Total unique Us: </span><span class="sc">{</span><span class="bu">len</span>(all_U_vectors_list)<span class="sc">}</span><span class="ss">, Total preference pairs: </span><span class="sc">{</span><span class="bu">len</span>(comparison_pairs_indices)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-105"><a href="#cb11-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-106"><a href="#cb11-106" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">--- PBO Experiment Finished ---"</span>)</span>
+<span id="cb11-107"><a href="#cb11-107" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> best_U_overall <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span>:</span>
+<span id="cb11-108"><a href="#cb11-108" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Best U vector found (by direct evaluation): </span><span class="sc">{</span>best_U_overall<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-109"><a href="#cb11-109" aria-hidden="true" tabindex="-1"></a>    final_Y_schedule <span class="op">=</span> X_initial_schedule <span class="op">+</span> np.<span class="bu">sum</span>(v_star_matrix[best_U_overall <span class="op">==</span> <span class="dv">1</span>, :], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb11-110"><a href="#cb11-110" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Corresponding Y schedule: </span><span class="sc">{</span>final_Y_schedule<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-111"><a href="#cb11-111" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Objective value: </span><span class="sc">{</span>best_obj_overall<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb11-112"><a href="#cb11-112" aria-hidden="true" tabindex="-1"></a>    iter_str <span class="op">=</span> <span class="st">"during initialization (before PBO iterations)"</span> <span class="cf">if</span> best_iter_found <span class="op">==</span> <span class="dv">0</span> <span class="cf">else</span> <span class="ss">f"at PBO iteration </span><span class="sc">{</span>best_iter_found<span class="sc">}</span><span class="ss">"</span></span>
+<span id="cb11-113"><a href="#cb11-113" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Found </span><span class="sc">{</span>iter_str<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-114"><a href="#cb11-114" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Patient count in final Y schedule: </span><span class="sc">{</span>np<span class="sc">.</span><span class="bu">sum</span>(final_Y_schedule)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-115"><a href="#cb11-115" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"No valid U vector found."</span>)</span>
+<span id="cb11-116"><a href="#cb11-116" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-117"><a href="#cb11-117" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> pairwise_model <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="kw">and</span> all_U_embeddings_tensor <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span> <span class="kw">and</span> <span class="bu">len</span>(all_U_embeddings_tensor) <span class="op">&gt;</span> <span class="dv">0</span>:</span>
+<span id="cb11-118"><a href="#cb11-118" aria-hidden="true" tabindex="-1"></a>    pairwise_model.<span class="bu">eval</span>()</span>
+<span id="cb11-119"><a href="#cb11-119" aria-hidden="true" tabindex="-1"></a>    transformed_all_U_embeddings <span class="op">=</span> input_transform(all_U_embeddings_tensor)</span>
+<span id="cb11-120"><a href="#cb11-120" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> torch.no_grad(), gpytorch.settings.fast_pred_var():</span>
+<span id="cb11-121"><a href="#cb11-121" aria-hidden="true" tabindex="-1"></a>        posterior_f_all <span class="op">=</span> pairwise_model.posterior(transformed_all_U_embeddings)</span>
+<span id="cb11-122"><a href="#cb11-122" aria-hidden="true" tabindex="-1"></a>        mean_f_all <span class="op">=</span> posterior_f_all.mean</span>
+<span id="cb11-123"><a href="#cb11-123" aria-hidden="true" tabindex="-1"></a>    best_idx_model <span class="op">=</span> torch.argmax(mean_f_all).item()</span>
+<span id="cb11-124"><a href="#cb11-124" aria-hidden="true" tabindex="-1"></a>    U_reco_model <span class="op">=</span> all_U_vectors_list[best_idx_model]</span>
+<span id="cb11-125"><a href="#cb11-125" aria-hidden="true" tabindex="-1"></a>    obj_reco_model <span class="op">=</span> evaluate_objective(U_reco_model, X_initial_schedule, v_star_matrix, convolutions_dict, d_interval_len, w_weight)</span>
+<span id="cb11-126"><a href="#cb11-126" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="ch">\n</span><span class="ss">Recommendation based on GP model (highest posterior mean utility over all </span><span class="sc">{</span><span class="bu">len</span>(all_U_vectors_list)<span class="sc">}</span><span class="ss"> evaluated Us):"</span>)</span>
+<span id="cb11-127"><a href="#cb11-127" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  U vector: </span><span class="sc">{</span>U_reco_model<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-128"><a href="#cb11-128" aria-hidden="true" tabindex="-1"></a>    Y_reco <span class="op">=</span> X_initial_schedule <span class="op">+</span> np.<span class="bu">sum</span>(v_star_matrix[U_reco_model <span class="op">==</span> <span class="dv">1</span>, :], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb11-129"><a href="#cb11-129" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Corresponding Y schedule: </span><span class="sc">{</span>Y_reco<span class="sc">.</span>tolist()<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb11-130"><a href="#cb11-130" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  Objective value of this GP recommended U: </span><span class="sc">{</span>obj_reco_model<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb11-131"><a href="#cb11-131" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"  GP's posterior mean utility for this U: </span><span class="sc">{</span>mean_f_all[best_idx_model]<span class="sc">.</span>item()<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb11-132"><a href="#cb11-132" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>: <span class="bu">print</span>(<span class="st">"</span><span class="ch">\n</span><span class="st">GP model not available for recommendation."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+--- PBO Iteration 1/50 ---
+  Query 1 (U): [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 37, Total preference pairs: 9
+
+--- PBO Iteration 2/50 ---
+  Query 1 (U): [0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 39, Total preference pairs: 9
+
+--- PBO Iteration 3/50 ---
+  Query 1 (U): [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 41, Total preference pairs: 9
+
+--- PBO Iteration 4/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.1602
+  Query 2 (U): [1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0], Obj: 10000000000.0000
+  Preference: Q1 &gt; Q2
+  Total unique Us: 43, Total preference pairs: 10
+
+--- PBO Iteration 5/50 ---
+  Query 1 (U): [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.3420
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.7967
+  Preference: Q1 &gt; Q2
+  Total unique Us: 45, Total preference pairs: 11
+
+--- PBO Iteration 6/50 ---
+  Query 1 (U): [1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 47, Total preference pairs: 11
+
+--- PBO Iteration 7/50 ---
+  Query 1 (U): [0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 49, Total preference pairs: 11
+
+--- PBO Iteration 8/50 ---
+  Query 1 (U): [0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1], Obj: 194.2641
+  Preference: Q2 &gt; Q1
+  Total unique Us: 51, Total preference pairs: 12
+
+--- PBO Iteration 9/50 ---
+  Query 1 (U): [1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 53, Total preference pairs: 12
+
+--- PBO Iteration 10/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 193.2156
+  Preference: Q2 &gt; Q1
+  Total unique Us: 55, Total preference pairs: 13
+
+--- PBO Iteration 11/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.4550
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 193.1021
+  New best U from Q1: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.4550 (Iter: 11)
+  Preference: Q1 &gt; Q2
+  Total unique Us: 57, Total preference pairs: 14
+
+--- PBO Iteration 12/50 ---
+  Query 1 (U): [0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 59, Total preference pairs: 14
+
+--- PBO Iteration 13/50 ---
+  Query 1 (U): [1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 61, Total preference pairs: 14
+
+--- PBO Iteration 14/50 ---
+  Query 1 (U): [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 63, Total preference pairs: 14
+
+--- PBO Iteration 15/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 65, Total preference pairs: 14
+
+--- PBO Iteration 16/50 ---
+  Query 1 (U): [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 67, Total preference pairs: 14
+
+--- PBO Iteration 17/50 ---
+  Query 1 (U): [1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 69, Total preference pairs: 14
+
+--- PBO Iteration 18/50 ---
+  Query 1 (U): [1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0], Obj: 209.8901
+  Query 2 (U): [0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0], Obj: 10000000000.0000
+  Preference: Q1 &gt; Q2
+  Total unique Us: 71, Total preference pairs: 15
+
+--- PBO Iteration 19/50 ---
+Error in GP/TS: All attempts to fit the model have failed.. Falling back to random.
+  Query 1 (U): [0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0], Obj: 197.9515
+  Preference: Q2 &gt; Q1
+  Total unique Us: 73, Total preference pairs: 16
+
+--- PBO Iteration 20/50 ---
+  Query 1 (U): [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 75, Total preference pairs: 16
+
+--- PBO Iteration 21/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 77, Total preference pairs: 16
+
+--- PBO Iteration 22/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 79, Total preference pairs: 16
+
+--- PBO Iteration 23/50 ---
+  Query 1 (U): [1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.3219
+  Preference: Q2 &gt; Q1
+  Total unique Us: 81, Total preference pairs: 17
+
+--- PBO Iteration 24/50 ---
+  Query 1 (U): [1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1], Obj: 206.9897
+  Preference: Q2 &gt; Q1
+  Total unique Us: 83, Total preference pairs: 18
+
+--- PBO Iteration 25/50 ---
+Error in GP/TS: All attempts to fit the model have failed.. Falling back to random.
+  Query 1 (U): [0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 85, Total preference pairs: 18
+
+--- PBO Iteration 26/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 191.4603
+  Query 2 (U): [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.4179
+  Preference: Q2 &gt; Q1
+  Total unique Us: 86, Total preference pairs: 19
+
+--- PBO Iteration 27/50 ---
+  Query 1 (U): [0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 205.1724
+  Preference: Q2 &gt; Q1
+  Total unique Us: 88, Total preference pairs: 20
+
+--- PBO Iteration 28/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.3035
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.3336
+  Preference: Q2 &gt; Q1
+  Total unique Us: 90, Total preference pairs: 21
+
+--- PBO Iteration 29/50 ---
+  Query 1 (U): [1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.3617
+  New best U from Q2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.3617 (Iter: 29)
+  Preference: Q2 &gt; Q1
+  Total unique Us: 92, Total preference pairs: 22
+
+--- PBO Iteration 30/50 ---
+  Query 1 (U): [0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 94, Total preference pairs: 22
+
+--- PBO Iteration 31/50 ---
+  Query 1 (U): [0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0], Obj: 191.6970
+  Preference: Q2 &gt; Q1
+  Total unique Us: 96, Total preference pairs: 23
+
+--- PBO Iteration 32/50 ---
+  Query 1 (U): [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.0716
+  Preference: Q2 &gt; Q1
+  Total unique Us: 98, Total preference pairs: 24
+
+--- PBO Iteration 33/50 ---
+  Query 1 (U): [0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 100, Total preference pairs: 24
+
+--- PBO Iteration 34/50 ---
+  Query 1 (U): [1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.2809
+  New best U from Q2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 190.2809 (Iter: 34)
+  Preference: Q2 &gt; Q1
+  Total unique Us: 102, Total preference pairs: 25
+
+--- PBO Iteration 35/50 ---
+  Query 1 (U): [1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 104, Total preference pairs: 25
+
+--- PBO Iteration 36/50 ---
+  Query 1 (U): [1, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 106, Total preference pairs: 25
+
+--- PBO Iteration 37/50 ---
+  Query 1 (U): [0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 108, Total preference pairs: 25
+
+--- PBO Iteration 38/50 ---
+  Query 1 (U): [1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 110, Total preference pairs: 25
+
+--- PBO Iteration 39/50 ---
+  Query 1 (U): [1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 112, Total preference pairs: 25
+
+--- PBO Iteration 40/50 ---
+  Query 1 (U): [0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0], Obj: 10000000000.0000
+  Query 2 (U): [1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0], Obj: 215.2048
+  Preference: Q2 &gt; Q1
+  Total unique Us: 114, Total preference pairs: 26
+
+--- PBO Iteration 41/50 ---
+  Query 1 (U): [0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.0824
+  Preference: Q2 &gt; Q1
+  Total unique Us: 116, Total preference pairs: 27
+
+--- PBO Iteration 42/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.1396
+  Query 2 (U): [1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1], Obj: 10000000000.0000
+  Preference: Q1 &gt; Q2
+  Total unique Us: 118, Total preference pairs: 28
+
+--- PBO Iteration 43/50 ---
+  Query 1 (U): [0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 120, Total preference pairs: 28
+
+--- PBO Iteration 44/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.1403
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], Obj: 192.0300
+  Preference: Q1 &gt; Q2
+  Total unique Us: 122, Total preference pairs: 29
+
+--- PBO Iteration 45/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.5695
+  Query 2 (U): [0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0], Obj: 10000000000.0000
+  Preference: Q1 &gt; Q2
+  Total unique Us: 124, Total preference pairs: 30
+
+--- PBO Iteration 46/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0], Obj: 191.3300
+  Query 2 (U): [1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1], Obj: 10000000000.0000
+  Preference: Q1 &gt; Q2
+  Total unique Us: 126, Total preference pairs: 31
+
+--- PBO Iteration 47/50 ---
+  Query 1 (U): [1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0], Obj: 10000000000.0000
+  Preference: Tie
+  Total unique Us: 128, Total preference pairs: 31
+
+--- PBO Iteration 48/50 ---
+  Query 1 (U): [1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], Obj: 189.9083
+  New best U from Q2: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], Obj: 189.9083 (Iter: 48)
+  Preference: Q2 &gt; Q1
+  Total unique Us: 130, Total preference pairs: 32
+
+--- PBO Iteration 49/50 ---
+  Query 1 (U): [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0], Obj: 214.2716
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], Obj: 190.9619
+  Preference: Q2 &gt; Q1
+  Total unique Us: 132, Total preference pairs: 33
+
+--- PBO Iteration 50/50 ---
+  Query 1 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1], Obj: 10000000000.0000
+  Query 2 (U): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1], Obj: 190.8365
+  Preference: Q2 &gt; Q1
+  Total unique Us: 134, Total preference pairs: 34
+
+--- PBO Experiment Finished ---
+Best U vector found (by direct evaluation): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1]
+Corresponding Y schedule: [2, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 2, 10]
+Objective value: 189.9083
+Found at PBO iteration 48
+Patient count in final Y schedule: 50
+
+Recommendation based on GP model (highest posterior mean utility over all 134 evaluated Us):
+  U vector: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0]
+  Corresponding Y schedule: [2, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 2, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 2, 0, 1, 1, 0, 1, 1, 11]
+  Objective value of this GP recommended U: 191.6970
+  GP's posterior mean utility for this U: -14.2663</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/botorch/fit.py:215: OptimizationWarning:
+
+`scipy_minimize` terminated with status OptimizationStatus.FAILURE, displaying original message from `scipy.optimize.minimize`: ABNORMAL: 
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/botorch/fit.py:215: OptimizationWarning:
+
+`scipy_minimize` terminated with status OptimizationStatus.FAILURE, displaying original message from `scipy.optimize.minimize`: ABNORMAL: 
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/botorch/fit.py:215: OptimizationWarning:
+
+`scipy_minimize` terminated with status OptimizationStatus.FAILURE, displaying original message from `scipy.optimize.minimize`: ABNORMAL: 
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/botorch/fit.py:215: OptimizationWarning:
+
+`scipy_minimize` terminated with status OptimizationStatus.FAILURE, displaying original message from `scipy.optimize.minimize`: ABNORMAL: 
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/botorch/fit.py:215: OptimizationWarning:
+
+`scipy_minimize` terminated with status OptimizationStatus.FAILURE, displaying original message from `scipy.optimize.minimize`: ABNORMAL: 
+
+/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/linear_operator/utils/cholesky.py:40: NumericalWarning:
+
+A not p.d., added jitter of 1.0e-06 to the diagonal
+</code></pre>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

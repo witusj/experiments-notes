@@ -1,0 +1,1036 @@
+---
+title: "Combinatorial Bayesian Optimization Experiments"
+editor: visual
+jupyter: python3
+bibliography: references.bib
+---
+
+## Objective
+
+The objective of this experiment is to evaluate and compare the performance of two distinct Combinatorial Bayesian Optimization (CBO) strategies for an outpatient appointment scheduling problem. We investigate:
+
+1.  CBO utilizing Expected Improvement (EI) as the acquisition function.
+2.  CBO utilizing Lower Confidence Bound (LCB) as the acquisition function with a fixed kappa ($\kappa$) value.
+
+We aim to determine which strategy is most effective in identifying an optimal or near-optimal schedule, as measured by the objective function value, leveraging dictionary-based embeddings for the high-dimensional combinatorial space [@deshwal_bayesian_2023].
+
+## Background
+
+We consider an outpatient appointment scheduling problem as described by @kaandorp_optimal_2007 where the schedule is represented by a vector $\mathbf{x} = (x_0, x_1, \ldots, x_{T-1})^T$. This vector comprises $T$ components, where $x_j$ denotes the non-negative allocation (number of patients) to time slot $j$, for $j = 0, \ldots, T-1$. A fundamental constraint is that the total allocation across all time slots must equal a fixed constant $N$: $$\sum_{j=0}^{T-1} x_j = N$$ We require $x_j \ge 0$ for all $j = 0, \ldots, T-1$. Consequently, a valid schedule $\mathbf{x}$ belongs to the feasible set $\mathcal{F} = \{ \mathbf{z} \in \mathbb{D}^{T} \mid \sum_{j=0}^{T-1} z_j = N, z_j \ge 0 \text{ for all } j\}$, where $\mathbb{D}$ is the set of non-negative integers ($\mathbb{Z}_{\ge 0}$).
+
+@kaandorp_optimal_2007 define a neighborhood structure for local search based on perturbation vectors derived from a set of $T$ basis change vectors, $v_i \in \mathbb{D}^{T}$, for $i = 0, \ldots, T-1$. These basis vectors represent elementary shifts of allocation between time slots:
+
+-   $v_0 = (-1, 0, \ldots, 0, 1)$ (Shift unit *from* slot 0 *to* slot $T-1$)
+-   $v_1 = (1, -1, 0, \ldots, 0)$ (Shift unit *from* slot 1 *to* slot 0)
+-   $v_i = (0, \ldots, 0, \underbrace{1}_{\text{pos } i-1}, \underbrace{-1}_{\text{pos } i}, 0, \ldots, 0)$ for $i = 2, \ldots, T-1$ (Shift unit *from* slot $i$ *to* slot $i-1$)
+
+A key property of these basis vectors is that the sum of components for each vector is zero: $\sum_{j=0}^{T-1} v_{ij} = 0$ for all $i=0, \ldots, T-1$.
+
+Perturbations are constructed using a binary selection vector $\mathbf{U} = (u_0, u_1, \ldots, u_{T-1})$, where $u_i \in \{0, 1\}$. Each $u_i$ indicates whether the basis change $v_i$ is included in the perturbation. The resulting perturbation vector $\mathbf{r}(\mathbf{U}) \in \mathbb{D}^{T}$ is the linear combination: $$\mathbf{r}(\mathbf{U}) := \sum_{i=0}^{T-1} u_i v_i$$
+
+Since each $v_i$ sums to zero, any perturbation $\mathbf{r}(\mathbf{U})$ also sums to zero: $\sum_{j=0}^{T-1} r_j(\mathbf{U}) = 0$. This ensures that applying such a perturbation to a valid schedule $\mathbf{x}$ preserves the total allocation $N$.
+
+The neighborhood of a schedule $\mathbf{x} \in \mathcal{F}$, denoted by $\mathcal{N}(\mathbf{x})$, comprises all distinct, feasible schedules $\mathbf{x}'$ reachable by applying a non-zero perturbation $\mathbf{r}(\mathbf{U})$ (@kaandorp_optimal_2007, use a slightly different but related neighborhood definition based on combinations of these basis vectors).
+
+The objective function to be minimized is a weighted sum of Expected Waiting Time (EWT) and Expected Staff Penalty (ESP), as defined by @kaandorp_optimal_2007: $$C(\mathbf{x}) = w \cdot EWT(\mathbf{x}) + (1-w) \cdot ESP(\mathbf{x})$$ @kaandorp_optimal_2007 prove that this objective function is multimodular, which guarantees that a local search algorithm using their defined neighborhood converges to the global optimum.
+
+However, evaluating $C(\mathbf{x})$ can be computationally expensive, especially for large $N$ and $T$. Furthermore, the search space defined by the binary vectors $\mathbf{U}$ is high-dimensional ($2^T - 2$ possibilities, excluding $\mathbf{0}$ and $\mathbf{1}$). Bayesian Optimization (BO) is a suitable framework for optimizing such expensive black-box functions. Standard BO methods often struggle with high-dimensional combinatorial spaces. @deshwal_bayesian_2023 propose a method using dictionary-based embeddings (Hamming Embedding via Dictionaries - HED) to map the high-dimensional binary space of $\mathbf{U}$ vectors into a lower-dimensional continuous space, where standard Gaussian Process (GP) models can be effectively applied. This experiment applies the HED approach within a BO framework to solve the scheduling problem formulated by @kaandorp_optimal_2007.
+
+## Hypothesis
+
+We hypothesize that:
+
+1.  Both CBO strategies, leveraging the HED embedding [@deshwal_bayesian_2023], will be capable of finding schedules superior to the initial schedule derived from the Bailey-Welch method (\@).
+2.  CBO strategies employing Lower Confidence Bound (LCB) may exhibit superior performance or faster convergence compared to Expected Improvement (EI), due to the explicit exploration-exploitation trade-off inherent in LCB.
+
+## Methodology
+
+### Tools and Materials
+
+-   Programming Language: Python 3
+-   Core Libraries: NumPy, SciPy
+-   Machine Learning: Scikit-learn (for `GaussianProcessRegressor`, `MinMaxScaler`)
+-   Data Structures: Standard Python lists and dictionaries, NumPy arrays.
+-   Imported functions: `bailey_welch_schedule`, `get_v_star`, `compute_convolutions`, `calculate_objective_serv_time_lookup` (implementing the logic from @bailey1952study, assumed to be in an external `functions.py` file).
+
+### Experimental Design
+
+Three distinct Bayesian optimization experiments are conducted, applying the HED embedding approach [@deshwal_bayesian_2023] to the scheduling problem:
+
+1.  **Experiment 1: Expected Improvement (EI)**
+    -   Acquisition Function: Expected Improvement.
+    -   Objective: Minimize $C(\mathbf{x})$ by iteratively selecting candidate vectors $\mathbf{U}$ (via their embeddings) that maximize the EI.
+2.  **Experiment 2: Lower Confidence Bound (LCB) - Fixed Kappa**
+    -   Acquisition Function: Lower Confidence Bound.
+    -   Objective: Minimize $C(\mathbf{x})$ using a fixed `kappa` ($\kappa$) value in the LCB acquisition function applied to the GP model over the embedded space.
+
+For all experiments, Hamming Distance Embedding (HED) with a "diverse random" dictionary construction strategy [@deshwal_bayesian_2023] is employed to map the binary perturbation vectors $\mathbf{U}$ to a continuous embedding space. A Gaussian Process (GP) model with Automatic Relevance Determination (ARD) kernels models the (negative) objective function in this embedded space.
+
+### Variables
+
+-   **Independent Variables**:
+    -   Type of acquisition function (EI, LCB).
+    -   The specific binary perturbation vector $\mathbf{U}$ selected in each iteration (chosen via optimizing the acquisition function over the embedded space).
+-   **Dependent Variables**:
+    -   The objective function value $C(\mathbf{x}')$ for the resulting schedule $\mathbf{x}' = \mathbf{x} + \mathbf{r}(\mathbf{U})$ (calculated using the method from @kaandorp_optimal_2007).
+    -   The best objective function value found throughout the optimization process.
+
+### Data Collection
+
+Data, comprising evaluated pairs $(\mathbf{U}, C(\mathbf{x}'))$, is collected iteratively:
+
+-   An initial set of `N_INITIAL` randomly generated $\mathbf{U}$ vectors is evaluated.
+-   In each of the subsequent `N_ITERATIONS`, `BATCH_SIZE_q` new $\mathbf{U}$ vectors are selected by optimizing the respective acquisition function over `NUM_CANDIDATES_Acqf` randomly generated candidate vectors in the original binary space (evaluated via their embeddings). These newly selected vectors are then evaluated, and the results are added to the dataset.
+
+### Sample Size and Selection
+
+-   **N_INITIAL**: 20 (number of initial random evaluations)
+-   **N_ITERATIONS**: 20 (number of Bayesian optimization iterations)
+-   **BATCH_SIZE_q**: 5 (number of candidates selected and evaluated per iteration)
+-   **NUM_CANDIDATES_Acqf**: $T \times 1024 = 20 \times 1024 = 20480$ (number of random candidates generated for optimizing the acquisition function in each iteration)
+-   **m**: 128 (dimensionality of the HED embedding space, following @deshwal_bayesian_2023)
+
+The selection of new points for evaluation is guided by the respective acquisition function (EI or LCB) optimized over the embedded space representation of candidate $\mathbf{U}$ vectors.
+
+### Experimental Procedure
+
+#### 1. Setup
+
+Import necessary libraries and configure warning filters.
+
+```{python}
+# Core Libraries
+import numpy as np
+import time
+import math
+import warnings
+from scipy.optimize import minimize
+from typing import List, Dict, Tuple, Callable, Optional, Union, Any, Iterable
+
+# Scikit-learn for GP, Scaling, and potentially acquisition functions
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import Matern, ConstantKernel, WhiteKernel
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.exceptions import ConvergenceWarning
+
+# SciPy for statistics (needed for Expected Improvement calculation)
+from scipy.stats import norm
+
+from functions import bailey_welch_schedule, get_v_star, compute_convolutions, calculate_objective_serv_time_lookup
+
+# Filter warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=ConvergenceWarning) # GP fitting might not always converge perfectly
+```
+
+#### 2. Constants
+
+Definition of problem parameters and initial configuration.
+
+```{python}
+# --- Problem Definition ---
+
+# Fixed Data (Use your actual data)
+N = 32 # Total number of patients
+T = 30 # Dimension of the binary vector U
+d = 10 # Length of each interval
+max_s = 30 # Maximum service time
+q = 0.20 # Probability of a scheduled patient not showing up
+w = 0.1 # Weight for the waiting time in objective function
+l = 14
+v_star = get_v_star(T) # Get the V* matrix(T x T)
+# Create service time distribution
+def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
+    """
+    Generates a service time probability distribution using optimization.
+
+    This function creates a discrete probability distribution over max_s possible
+    service times (from 1 to max_s). It uses optimization (SLSQP) to find a
+    distribution whose weighted average service time is as close as possible
+    to a target value 'l', subject to the constraint that the probabilities
+    sum to 1 and each probability is between 0 and 1.
+
+    After finding the distribution, it sorts the probabilities: the first 'i'
+    probabilities (corresponding to service times 1 to i) are sorted in
+    ascending order, and the remaining probabilities (service times i+1 to max_s)
+    are sorted in descending order.
+
+    Note:
+        - Requires NumPy and SciPy libraries (specifically scipy.optimize.minimize).
+
+    Args:
+        max_s (int): Maximum service time parameter (number of probability bins).
+                     Must be a positive integer.
+        l (float): The target weighted average service time for the distribution.
+                   Must be between 1 and max_s, inclusive.
+        i (int): The index determining the sorting split point. Probabilities
+                 for service times 1 to 'i' are sorted ascendingly, and
+                 probabilities for service times 'i+1' to 'max_s' are sorted
+                 descendingly. Must be between 1 and max_s-1 for meaningful sorting.
+
+    Returns:
+        numpy.ndarray: An array of size max_s+1. The first element (index 0) is 0.
+                       Elements from index 1 to max_s represent the calculated
+                       and sorted probability distribution, summing to 1.
+                       Returns None if optimization fails or inputs are invalid.
+    """
+
+    # --- Input Validation ---
+    if not isinstance(max_s, int) or max_s <= 0:
+        print(f"Error: max_s must be a positive integer, but got {max_s}")
+        return None
+    if not isinstance(l, (int, float)) or not (1 <= l <= max_s):
+        print(f"Error: Target average 'l' ({l}) must be between 1 and max_s ({max_s}).")
+        return None
+    if not isinstance(i, int) or not (0 < i < max_s):
+        print(f"Error: Sorting index 'i' ({i}) must be between 1 and max_s-1 ({max_s-1}).")
+        # If clamping is desired instead of error:
+        # print(f"Warning: Index 'i' ({i}) is outside the valid range (1 to {max_s-1}). Clamping i.")
+        # i = max(1, min(i, max_s - 1))
+        return None # Strict check based on docstring requirement
+
+    # --- Inner helper function for optimization ---
+    def objective(x: np.ndarray) -> float:
+        """Objective function: Squared difference between weighted average and target l."""
+        # x represents probabilities P(1) to P(max_s)
+        service_times = np.arange(1, max_s + 1)
+        weighted_avg = np.dot(service_times, x) # Equivalent to sum(k * P(k) for k=1 to max_s)
+        return (weighted_avg - l) ** 2
+
+    # --- Constraints for optimization ---
+    # Constraint 1: The sum of the probabilities must be 1
+    constraints = ({
+        'type': 'eq',
+        'fun': lambda x: np.sum(x) - 1.0 # Ensure float comparison
+    })
+
+    # Bounds: Each probability value x[k] must be between 0 and 1
+    # Creates a list of max_s tuples, e.g., [(0, 1), (0, 1), ..., (0, 1)]
+    bounds = [(0, 1)] * max_s
+
+    # Initial guess: Use Dirichlet distribution to get a random distribution that sums to 1.
+    # Provides a starting point for the optimizer. np.ones(max_s) gives equal weights initially.
+    initial_guess = np.random.dirichlet(np.ones(max_s))
+
+    # --- Perform Optimization ---
+    try:
+        result = minimize(
+            objective,
+            initial_guess,
+            method='SLSQP',
+            bounds=bounds,
+            constraints=constraints,
+            # options={'disp': False} # Set True for detailed optimizer output
+        )
+
+        # Check if optimization was successful
+        if not result.success:
+            print(f"Warning: Optimization failed! Message: {result.message}")
+            # Optionally print result object for more details: print(result)
+            return None # Indicate failure
+
+        # The optimized probabilities (P(1) to P(max_s))
+        optimized_probs = result.x
+
+        # --- Post-process: Correct potential floating point inaccuracies ---
+        # Ensure probabilities are non-negative and sum *exactly* to 1
+        optimized_probs[optimized_probs < 0] = 0 # Clamp small negatives to 0
+        current_sum = np.sum(optimized_probs)
+        if not np.isclose(current_sum, 1.0):
+            if current_sum > 0: # Avoid division by zero
+                 optimized_probs /= current_sum # Normalize to sum to 1
+            else:
+                 print("Warning: Optimization resulted in zero sum probabilities after clamping negatives.")
+                 # Handle this case - maybe return uniform distribution or None
+                 return None # Or return uniform: np.ones(max_s) / max_s
+
+    except Exception as e:
+        print(f"An error occurred during optimization: {e}")
+        return None
+
+    # --- Reorder the probabilities based on the index 'i' ---
+    # Split the probabilities P(1)...P(i) and P(i+1)...P(max_s)
+    # Note: Python slicing is exclusive of the end index, array indexing is 0-based.
+    # result.x[0] corresponds to P(1), result.x[i-1] to P(i).
+    # result.x[i] corresponds to P(i+1), result.x[max_s-1] to P(max_s).
+
+    first_part_probs = optimized_probs[:i]   # Probabilities P(1) to P(i)
+    second_part_probs = optimized_probs[i:]  # Probabilities P(i+1) to P(max_s)
+
+    # Sort the first part ascending, the second part descending
+    sorted_first_part = np.sort(first_part_probs)
+    sorted_second_part = np.sort(second_part_probs)[::-1] # [::-1] reverses
+
+    # --- Create final output array ---
+    # Array of size max_s + 1, initialized to zeros. Index 0 unused.
+    values = np.zeros(max_s + 1)
+
+    # Assign the sorted probabilities back into the correct slots (index 1 onwards)
+    values[1 : i + 1] = sorted_first_part      # Assign P(1)...P(i)
+    values[i + 1 : max_s + 1] = sorted_second_part # Assign P(i+1)...P(max_s)
+
+    # Final check on sum after potential normalization/sorting
+    if not np.isclose(np.sum(values[1:]), 1.0):
+         print(f"Warning: Final distribution sum is {np.sum(values[1:])}, not 1.0. Check logic.")
+
+    # Return the final array with the sorted probability distribution
+    return values
+
+i = 10  # First 5 highest values in ascending order, rest in descending order
+s = generate_weighted_list(max_s, l, i)
+print(f"Average generated service time: {np.dot(np.arange(len(s)), s)}")
+convolutions = compute_convolutions(s, N, q)
+X = np.array(bailey_welch_schedule(T, d, N, s))
+print(f"Initial schedule: {X}")
+# Objective Function Calculation
+LARGE_PENALTY = 1e10 # Penalty for infeasible solutions
+ewt, esp = calculate_objective_serv_time_lookup(X, d, convolutions)
+initial_objective_value = w * ewt + (1 - w) * esp
+print(f"Initial objective value: {initial_objective_value}")
+```
+
+#### 3. Common Functions (Objective Evaluation and HED)
+
+Objective evaluation implements $C(\mathbf{x})$ from @kaandorp_optimal_2007. HED implementation follows @deshwal_bayesian_2023.
+
+```{python}
+def evaluate_objective(U_np, X_vec, v_star, convolutions, d, w):
+    """
+    Target function: Evaluates objective for a single binary numpy array U.
+    Returns a float.
+    """
+    # Input validation (same as before)
+    if not isinstance(U_np, np.ndarray):
+        raise TypeError("Input U must be a numpy array")
+    if U_np.ndim != 1:
+         raise ValueError("Input U must be 1-dimensional")
+    if U_np.shape[0] != v_star.shape[0]:
+         raise ValueError(f"Dimension mismatch: U length {U_np.shape[0]} != V* rows {v_star.shape[0]}.")
+    if X_vec.shape[0] != v_star.shape[1]:
+         raise ValueError("Dimension mismatch: X length must match V* columns.")
+    if not np.all((U_np == 0) | (U_np == 1)):
+         raise ValueError("Input U must be binary (0s and 1s).")
+
+    # Calculate Y based on selected rows of V_star
+    V_sum = np.sum(v_star[U_np == 1, :], axis=0)
+    Y = X_vec + V_sum
+
+    # Check feasibility and calculate objective
+    if np.all(Y >= 0):
+        ewt, esp = calculate_objective_serv_time_lookup(Y, d, convolutions)
+        objective_value = w * ewt + (1 - w) * esp
+        return objective_value
+    else:
+        # Infeasible solution
+        return LARGE_PENALTY
+
+# --- HED Implementation ---
+
+def hamming_distance(u1, u2):
+    """Calculates Hamming distance between two binary numpy arrays."""
+    return np.sum(u1 != u2)
+
+def generate_diverse_random_dictionary(T, m):
+    """Generates the random dictionary A for HED."""
+    dictionary_A = np.zeros((m, T), dtype=int)
+    for i in range(m):
+        # Sample theta for density of 1s in this dictionary vector
+        theta = np.random.uniform(0, 1)
+        row = (np.random.rand(T) < theta).astype(int)
+        dictionary_A[i, :] = row
+    return dictionary_A
+
+def _generate_binary_hadamard_matrix_recursive(dim):
+    """
+    Generates a binary (0/1) Hadamard-like matrix of size dim x dim.
+    'dim' must be a power of 2.
+    This uses the Sylvester's construction H_2n = [[H_n, H_n], [H_n, 1-H_n]]
+    starting with H_1 = [[1]].
+    """
+    if not (dim > 0 and (dim & (dim - 1) == 0)): # Checks if dim is a power of 2
+        raise ValueError("Dimension must be a power of 2.")
+
+    if dim == 1:
+        return np.array([[1]], dtype=int)
+    else:
+        h_prev = _generate_binary_hadamard_matrix_recursive(dim // 2)
+        h_top = np.hstack((h_prev, h_prev))
+        h_bottom = np.hstack((h_prev, 1 - h_prev)) # 1-H_n for binary
+        return np.vstack((h_top, h_bottom))
+
+def generate_wavelet_dictionary(T, m):
+    """
+    Generates a dictionary A of size m x T using the subsampled binary wavelet approach.
+
+    Args:
+        T (int): The dimensionality of the input space (number of columns in dictionary).
+        m (int): The desired number of dictionary elements (number of rows).
+
+    Returns:
+        np.ndarray: An m x T integer numpy array representing the dictionary.
+    """
+    if T <= 0:
+        raise ValueError("T (dimensionality) must be positive.")
+    if m <= 0:
+        raise ValueError("m (dictionary size) must be positive.")
+
+    # 1. Determine the smallest power of 2 >= T for the full wavelet matrix
+    if T == 1:
+        n_wavelet = 1
+    elif (T > 0 and (T & (T - 1) == 0)): # T is already a power of 2
+        n_wavelet = T
+    else:
+        n_wavelet = 2**math.ceil(math.log2(T))
+
+    # 2. Generate the full n_wavelet x n_wavelet binary Hadamard matrix
+    # print(f"Generating full wavelet matrix of size: {n_wavelet}x{n_wavelet}")
+    full_wavelet_matrix = _generate_binary_hadamard_matrix_recursive(n_wavelet)
+
+    # 3. Subsample T columns if n_wavelet > T
+    if n_wavelet > T:
+        # print(f"Subsampling {T} columns from {n_wavelet} columns.")
+        col_indices = np.random.choice(n_wavelet, size=T, replace=False)
+        col_indices.sort() # Optional: for deterministic testing if seed is set
+        wavelet_matrix_T_cols = full_wavelet_matrix[:, col_indices]
+    else:
+        wavelet_matrix_T_cols = full_wavelet_matrix # n_wavelet == T
+
+    # 4. Subsample m rows
+    num_available_rows = wavelet_matrix_T_cols.shape[0]
+    if m > num_available_rows:
+        print(f"Warning: Requested dictionary size m ({m}) is greater than "
+              f"available unique wavelet rows ({num_available_rows}). "
+              f"Using all available rows and repeating if necessary, or consider reducing m.")
+        # For simplicity, if m > num_available_rows, we'll sample with replacement
+        # or you could choose to error, or return fewer rows.
+        # The paper implies m should be less than or equal to the rows of B_d.
+        # If sampling with replacement is needed:
+        row_indices = np.random.choice(num_available_rows, size=m, replace=True)
+        # If strictly no replacement and m > num_available_rows, one might error or cap m
+        # row_indices = np.random.choice(num_available_rows, size=min(m, num_available_rows), replace=False)
+        # if m > num_available_rows:
+        #     # Handle the case where more rows are needed than available unique ones
+        #     # This might involve repeating rows or another strategy
+        #     pass
+    else:
+        # print(f"Subsampling {m} rows from {num_available_rows} available rows.")
+        row_indices = np.random.choice(num_available_rows, size=m, replace=False)
+
+    row_indices.sort() # Optional: for deterministic testing if seed is set
+    dictionary_A = wavelet_matrix_T_cols[row_indices, :]
+
+    return dictionary_A
+
+def embed_vector(U_np, dictionary_A):
+    """Embeds a single binary vector U using HED."""
+    m = dictionary_A.shape[0]
+    embedding_phi = np.zeros(m, dtype=float) # Use float for GP
+    for i in range(m):
+        embedding_phi[i] = hamming_distance(U_np, dictionary_A[i, :])
+    return embedding_phi
+
+def embed_batch(U_batch_np, dictionary_A):
+    """Embeds a batch of binary vectors U."""
+    # Input U_batch_np is expected to be a NumPy array
+    m = dictionary_A.shape[0]
+    if U_batch_np.ndim == 1: # Handle single vector case
+        U_batch_np = U_batch_np.reshape(1, -1)
+
+    batch_size = U_batch_np.shape[0]
+    embeddings_np = np.zeros((batch_size, m), dtype=float) # Use float for GP
+
+    for j in range(batch_size):
+        embeddings_np[j, :] = embed_vector(U_batch_np[j, :], dictionary_A)
+
+    # Return NumPy array directly
+    return embeddings_np
+  
+
+```
+
+#### 4. Experiment 1: CBO with Expected Improvement (EI)
+
+Applies the methodology from @deshwal_bayesian_2023 using EI.
+
+```{python}
+# --- get_fitted_model function remains the same ---
+def get_fitted_model(train_X_embedded_scaled, train_Y, m):
+    # ... (implementation is unchanged) ...
+    if train_Y.ndim > 1 and train_Y.shape[1] == 1: train_Y = train_Y.ravel()
+    kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
+             Matern(length_scale=np.ones(m), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
+    gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
+    gp_model.fit(train_X_embedded_scaled, train_Y)
+    return gp_model
+
+def lower_confidence_bound(mu, sigma, kappa=2.576):
+    """
+    Computes the Lower Confidence Bound (LCB) acquisition function.
+    Assumes maximization of this value guides the search (since mu is neg objective).
+    Higher LCB means lower predicted objective or lower penalty for uncertainty.
+
+    mu, sigma: Predicted mean and standard deviation (NumPy arrays).
+    kappa: Controls the balance between exploitation (high mu -> low original objective)
+           and exploration (low sigma).
+    """
+    # Ensure sigma is non-negative
+    sigma = np.maximum(sigma, 0)
+    return mu - kappa * sigma # <<< Sign flipped from UCB
+
+def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, num_candidates, kappa):
+    """
+    Optimizes LCB acquisition function by sampling random binary candidates,
+    embedding, SCALING, predicting with GP, and calculating LCB.
+    Selects the top q candidates based on LCB.
+    Returns candidates as a numpy array (q x T).
+    """
+    m = dictionary_A.shape[0]
+
+    # 1. Generate Random Binary Candidates
+    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_candidates, T))
+
+    # 2. Embed the Candidates
+    embedded_candidates_np = embed_batch(candidate_u_vectors_np, dictionary_A)
+
+    # 3. Scale the Embedded Candidates
+    embedded_candidates_scaled_np = scaler.transform(embedded_candidates_np)
+
+    # 4. Predict Mean and Std Dev using the GP Model
+    mu, std = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
+
+    # 5. Calculate Acquisition Function (Lower Confidence Bound) <<< CHANGED HERE
+    acq_values = lower_confidence_bound(mu, std, kappa=kappa) # Use LCB
+
+    # 6. Select Top Candidates (based on highest LCB) <<< COMMENT UPDATED
+    # We maximize LCB = mu - kappa*sigma, where mu is neg_objective
+    top_indices = np.argsort(acq_values)[-q:]
+    top_indices = top_indices[::-1] # Ensure descending order of LCB
+
+    return candidate_u_vectors_np[top_indices, :]
+
+# --- Local Search with Embedded BO ---
+start_time = time.time()
+MAX_LOCAL_SEARCH_ITERATIONS = 10 # Max iterations for the outer local search loop
+CONVERGENCE_TOLERANCE = 1e-5    # If improvement is less than this, consider converged
+NO_IMPROVEMENT_STREAK_LIMIT = 3 # Stop if no improvement for this many LS iterations
+
+# BO Parameters (can be tuned)
+KAPPA = 2.576
+N_INITIAL_BO = 50
+N_ITERATIONS_BO = 20 # Max BO iterations *if no improvement is found earlier*
+BATCH_SIZE_q = 5     # Number of candidates BO proposes at once
+m = math.ceil(T/2) if T > 0 else 1
+NUM_CANDIDATES_Acqf = (T * 2 * 1024) if T > 0 else 100 # Ensure Acqf has candidates even if T=0 (though U will be empty)
+
+current_X_ls = np.copy(X) # Start with the initial X
+best_overall_f_ls = float('inf')
+best_overall_U_ls = None
+best_overall_Y_ls = None
+no_improvement_streak = 0
+
+print(f"Starting Local Search with initial X: {current_X_ls}")
+
+for ls_iter in range(MAX_LOCAL_SEARCH_ITERATIONS):
+    print(f"\n\n{'='*10} LOCAL SEARCH ITERATION {ls_iter + 1}/{MAX_LOCAL_SEARCH_ITERATIONS} {'='*10}")
+    print(f"Current X for this LS iteration: {current_X_ls}")
+    current_best_f_in_ls_iter = float('inf') # Best objective for the *current* X
+
+    # --- BO Loop (inner loop) ---
+    evaluated_U_np_list_bo = []
+    evaluated_f_vals_bo = []
+    train_Y_list_bo = [] # For negated objectives (GP maximizes)
+
+    # 1. Initialization for BO (using current_X_ls)
+    #    We can add some diverse initial candidates or just let BO explore
+    #    For simplicity, we'll generate a few random ones if initial_candidates is specific to global start
+    bo_initial_points = [np.random.randint(0, 2, size=T) for _ in range(N_INITIAL_BO)]
+    bo_initial_points.insert(0, np.zeros(T, dtype=int)) # Add U=zeros as the first point
+    # Ensure at least one non-empty schedule if possible
+    if T > 0 and not any(np.any(u) for u in bo_initial_points):
+        idx_to_set = np.random.randint(T)
+        bo_initial_points[0][idx_to_set] = 1
+
+
+    for U_init in bo_initial_points: # Use a small set of diverse points for each BO run
+        f_val = evaluate_objective(U_init, current_X_ls, v_star, convolutions, d, w)
+        neg_f_val = -f_val
+        evaluated_U_np_list_bo.append(U_init)
+        evaluated_f_vals_bo.append(f_val)
+        train_Y_list_bo.append(neg_f_val)
+
+    if evaluated_f_vals_bo:
+        best_f_this_bo_run = min(evaluated_f_vals_bo)
+        best_U_this_bo_run_idx = np.argmin(evaluated_f_vals_bo)
+        best_U_this_bo_run = evaluated_U_np_list_bo[best_U_this_bo_run_idx]
+    else: # Should not happen if N_INITIAL_BO > 0
+        best_f_this_bo_run = float('inf')
+        best_U_this_bo_run = np.zeros(T, dtype=int) # Placeholder
+
+    print(f"BO Initial best objective for current X: {best_f_this_bo_run:.4f}")
+
+    improvement_found_in_bo = False
+
+    for bo_iter in range(N_ITERATIONS_BO):
+        print(f"\n--- BO Iteration {bo_iter + 1}/{N_ITERATIONS_BO} (LS Iter {ls_iter + 1}) ---")
+        start_time_bo = time.time()
+
+        # a. Generate dictionary A
+        current_dictionary_A = generate_diverse_random_dictionary(T, m) # Or wavelet
+
+        # b. Embed ALL evaluated U vectors for this BO run
+        if not evaluated_U_np_list_bo: continue
+        evaluated_U_np_array_bo = np.array(evaluated_U_np_list_bo)
+        embedded_train_X_bo = embed_batch(evaluated_U_np_array_bo, current_dictionary_A)
+
+        # c. Scale
+        scaler_bo = MinMaxScaler()
+        if embedded_train_X_bo.shape[0] > 0:
+            embedded_train_X_scaled_bo = scaler_bo.fit_transform(embedded_train_X_bo)
+        else:
+            embedded_train_X_scaled_bo = embedded_train_X_bo
+
+        train_Y_for_fit_bo = np.array(train_Y_list_bo)
+
+        # d. Fit GP Model
+        if embedded_train_X_scaled_bo.shape[0] > 0 and \
+           train_Y_for_fit_bo.shape[0] == embedded_train_X_scaled_bo.shape[0]:
+            try:
+                gp_model_bo = get_fitted_model(embedded_train_X_scaled_bo, train_Y_for_fit_bo, m)
+            except ValueError as e:
+                print(f"Warning: GP fitting error: {e}. Skipping BO iteration.")
+                continue
+        else:
+            print("Warning: Not enough data or mismatch for GP. Skipping BO iteration.")
+            continue
+
+        # f. Optimize Acquisition Function (LCB)
+        next_U_candidates_np_bo = optimize_acqf_discrete_via_embedding(
+            gp_model=gp_model_bo,
+            scaler=scaler_bo,
+            dictionary_A=current_dictionary_A,
+            T=T,
+            q=BATCH_SIZE_q,
+            num_candidates=NUM_CANDIDATES_Acqf,
+            kappa=KAPPA
+        )
+        if next_U_candidates_np_bo.shape[0] == 0:
+            print("Acquisition function optimization yielded no new candidates. Stopping BO for this LS iteration.")
+            break
+
+
+        # g. Evaluate Objective for new candidates
+        newly_evaluated_U_bo = []
+        newly_evaluated_f_bo = []
+        newly_evaluated_neg_f_bo = []
+
+        for i in range(next_U_candidates_np_bo.shape[0]):
+            next_U_bo = next_U_candidates_np_bo[i, :]
+            # Check if already evaluated in *this specific BO run*
+            already_evaluated_this_bo = any(np.array_equal(next_U_bo, u) for u in evaluated_U_np_list_bo)
+            if already_evaluated_this_bo:
+                print(f"  Candidate {i} was already evaluated in this BO run. Skipping.")
+                continue
+
+            next_f_bo = evaluate_objective(next_U_bo, current_X_ls, v_star, convolutions, d, w)
+            next_neg_f_bo = -next_f_bo
+            temp_Y_bo = current_X_ls + np.sum(v_star[next_U_bo == 1, :], axis=0) # Calculate Y for this candidate
+            print(f"  BO Candidate {i}: Obj = {next_f_bo:.4f} (with current_X_ls)") # Y: {temp_Y_bo}
+
+            newly_evaluated_U_bo.append(next_U_bo)
+            newly_evaluated_f_bo.append(next_f_bo)
+            newly_evaluated_neg_f_bo.append(next_neg_f_bo)
+
+            if next_f_bo < best_f_this_bo_run:
+                best_f_this_bo_run = next_f_bo
+                best_U_this_bo_run = next_U_bo # Update best U for this BO run
+                improvement_found_in_bo = True
+                print(f"    New best for this BO run: Obj={best_f_this_bo_run:.4f}, U={best_U_this_bo_run}")
+                # --- LOCAL SEARCH DECISION POINT ---
+                # If this new objective is better than the current_best_f_in_ls_iter
+                # (which is the objective associated with current_X_ls itself, or best found so far for current_X_ls)
+                # Then, we have found an improvement. We can break the BO loop and update X.
+                # For a true "first improvement" local search, we'd break here.
+                # For a "best improvement" within BO, we continue BO, then update LS.
+                # Let's implement "first improvement found by BO for current X"
+                # To make it more "local searchy", we compare to the objective of X itself
+                # or a very good objective found from X.
+                # If we are trying to improve upon current_X_ls (whose implicit U is "all zeros" for modifications)
+                # obj_of_current_X = evaluate_objective(np.zeros(T, dtype=int), current_X_ls, v_star, convolutions, d, w)
+                # We need a baseline. The baseline is the best objective found so far *for the current X_ls*.
+                # This is `best_f_this_bo_run` before this candidate was evaluated.
+                # So, if `next_f_bo` is better than the previous `best_f_this_bo_run`, it's an improvement.
+                # No, `best_f_this_bo_run` is the best *during this specific BO run*.
+                # We need to compare to `current_best_f_in_ls_iter` which should be the obj of `current_X_ls`
+                # if we haven't found a better U for it yet.
+                # Let's initialize `current_best_f_in_ls_iter` with the objective of `current_X_ls` (U=zeros)
+                if ls_iter == 0 and bo_iter == 0 and i ==0: # At very start, or start of new LS with new X
+                    obj_of_current_X_ls = evaluate_objective(np.zeros(T, dtype=int), current_X_ls, v_star, convolutions, d, w)
+                    current_best_f_in_ls_iter = obj_of_current_X_ls
+
+                if next_f_bo < current_best_f_in_ls_iter:
+                    print(f"    BO found a U that improves upon current_X_ls (Obj: {next_f_bo:.4f} < {current_best_f_in_ls_iter:.4f}).")
+                    current_best_f_in_ls_iter = next_f_bo # Update best for this LS iter
+                    # This U (next_U_bo) is the candidate for the next X
+                    # We can decide to break BO here and update X, or continue BO for best improvement.
+                    # For "first improvement" local search:
+                    # break # This break will exit the loop over next_U_candidates_np_bo
+                    pass # Let BO finish its batch to make a more informed choice for this LS step
+
+        # h. Augment Dataset for this BO run
+        evaluated_U_np_list_bo.extend(newly_evaluated_U_bo)
+        evaluated_f_vals_bo.extend(newly_evaluated_f_bo)
+        train_Y_list_bo.extend(newly_evaluated_neg_f_bo)
+
+        iter_time_bo = time.time() - start_time_bo
+        print(f"  Best objective for current X in this BO run: {best_f_this_bo_run:.4f}")
+        print(f"  BO Iteration {bo_iter + 1} completed in {iter_time_bo:.2f} sec.")
+
+        # if improvement_found_in_bo and "first improvement" was desired from the batch:
+        #    break # This break will exit the BO iterations loop
+
+    # --- End of BO Loop for current_X_ls ---
+    print(f"\nFinished BO for LS Iteration {ls_iter + 1}.")
+    print(f"Best U found by BO for current_X_ls: {best_U_this_bo_run}, Obj: {best_f_this_bo_run:.4f}")
+
+    # Compare the best result from this BO run (best_f_this_bo_run for current_X_ls)
+    # with the overall best found so far in the local search (best_overall_f_ls)
+    # The "move" in local search happens if `best_f_this_bo_run` is better than
+    # the objective of `current_X_ls` (using U=zeros for modifications).
+    obj_of_current_X_ls_no_mod = evaluate_objective(np.zeros(T, dtype=int), current_X_ls, v_star, convolutions, d, w)
+
+    if best_f_this_bo_run < obj_of_current_X_ls_no_mod - CONVERGENCE_TOLERANCE:
+        print(f"Improvement found! New best obj {best_f_this_bo_run:.4f} < obj of current X {obj_of_current_X_ls_no_mod:.4f}")
+        Y_improved = current_X_ls + np.sum(v_star[best_U_this_bo_run == 1, :], axis=0)
+
+        # Check feasibility of the new Y before accepting the move
+        is_Y_feasible = np.all(Y_improved >= 0)
+        if not is_Y_feasible:
+            # Re-evaluate with penalty if the direct evaluation didn't catch it
+            # (depends on how evaluate_objective handles feasibility internally)
+            # This check is mostly for sanity, evaluate_objective should handle it.
+            obj_of_Y_improved_check = evaluate_objective(best_U_this_bo_run, current_X_ls, v_star, convolutions, d, w)
+            if obj_of_Y_improved_check >= LARGE_PENALTY:
+                 print(f"  Proposed Y from U={best_U_this_bo_run} is INFEASIBLE. Obj={obj_of_Y_improved_check:.4f}. Rejecting move.")
+                 no_improvement_streak += 1
+            else: # It was feasible or penalty was low enough
+                print(f"  Moving to new state Y: {Y_improved}")
+                current_X_ls = np.copy(Y_improved) # Update X for the next LS iteration
+                no_improvement_streak = 0
+        else:
+            print(f"  Moving to new state Y: {Y_improved}")
+            current_X_ls = np.copy(Y_improved) # Update X for the next LS iteration
+            no_improvement_streak = 0
+
+        # Update overall best if this new state (Y_improved) is the best ever
+        # The objective of Y_improved *as a new starting state X* is evaluate_objective(zeros, Y_improved, ...)
+        obj_of_new_X_state = evaluate_objective(np.zeros(T, dtype=int), current_X_ls, v_star, convolutions, d, w)
+        if obj_of_new_X_state < best_overall_f_ls:
+            best_overall_f_ls = obj_of_new_X_state
+            best_overall_U_ls = np.zeros(T, dtype=int) # U is relative to X, so for the new X, U is initially zeros
+            best_overall_Y_ls = np.copy(current_X_ls)
+            print(f"    New OVERALL best state found. Obj of new X: {best_overall_f_ls:.4f}")
+
+    else:
+        print(f"No improvement over current_X_ls (Obj {obj_of_current_X_ls_no_mod:.4f} vs BO best {best_f_this_bo_run:.4f}). Staying at current X.")
+        no_improvement_streak += 1
+
+    if no_improvement_streak >= NO_IMPROVEMENT_STREAK_LIMIT:
+        print(f"No improvement for {no_improvement_streak} local search iterations. Stopping.")
+        break
+    if ls_iter > 0 and abs(best_f_this_bo_run - obj_of_current_X_ls_no_mod) < CONVERGENCE_TOLERANCE and best_f_this_bo_run < obj_of_current_X_ls_no_mod :
+        # This condition is a bit tricky. If BO found something slightly better but very close,
+        # and we made the move, the next obj_of_current_X_ls_no_mod will be that new value.
+        # True convergence is when BO cannot find a U that makes current_X_ls + U_vstar better than current_X_ls.
+        pass # Rely on no_improvement_streak for now.
+
+# --- End of Local Search Loop ---
+
+print(f"\n\n{'='*10} LOCAL SEARCH FINISHED {'='*10}")
+if best_overall_Y_ls is not None:
+    print(f"Best Overall Objective (of the final X state): {best_overall_f_ls:.4f}")
+    # print(f"Best Overall U (relative to the X that produced it): {best_overall_U_ls}") # This U is just zeros for the final X
+    print(f"Best Overall Y (final state vector): {best_overall_Y_ls}")
+
+    # Verification of the final best_overall_Y_ls
+    print("\n--- Verification of Final Best Local Search State ---")
+    is_feasible_final = np.all(best_overall_Y_ls >= 0)
+    recalculated_obj_final = LARGE_PENALTY
+    if is_feasible_final:
+        # Objective of this state is when U=zeros (no further modifications)
+        ewt_f, esp_f = calculate_objective_serv_time_lookup(best_overall_Y_ls, d, convolutions)
+        recalculated_obj_final = w * ewt_f + (1 - w) * esp_f
+    print(f"Is the best Y_ls feasible? {is_feasible_final}")
+    if is_feasible_final:
+        print(f"Objective value of best Y_ls (recalculated): {recalculated_obj_final:.4f}")
+        if not np.isclose(best_overall_f_ls, recalculated_obj_final):
+            print(f"Warning: Stored best LS objective ({best_overall_f_ls:.4f}) "
+                  f"does not match recalculation ({recalculated_obj_final:.4f})!")
+    elif best_overall_f_ls < LARGE_PENALTY:
+        print(f"Warning: Best LS objective ({best_overall_f_ls:.4f}) is not penalty, but feasibility check failed for Y.")
+    else:
+        print("Best LS solution found corresponds to an infeasible penalty value.")
+
+else:
+    print("Local search did not find any valid state or no iterations were run meaningfully.")
+end_time = time.time()
+print(f"Total time taken for Local Search: {end_time - start_time:.2f} seconds")
+```
+
+#### 5. Experiment 2:
+
+```{python}
+# --- Local Search with Embedded BO (Stricter First Improvement) ---
+start_time = time.time()
+MAX_LOCAL_SEARCH_ITERATIONS = 20
+CONVERGENCE_TOLERANCE = 1e-8
+NO_IMPROVEMENT_STREAK_LIMIT = 5
+
+KAPPA = 2.576
+N_INITIAL_BO = 50
+N_ITERATIONS_BO = 20 # Max BO iterations *if no improvement is found earlier*
+BATCH_SIZE_q = 5     # Number of candidates BO proposes at once
+m = math.ceil(T/2) if T > 0 else 1
+NUM_CANDIDATES_Acqf = (T * 2 * 1024) if T > 0 else 100 # Ensure Acqf has candidates even if T=0 (though U will be empty)
+
+
+current_X_ls = np.copy(X)
+best_overall_f_ls = float('inf')
+best_overall_Y_ls = None
+no_improvement_streak = 0
+
+# Initial evaluation of the starting X state
+obj_of_initial_X = evaluate_objective(np.zeros(T, dtype=int) if T > 0 else np.array([]), current_X_ls, v_star, convolutions, d, w)
+best_overall_f_ls = obj_of_initial_X
+best_overall_Y_ls = np.copy(current_X_ls)
+print(f"Starting Local Search. Initial X obj: {best_overall_f_ls:.4f}")
+
+
+for ls_iter in range(MAX_LOCAL_SEARCH_ITERATIONS):
+    print(f"\n\n{'='*10} LOCAL SEARCH ITERATION {ls_iter + 1}/{MAX_LOCAL_SEARCH_ITERATIONS} {'='*10}")
+    print(f"Current X for this LS iteration (Obj: {evaluate_objective(np.zeros(T, dtype=int) if T > 0 else np.array([]), current_X_ls, v_star, convolutions, d, w):.4f})")
+
+    # The baseline to beat in this LS iteration is the objective of current_X_ls with no modifications
+    baseline_obj_for_ls_iter = evaluate_objective(np.zeros(T, dtype=int) if T > 0 else np.array([]), current_X_ls, v_star, convolutions, d, w)
+    print(f"  Baseline objective to beat for current X: {baseline_obj_for_ls_iter:.4f}")
+
+    bo_found_improving_U = False
+    best_U_from_bo_for_current_X = np.zeros(T, dtype=int) if T > 0 else np.array([])
+    best_f_from_bo_for_current_X = baseline_obj_for_ls_iter # Start with baseline
+
+    # --- BO Loop (inner loop) ---
+    evaluated_U_np_list_bo = []
+    evaluated_f_vals_bo = []
+    train_Y_list_bo = []
+
+    # 1. Initialization for BO
+    if T > 0: # Only generate U candidates if T > 0
+        bo_initial_points = [np.random.randint(0, 2, size=T) for _ in range(N_INITIAL_BO)]
+        bo_initial_points.insert(0, np.zeros(T, dtype=int)) # Add U=zeros as the first point
+        if not any(np.any(u) for u in bo_initial_points) and N_INITIAL_BO > 0 :
+            idx_to_set = np.random.randint(T)
+            bo_initial_points[0][idx_to_set] = 1
+    else: # T=0
+        bo_initial_points = [np.array([])] # U is empty if T=0
+
+    for U_init in bo_initial_points:
+        f_val = evaluate_objective(U_init, current_X_ls, v_star, convolutions, d, w)
+        neg_f_val = -f_val
+        evaluated_U_np_list_bo.append(U_init)
+        evaluated_f_vals_bo.append(f_val)
+        train_Y_list_bo.append(neg_f_val)
+        if f_val < best_f_from_bo_for_current_X:
+            best_f_from_bo_for_current_X = f_val
+            best_U_from_bo_for_current_X = U_init
+            if f_val < baseline_obj_for_ls_iter - CONVERGENCE_TOLERANCE:
+                print(f"  BO Init found immediate improver U={U_init}, Obj={f_val:.4f} (beats {baseline_obj_for_ls_iter:.4f})")
+                bo_found_improving_U = True
+                break # Exit BO initialization loop
+
+    if bo_found_improving_U: # If init found improvement, skip further BO iterations
+        pass # Proceed to LS decision block
+    else: # Continue with BO iterations if no immediate improvement from init
+        for bo_iter in range(N_ITERATIONS_BO):
+            print(f"\n--- BO Iteration {bo_iter + 1}/{N_ITERATIONS_BO} (LS Iter {ls_iter + 1}) ---")
+            start_time_bo = time.time()
+
+            current_dictionary_A = generate_diverse_random_dictionary(T, m)
+
+            if not evaluated_U_np_list_bo: continue
+            evaluated_U_np_array_bo = np.array(evaluated_U_np_list_bo, dtype=object) # dtype=object for ragged arrays if T=0
+            # Ensure U vectors are 2D for embed_batch, even if T=0 (N,0)
+            if T == 0 and evaluated_U_np_array_bo.ndim == 1:
+                 evaluated_U_np_array_bo = evaluated_U_np_array_bo.reshape(-1,0)
+
+
+            embedded_train_X_bo = embed_batch(evaluated_U_np_array_bo, current_dictionary_A)
+
+            scaler_bo = MinMaxScaler()
+            if embedded_train_X_bo.shape[0] > 0:
+                embedded_train_X_scaled_bo = scaler_bo.fit_transform(embedded_train_X_bo)
+            else:
+                embedded_train_X_scaled_bo = embedded_train_X_bo
+
+            train_Y_for_fit_bo = np.array(train_Y_list_bo)
+
+            if embedded_train_X_scaled_bo.shape[0] > 0 and \
+               train_Y_for_fit_bo.shape[0] == embedded_train_X_scaled_bo.shape[0]:
+                try:
+                    gp_model_bo = get_fitted_model(embedded_train_X_scaled_bo, train_Y_for_fit_bo, m)
+                except ValueError as e:
+                    print(f"Warning: GP fitting error: {e}. Skipping BO iteration.")
+                    continue
+            else:
+                print("Warning: Not enough/mismatched data for GP. Skipping BO iteration.")
+                continue
+
+            next_U_candidates_np_bo = optimize_acqf_discrete_via_embedding(
+                gp_model=gp_model_bo, scaler=scaler_bo, dictionary_A=current_dictionary_A,
+                T=T, q=BATCH_SIZE_q, num_candidates=NUM_CANDIDATES_Acqf, kappa=KAPPA
+            )
+            if next_U_candidates_np_bo.shape[0] == 0:
+                print("Acquisition function yielded no new candidates. Continuing BO.")
+                continue
+
+            newly_evaluated_U_bo = []
+            newly_evaluated_f_bo = []
+            newly_evaluated_neg_f_bo = []
+
+            for i_cand in range(next_U_candidates_np_bo.shape[0]):
+                next_U_bo = next_U_candidates_np_bo[i_cand, :]
+                already_evaluated_this_bo = any(np.array_equal(next_U_bo, u) for u in evaluated_U_np_list_bo)
+                if already_evaluated_this_bo: continue
+
+                next_f_bo = evaluate_objective(next_U_bo, current_X_ls, v_star, convolutions, d, w)
+                next_neg_f_bo = -next_f_bo
+                # temp_Y_bo = current_X_ls + (np.sum(v_star[next_U_bo == 1, :], axis=0) if T > 0 else 0)
+                print(f"  BO Acqf Candidate {i_cand}: Obj = {next_f_bo:.4f}")
+
+                newly_evaluated_U_bo.append(next_U_bo)
+                newly_evaluated_f_bo.append(next_f_bo)
+                newly_evaluated_neg_f_bo.append(next_neg_f_bo)
+
+                if next_f_bo < best_f_from_bo_for_current_X: # Update best found in this BO run
+                    best_f_from_bo_for_current_X = next_f_bo
+                    best_U_from_bo_for_current_X = next_U_bo
+
+                if next_f_bo < baseline_obj_for_ls_iter - CONVERGENCE_TOLERANCE:
+                    print(f"    BO Acqf found immediate improver U={next_U_bo}, Obj={next_f_bo:.4f} (beats {baseline_obj_for_ls_iter:.4f})")
+                    bo_found_improving_U = True
+                    # Update best_U_from_bo_for_current_X one last time with this specific improver
+                    best_U_from_bo_for_current_X = next_U_bo
+                    best_f_from_bo_for_current_X = next_f_bo
+                    break # Exit loop evaluating candidates from acquisition function
+
+            evaluated_U_np_list_bo.extend(newly_evaluated_U_bo)
+            evaluated_f_vals_bo.extend(newly_evaluated_f_bo)
+            train_Y_list_bo.extend(newly_evaluated_neg_f_bo)
+
+            iter_time_bo = time.time() - start_time_bo
+            print(f"  Best obj for current X in this BO run so far: {best_f_from_bo_for_current_X:.4f}")
+            print(f"  BO Iteration {bo_iter + 1} completed in {iter_time_bo:.2f} sec.")
+
+            if bo_found_improving_U:
+                break # Exit BO iterations loop as an improver was found
+
+    # --- End of BO Loop for current_X_ls ---
+    print(f"\nFinished BO for LS Iteration {ls_iter + 1}.")
+
+    if bo_found_improving_U:
+        print(f"BO found an improving U: {best_U_from_bo_for_current_X}, Obj: {best_f_from_bo_for_current_X:.4f}")
+        Y_improved = current_X_ls + (np.sum(v_star[best_U_from_bo_for_current_X == 1, :], axis=0) if T > 0 else 0)
+
+        # Sanity check feasibility of Y_improved (evaluate_objective should handle penalties)
+        obj_of_Y_improved_check = evaluate_objective(np.zeros(T,dtype=int) if T > 0 else np.array([]), Y_improved, v_star, convolutions, d, w)
+
+        if obj_of_Y_improved_check >= LARGE_PENALTY and best_f_from_bo_for_current_X >= LARGE_PENALTY : # Check if the *state* Y_improved is penalized
+            print(f"  Proposed Y from U={best_U_from_bo_for_current_X} results in a penalized state. Obj={obj_of_Y_improved_check:.4f}. Rejecting move.")
+            no_improvement_streak += 1
+        else:
+            print(f"  Improvement accepted. Moving to new state Y: (Obj of Y state: {obj_of_Y_improved_check:.4f})")
+            current_X_ls = np.copy(Y_improved)
+            no_improvement_streak = 0
+
+            # Update overall best if this new state is the best ever
+            if obj_of_Y_improved_check < best_overall_f_ls:
+                best_overall_f_ls = obj_of_Y_improved_check
+                best_overall_Y_ls = np.copy(current_X_ls)
+                print(f"    New OVERALL best state found. Obj of new X: {best_overall_f_ls:.4f}")
+    else:
+        print(f"BO did not find a U that improves upon current_X_ls (baseline: {baseline_obj_for_ls_iter:.4f}, BO best for X: {best_f_from_bo_for_current_X:.4f}).")
+        no_improvement_streak += 1
+
+    if no_improvement_streak >= NO_IMPROVEMENT_STREAK_LIMIT:
+        print(f"No improvement for {no_improvement_streak} local search iterations. Stopping.")
+        break
+
+# --- End of Local Search Loop ---
+# (Results and Verification part remains the same as your previous version, using best_overall_f_ls and best_overall_Y_ls)
+print(f"\n\n{'='*10} LOCAL SEARCH FINISHED {'='*10}")
+if best_overall_Y_ls is not None:
+    print(f"Best Overall Objective (of the final X state): {best_overall_f_ls:.4f}")
+    print(f"Best Overall Y (final state vector): {best_overall_Y_ls}")
+
+    # Verification of the final best_overall_Y_ls
+    print("\n--- Verification of Final Best Local Search State ---")
+    is_feasible_final = np.all(best_overall_Y_ls >= 0) # Basic feasibility
+    recalculated_obj_final = LARGE_PENALTY
+    # The true objective of the state Y_ls is when U is all zeros for it
+    recalculated_obj_final = evaluate_objective(np.zeros(T,dtype=int) if T > 0 else np.array([]), best_overall_Y_ls, v_star, convolutions, d, w)
+
+
+    print(f"Is the best Y_ls feasible (according to its obj value < LARGE_PENALTY)? {recalculated_obj_final < LARGE_PENALTY}")
+    if recalculated_obj_final < LARGE_PENALTY:
+        print(f"Objective value of best Y_ls (recalculated from state): {recalculated_obj_final:.4f}")
+        if not np.isclose(best_overall_f_ls, recalculated_obj_final):
+            print(f"Warning: Stored best LS objective ({best_overall_f_ls:.4f}) "
+                  f"does not match recalculation ({recalculated_obj_final:.4f})!")
+    else:
+        print(f"Best LS solution state has a penalty objective: {recalculated_obj_final:.4f}")
+else:
+    print("Local search did not find any valid state or no iterations were run meaningfully.")
+    
+end_time = time.time()
+print(f"Total time taken for Local Search: {end_time - start_time:.2f} seconds")
+```
+
+#### 6. Experiment 3:
+
+```{}
+```
+
+## Results
+
+### Experiment 1: 
+
+### Experiment 2: 
+
+### Summary of Best ObjectivesDiscussion
+
+1.  **Performance Comparison**:
+
+2.  **Hypothesis Evaluation**:
+
+    -   Hypothesis 1
+    -   Hypothesis 2
+
+3.  **Exploration vs. Exploitation**:
+
+4.  **Computational Effort**:
+
+5.  **Limitations and Future Work**:
+
+    -   The optimality guarantee mentioned by @kaandorp_optimal_2007 applies to their specific local search algorithm operating directly on the schedule space $\mathcal{F}$, leveraging multimodularity. Our BO approach operates on the perturbation vector space $\mathbf{U}$ via HED embeddings. While BO aims for global optimization, it doesn't inherit the same theoretical guarantee of finding the global optimum as the original local search, especially given the stochastic nature of GP modeling and acquisition function optimization.
+    -   The performance is likely sensitive to BO hyperparameters (dictionary size $m$, $\kappa$ values, number of candidates for acquisition optimization).
+    -   Further investigation into different dictionary construction methods (e.g., binary wavelets as mentioned in Deshwal et al., 2023) or adaptive $\kappa$ schedules could be beneficial.
+
+## Timeline
+
+-   **Experiment Setup and Code Implementation**: 09-05-2025
+-   **Results Analysis and Report Compilation**:
+
+## References
+
+::: {#refs}
+:::

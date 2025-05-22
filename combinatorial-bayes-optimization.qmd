@@ -338,6 +338,87 @@ def generate_diverse_random_dictionary(T, m):
         dictionary_A[i, :] = row
     return dictionary_A
 
+def _generate_binary_hadamard_matrix_recursive(dim):
+    """
+    Generates a binary (0/1) Hadamard-like matrix of size dim x dim.
+    'dim' must be a power of 2.
+    This uses the Sylvester's construction H_2n = [[H_n, H_n], [H_n, 1-H_n]]
+    starting with H_1 = [[1]].
+    """
+    if not (dim > 0 and (dim & (dim - 1) == 0)): # Checks if dim is a power of 2
+        raise ValueError("Dimension must be a power of 2.")
+
+    if dim == 1:
+        return np.array([[1]], dtype=int)
+    else:
+        h_prev = _generate_binary_hadamard_matrix_recursive(dim // 2)
+        h_top = np.hstack((h_prev, h_prev))
+        h_bottom = np.hstack((h_prev, 1 - h_prev)) # 1-H_n for binary
+        return np.vstack((h_top, h_bottom))
+
+def generate_wavelet_dictionary(T, m):
+    """
+    Generates a dictionary A of size m x T using the subsampled binary wavelet approach.
+
+    Args:
+        T (int): The dimensionality of the input space (number of columns in dictionary).
+        m (int): The desired number of dictionary elements (number of rows).
+
+    Returns:
+        np.ndarray: An m x T integer numpy array representing the dictionary.
+    """
+    if T <= 0:
+        raise ValueError("T (dimensionality) must be positive.")
+    if m <= 0:
+        raise ValueError("m (dictionary size) must be positive.")
+
+    # 1. Determine the smallest power of 2 >= T for the full wavelet matrix
+    if T == 1:
+        n_wavelet = 1
+    elif (T > 0 and (T & (T - 1) == 0)): # T is already a power of 2
+        n_wavelet = T
+    else:
+        n_wavelet = 2**math.ceil(math.log2(T))
+
+    # 2. Generate the full n_wavelet x n_wavelet binary Hadamard matrix
+    # print(f"Generating full wavelet matrix of size: {n_wavelet}x{n_wavelet}")
+    full_wavelet_matrix = _generate_binary_hadamard_matrix_recursive(n_wavelet)
+
+    # 3. Subsample T columns if n_wavelet > T
+    if n_wavelet > T:
+        # print(f"Subsampling {T} columns from {n_wavelet} columns.")
+        col_indices = np.random.choice(n_wavelet, size=T, replace=False)
+        col_indices.sort() # Optional: for deterministic testing if seed is set
+        wavelet_matrix_T_cols = full_wavelet_matrix[:, col_indices]
+    else:
+        wavelet_matrix_T_cols = full_wavelet_matrix # n_wavelet == T
+
+    # 4. Subsample m rows
+    num_available_rows = wavelet_matrix_T_cols.shape[0]
+    if m > num_available_rows:
+        print(f"Warning: Requested dictionary size m ({m}) is greater than "
+              f"available unique wavelet rows ({num_available_rows}). "
+              f"Using all available rows and repeating if necessary, or consider reducing m.")
+        # For simplicity, if m > num_available_rows, we'll sample with replacement
+        # or you could choose to error, or return fewer rows.
+        # The paper implies m should be less than or equal to the rows of B_d.
+        # If sampling with replacement is needed:
+        row_indices = np.random.choice(num_available_rows, size=m, replace=True)
+        # If strictly no replacement and m > num_available_rows, one might error or cap m
+        # row_indices = np.random.choice(num_available_rows, size=min(m, num_available_rows), replace=False)
+        # if m > num_available_rows:
+        #     # Handle the case where more rows are needed than available unique ones
+        #     # This might involve repeating rows or another strategy
+        #     pass
+    else:
+        # print(f"Subsampling {m} rows from {num_available_rows} available rows.")
+        row_indices = np.random.choice(num_available_rows, size=m, replace=False)
+
+    row_indices.sort() # Optional: for deterministic testing if seed is set
+    dictionary_A = wavelet_matrix_T_cols[row_indices, :]
+
+    return dictionary_A
+
 def embed_vector(U_np, dictionary_A):
     """Embeds a single binary vector U using HED."""
     m = dictionary_A.shape[0]
@@ -725,7 +806,7 @@ KAPPA = 2.576 # Exploration parameter for LCB. Adjust as needed.
 N_INITIAL = 49 # The initial schedule will always be included
 N_ITERATIONS = 25
 BATCH_SIZE_q = 5
-NUM_CANDIDATES_Acqf = T*3*1024 # Might need more for higher T
+NUM_CANDIDATES_Acqf = T*5*1024 # Might need more for higher T
 m = math.ceil(T/4) # Dimension of the embedding space
 
 # Store evaluated points (using NumPy arrays)
@@ -853,6 +934,206 @@ else:
     elif final_best_f_lcb < LARGE_PENALTY: print(f"Warning: Best objective ({final_best_f_lcb:.4f}) is not the penalty value, but feasibility check failed."); print(f"Resulting Y vector (infeasible): {Y_best_lcb}")
     else: print("Best solution found corresponds to an infeasible penalty value.")
 ```
+
+
+#### 6. Experiment 3: CBO with LCB and wavelet dictionary.
+
+```{python}
+# --- BO Helper Functions ---
+
+# --- get_fitted_model function remains the same ---
+def get_fitted_model(train_X_embedded_scaled, train_Y, m):
+    # ... (implementation is unchanged) ...
+    if train_Y.ndim > 1 and train_Y.shape[1] == 1: train_Y = train_Y.ravel()
+    kernel = ConstantKernel(1.0, constant_value_bounds=(1e-3, 1e3)) * \
+             Matern(length_scale=np.ones(m), length_scale_bounds=(1e-2, 1e2), nu=2.5) + \
+             WhiteKernel(noise_level=1e-10, # Small value for numerical stability
+                         noise_level_bounds="fixed") # Bounds for noise optimization
+    gp_model = GaussianProcessRegressor(kernel=kernel, alpha=1e-10, n_restarts_optimizer=10, random_state=42)
+    gp_model.fit(train_X_embedded_scaled, train_Y)
+    return gp_model
+
+def lower_confidence_bound(mu, sigma, kappa=2.576):
+    """
+    Computes the Lower Confidence Bound (LCB) acquisition function.
+    Assumes maximization of this value guides the search (since mu is neg objective).
+    Higher LCB means lower predicted objective or lower penalty for uncertainty.
+
+    mu, sigma: Predicted mean and standard deviation (NumPy arrays).
+    kappa: Controls the balance between exploitation (high mu -> low original objective)
+           and exploration (low sigma).
+    """
+    # Ensure sigma is non-negative
+    sigma = np.maximum(sigma, 0)
+    return mu - kappa * sigma # <<< Sign flipped from UCB
+
+def optimize_acqf_discrete_via_embedding(gp_model, scaler, dictionary_A, T, q, num_candidates, kappa):
+    """
+    Optimizes LCB acquisition function by sampling random binary candidates,
+    embedding, SCALING, predicting with GP, and calculating LCB.
+    Selects the top q candidates based on LCB.
+    Returns candidates as a numpy array (q x T).
+    """
+    m = dictionary_A.shape[0]
+
+    # 1. Generate Random Binary Candidates
+    candidate_u_vectors_np = np.random.randint(0, 2, size=(num_candidates, T))
+
+    # 2. Embed the Candidates
+    embedded_candidates_np = embed_batch(candidate_u_vectors_np, dictionary_A)
+
+    # 3. Scale the Embedded Candidates
+    embedded_candidates_scaled_np = scaler.transform(embedded_candidates_np)
+
+    # 4. Predict Mean and Std Dev using the GP Model
+    mu, std = gp_model.predict(embedded_candidates_scaled_np, return_std=True)
+
+    # 5. Calculate Acquisition Function (Lower Confidence Bound) <<< CHANGED HERE
+    acq_values = lower_confidence_bound(mu, std, kappa=kappa) # Use LCB
+
+    # 6. Select Top Candidates (based on highest LCB) <<< COMMENT UPDATED
+    # We maximize LCB = mu - kappa*sigma, where mu is neg_objective
+    top_indices = np.argsort(acq_values)[-q:]
+    top_indices = top_indices[::-1] # Ensure descending order of LCB
+
+    return candidate_u_vectors_np[top_indices, :]
+
+# --- BO Loop ---
+
+# Parameters
+KAPPA = 2.576 # Exploration parameter for LCB. Adjust as needed.
+N_INITIAL = 49 # The initial schedule will always be included
+N_ITERATIONS = 25
+BATCH_SIZE_q = 5
+NUM_CANDIDATES_Acqf = T*5*1024 # Might need more for higher T
+m = math.ceil(T/4) # Dimension of the embedding space
+
+# Store evaluated points (using NumPy arrays)
+evaluated_U_np_list = [] # List to store evaluated U vectors (binary)
+evaluated_f_vals = []    # List to store raw objective values (lower is better)
+train_Y_list = []        # List to store NEGATED objective values for GP (higher is better)
+
+# 1. Initialization
+for U_init in initial_candidates:
+    f_val = evaluate_objective(U_init, X, v_star, convolutions, d, w)
+    neg_f_val = -f_val
+    evaluated_U_np_list.append(U_init)
+    evaluated_f_vals.append(f_val)
+    train_Y_list.append(neg_f_val)
+  
+# Convert lists to NumPy arrays for GP fitting
+train_Y = np.array(train_Y_list).reshape(-1, 1) # Keep as column vector initially
+
+best_obj_so_far = min(evaluated_f_vals) if evaluated_f_vals else float('inf')
+initial_best_obj_so_far_lcb = best_obj_so_far # Saved for reporting results
+print(f"Initial best objective value: {best_obj_so_far}")
+if not np.isfinite(best_obj_so_far):
+     print("Warning: Initial best objective is infinite, possibly all initial points were infeasible.")
+
+# 2. BO Iterations
+for iteration in range(N_ITERATIONS):
+    start_time = time.time()
+    print(f"\n--- Iteration {iteration + 1}/{N_ITERATIONS} ---")
+
+    # a. Generate dictionary A (remains the same)
+    current_dictionary_A = generate_wavelet_dictionary(T, m)
+
+    # b. Embed ALL evaluated U vectors (remains the same)
+    if not evaluated_U_np_list: continue
+    evaluated_U_np_array = np.array(evaluated_U_np_list)
+    embedded_train_X = embed_batch(evaluated_U_np_array, current_dictionary_A)
+
+    # c. Scale the embedded training data (remains the same)
+    scaler = MinMaxScaler()
+    if embedded_train_X.shape[0] > 0: embedded_train_X_scaled = scaler.fit_transform(embedded_train_X)
+    else: embedded_train_X_scaled = embedded_train_X
+
+    # Ensure train_Y is NumPy array
+    train_Y_for_fit = np.array(train_Y_list)
+
+    # d. Fit GP Model (remains the same)
+    print("Fitting GP model...")
+    if embedded_train_X_scaled.shape[0] > 0 and train_Y_for_fit.shape[0] == embedded_train_X_scaled.shape[0]:
+        gp_model = get_fitted_model(embedded_train_X_scaled, train_Y_for_fit, m)
+        print("GP model fitted.")
+    else:
+        print("Warning: Not enough data or data mismatch to fit GP model. Skipping iteration.")
+        continue
+
+    # e. Determine current best neg value (useful for tracking, not directly used in LCB calculation)
+    current_best_neg_f_val = np.max(train_Y_for_fit) if train_Y_for_fit.size > 0 else -float('inf')
+    if current_best_neg_f_val <= -LARGE_PENALTY / 2 and np.isfinite(current_best_neg_f_val):
+        print(f"Warning: Current best NEGATIVE objective value ({current_best_neg_f_val:.2f}) is very low (likely from penalties).")
+
+    # f. Optimize Acquisition Function (LCB) <<< MODIFIED CALL & COMMENT
+    print("Optimizing acquisition function (LCB)...") # Comment updated
+    next_U_candidates_np = optimize_acqf_discrete_via_embedding(
+        gp_model=gp_model,
+        scaler=scaler,
+        dictionary_A=current_dictionary_A,
+        T=T,
+        q=BATCH_SIZE_q,
+        num_candidates=NUM_CANDIDATES_Acqf,
+        kappa=KAPPA # Pass kappa
+    )
+    print(f"Selected {next_U_candidates_np.shape[0]} candidate(s).")
+
+    # g. Evaluate Objective (remains the same)
+    newly_evaluated_U = []; newly_evaluated_f = []; newly_evaluated_neg_f = []
+    for i in range(next_U_candidates_np.shape[0]):
+        next_U = next_U_candidates_np[i, :]
+        already_evaluated = any(np.array_equal(next_U, u) for u in evaluated_U_np_list)
+        if already_evaluated: print(f"  Candidate {i} was already evaluated. Skipping."); continue
+
+        next_f = evaluate_objective(next_U, X, v_star, convolutions, d, w)
+        next_neg_f = -next_f
+        V_sum = np.sum(v_star[next_U == 1, :], axis=0)
+        Y = X + V_sum
+        print(f"  Candidate {i}: Obj = {next_f:.4f}, schedule = {Y}")
+        newly_evaluated_U.append(next_U); newly_evaluated_f.append(next_f); newly_evaluated_neg_f.append(next_neg_f)
+        if next_f < best_obj_so_far: best_obj_so_far = next_f
+
+    # h. Augment Dataset (remains the same)
+    evaluated_U_np_list.extend(newly_evaluated_U); evaluated_f_vals.extend(newly_evaluated_f); train_Y_list.extend(newly_evaluated_neg_f)
+    train_Y = np.array(train_Y_list).reshape(-1, 1)
+
+    iter_time = time.time() - start_time
+    print(f"Best objective value found so far: {best_obj_so_far:.4f}")
+    print(f"Total points evaluated: {len(evaluated_f_vals)}")
+    print(f"Iteration {iteration + 1} completed in {iter_time:.2f} seconds.")
+
+
+# --- Results ---
+print("\n--- Optimization Finished ---")
+if not evaluated_f_vals: print("No points were successfully evaluated.")
+else:
+    final_best_idx_lcb = np.argmin(evaluated_f_vals)
+    final_best_U_lcb = evaluated_U_np_list[final_best_idx_lcb]
+    final_best_f_lcb = evaluated_f_vals[final_best_idx_lcb]
+    nr_evaluated_f_vals_lcb = len(evaluated_f_vals) # Saved for reporting results
+    print(f"Total evaluations: {nr_evaluated_f_vals_lcb}")
+    print(f"Best Objective Value Found: {final_best_f_lcb}")
+    print(f"Best U vector Found: {final_best_U_lcb}")
+
+    # Verification
+    V_sum_best = np.sum(v_star[final_best_U_lcb == 1, :], axis=0)
+    Y_best_lcb = X + V_sum_best
+    is_feasible = np.all(Y_best_lcb >= 0)
+    recalculated_obj = LARGE_PENALTY
+    if is_feasible:
+        ewt, esp = calculate_objective_serv_time_lookup(Y_best_lcb, d, convolutions)
+        recalculated_obj = w * ewt + (1 - w) * esp
+
+    print(f"\n--- Verification ---")
+    print(f"Is the best U feasible? {is_feasible}")
+    if is_feasible:
+        print(f"Resulting Y vector for best U: {Y_best_lcb}")
+        print(f"Objective value (recalculated): {recalculated_obj:.4f}")
+        if not np.isclose(final_best_f_lcb, recalculated_obj): print(f"Warning: Stored best objective ({final_best_f:.4f}) does not match recalculation ({recalculated_obj:.4f})!")
+    elif final_best_f_lcb < LARGE_PENALTY: print(f"Warning: Best objective ({final_best_f_lcb:.4f}) is not the penalty value, but feasibility check failed."); print(f"Resulting Y vector (infeasible): {Y_best_lcb}")
+    else: print("Best solution found corresponds to an infeasible penalty value.")
+```
+
 
 ## Results
 
