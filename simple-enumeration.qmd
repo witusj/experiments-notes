@@ -334,9 +334,7 @@ fig.show()
 # --- Parameters and Setup for Figure 2 ---
 N_patients = 48  # Update N_patients for the second figure
 # T_intervals, d_interval_len, max_s_time, l_target_avg_service_time, i_sorting_split, 
-# v_star_matrix, and s_dist are assumed to be the same as for the first figure,
-# as per "All else equal". The compute_schedules_and_objectives function will use 
-# the updated N_patients and the existing T_intervals, s_dist, etc. from the global scope.
+# v_star_matrix, and s_dist are unchanged from Figure 1 setup
 
 q_values_fig2 = [0.1, 0.2]
 w_values_fig2 = [0.1, 0.9]
