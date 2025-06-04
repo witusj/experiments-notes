@@ -14,6 +14,7 @@ book:
     - local-search-ranking-large.qmd
     - combinatorial-bayes-optimization.qmd
     - preferential-bayesian-optimization.qmd
+    - simple-enumeration.qmd
     - references.qmd
     - part: "Function documentation"
       chapters:

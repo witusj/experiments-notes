@@ -1,5 +1,5 @@
 ---
-title: "Simple enumaration"
+title: "Simple enumeration"
 author: "Witek ten Hove"
 editor: visual
 jupyter: python3
