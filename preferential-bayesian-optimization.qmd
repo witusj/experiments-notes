@@ -58,6 +58,7 @@ Because the preferential likelihood is non-conjugate, each iteration requires ex
 By applying PBO with HED embeddings and Thompson sampling, we expect to efficiently identify perturbation vectors $\mathbf{U}$ that yield significantly improved schedules (lower cost) compared to random or simple local search heuristics.
 
 ## Methodology
+We are using Botorch for the PBO implementation [@balandat2020botorch].
 
 ```{python}
 import torch
@@ -83,7 +84,7 @@ from functions import (
 ## Helper Functions
 
 ```{python}
-# --- Helper: generate_weighted_list (from prompt) ---
+# --- Helper: generate_weighted_list ---
 def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
     if not isinstance(max_s, int) or max_s <= 0: return None
     if not isinstance(l, (int, float)) or not (1 <= l <= max_s): return None
