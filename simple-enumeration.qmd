@@ -23,6 +23,8 @@ Specifically, we implement a Python-based model to:
 Through this computational study, we aim to gain deeper insights into the sensitivity of optimal schedules to key operational parameters and to visualize the complex trade-offs inherent in outpatient appointment systems. The findings from this enumerative approach can also serve as a benchmark and provide foundational understanding for the development or comparison of more sophisticated heuristic or exact optimization algorithms.
 
 ```{python}
+#| code-fold: true
+
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -290,6 +292,8 @@ def generate_start_tail_distribution(N_patients: int, T_intervals: int) -> List[
 ```
 
 ```{python}
+#| code-fold: true
+
 # --- Main computation function ---
 N_patients_fig1 = 24  # Renamed to avoid conflict with N_patients for fig2
 T_intervals = 48
@@ -476,6 +480,8 @@ w_values = [0.1, 0.5, 0.9]
 
 ::: column-screen-inset
 ```{python}
+#| code-fold: true
+
 # Create subplots with 3D scenes
 fig = make_subplots(
     rows=3, cols=3,
@@ -645,6 +651,8 @@ fig.show()
 
 ::: column-screen-inset
 ```{python}
+#| code-fold: true
+
 # --- Parameters and Setup for Figure 2 ---
 N_patients_fig2 = 48  # Update N_patients for the second figure
 # T_intervals, d_interval_len, max_s_time, l_target_avg_service_time, i_sorting_split
