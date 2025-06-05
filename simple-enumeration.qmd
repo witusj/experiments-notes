@@ -44,6 +44,8 @@ from functions import (
 ```
 
 ```{python}
+#| code-fold: true
+
 # --- Helper: generate_weighted_list ---
 def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
     """
@@ -351,7 +353,7 @@ def compute_schedules_and_objectives(
         - `generate_evenly_distributed_schedule_intervals`: Helper for the center part of schedule.
         - `calculate_objective_serv_time_lookup`: External function for EWT and ESP.
     """
-    if s_dist is None: # Should have been caught earlier, but good check
+    if s_dist is None:
         raise ValueError("s_dist (service time distribution) is None.")
 
     # `s_dist` from `generate_weighted_list` is np.ndarray.
@@ -365,7 +367,6 @@ def compute_schedules_and_objectives(
     # implicitly. It's better to pass them as arguments if they can vary.
     # Here, we use current_N_patients and current_T_intervals.
     start_tail_options = generate_start_tail_distribution(current_N_patients, current_T_intervals)
-
     schedules = []
     objective_values = []
 
@@ -796,3 +797,299 @@ for r_loop_idx in range(num_rows_fig2):
 fig2.show()
 ```
 :::
+
+```{python}
+#| code-fold: true
+#| label: fig-single-case-N48-q01-w09
+#| fig-cap: "3D chart for N=48, q=0.1, w=0.9. X-axis: Start Count, Y-axis: Tail Count, Z-axis: Objective Value."
+
+# Parameters for the new chart
+N_patients_single_case = 48
+q_single_case = 0.1
+w_single_case = 0.9
+# T_intervals is assumed to be the globally defined T_intervals = 48.
+# s_dist is assumed to be the globally computed service time distribution.
+# d_interval_len is assumed to be the globally defined d_interval_len = 10.
+
+# Imports (good practice for cell self-containment, though might be inherited in Quarto)
+import plotly.graph_objects as go
+import textwrap
+import numpy as np # For min/max if used, and potentially by downstream functions
+
+# Compute schedules and objectives for the new parameters
+# Assumes T_intervals, s_dist, and d_interval_len are available from previous cells' execution
+# and compute_schedules_and_objectives function is defined.
+schedules_single, objective_values_single = compute_schedules_and_objectives(
+    q_single_case, 
+    w_single_case, 
+    N_patients_single_case, 
+    T_intervals # Use the existing global T_intervals (should be 48)
+)
+
+# Create the 3D scatter plot
+fig_single = go.Figure()
+
+if not schedules_single or not objective_values_single:
+    print(f"No data to plot for N={N_patients_single_case}, q={q_single_case}, w={w_single_case}")
+    # Add a text annotation to the figure if it's empty
+    fig_single.add_annotation(text="No data to plot for these parameters",
+                              xref="paper", yref="paper",
+                              x=0.5, y=0.5, showarrow=False,
+                              font=dict(size=16))
+    fig_single.update_layout(
+        title=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f} - No Data',
+        height=500, width=700
+    )
+
+else:
+    x_coords_single = [schedule[0] for schedule in schedules_single]
+    # Ensure y_coords access is safe if schedule can be very short
+    y_coords_single = [(schedule[-1] if len(schedule)>0 else 0) for schedule in schedules_single]
+    z_values_single = objective_values_single
+
+    min_obj_val_single = min(z_values_single)
+    min_index_single = z_values_single.index(min_obj_val_single)
+
+    schedules_wrapped_single = [textwrap.wrap(str(schedule), width=75) for schedule in schedules_single]
+    formatted_schedules_str_single = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped_single]
+
+    hover_texts_single = [
+        f"Sch: {f_sch_str}<br>N_sched: {sum(sch_list)}<br>Obj: {obj_val:.4f}<br>" +
+        f"Start: {sch_list[0]}, Tail: {(sch_list[-1] if len(sch_list)>0 else 0)}"
+        for sch_list, f_sch_str, obj_val in zip(schedules_single, formatted_schedules_str_single, z_values_single)
+    ]
+
+    normal_indices_single = [idx for idx in range(len(z_values_single)) if idx != min_index_single]
+    normal_x_single = [x_coords_single[idx] for idx in normal_indices_single]
+    normal_y_single = [y_coords_single[idx] for idx in normal_indices_single]
+    normal_z_single = [z_values_single[idx] for idx in normal_indices_single]
+    normal_hover_single = [hover_texts_single[idx] for idx in normal_indices_single]
+
+    min_x_single = [x_coords_single[min_index_single]]
+    min_y_single = [y_coords_single[min_index_single]]
+    min_z_val_single = [z_values_single[min_index_single]]
+    min_hover_single = [hover_texts_single[min_index_single]]
+
+    fig_single.add_trace(
+        go.Scatter3d(
+            x=normal_x_single, y=normal_y_single, z=normal_z_single,
+            mode='markers',
+            marker=dict(size=4, color=normal_z_single, colorscale='Viridis', opacity=0.7, colorbar=dict(title='Objective Value')),
+            hovertemplate='%{hovertext}<extra></extra>',
+            hovertext=normal_hover_single,
+            name='Data points'
+        )
+    )
+
+    fig_single.add_trace(
+        go.Scatter3d(
+            x=min_x_single, y=min_y_single, z=min_z_val_single,
+            mode='markers',
+            marker=dict(size=6, color='red', opacity=1.0),
+            hovertemplate='%{hovertext}<extra></extra>',
+            hovertext=min_hover_single,
+            name=f'Minimum (Obj: {min_obj_val_single:.4f})'
+        )
+    )
+
+    fig_single.update_layout(
+        title=dict(
+            text=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f}<br><sub>Optimal Objective Value: {min_obj_val_single:.4f}</sub>',
+            x=0.5, font=dict(size=16)
+        ),
+        scene=dict(
+            xaxis_title='Start Count (Schedule[0])',
+            yaxis_title='Tail Count (Schedule[-1])',
+            zaxis_title='Objective Value',
+            camera=dict(eye=dict(x=-1.5, y=-1.5, z=1.5)), # Consistent camera angle
+            xaxis=dict(range=[0, N_patients_single_case], autorange=False), # Set x-axis range based on N
+            yaxis=dict(range=[0, N_patients_single_case], autorange=False)  # Set y-axis range based on N
+        ),
+        height=700, width=900, # Adjust size as needed
+        showlegend=True,
+        legend=dict(yanchor="top", y=0.9, xanchor="left", x=0.1) # Position legend
+    )
+
+fig_single.show()
+```
+
+```{python}
+#| code-fold: true
+#| label: fig-single-case-N48-q01-w09-projection
+#| fig-cap: "3D chart for N=48, q=0.1, w=0.9, with projection on start_count + tail_count = 40. X-axis: Start Count, Y-axis: Tail Count, Z-axis: Objective Value."
+
+# Parameters for the new chart
+N_patients_single_case = 48
+q_single_case = 0.1
+w_single_case = 0.9
+# T_intervals is assumed to be the globally defined T_intervals = 48.
+# s_dist is assumed to be the globally computed service time distribution.
+# d_interval_len is assumed to be the globally defined d_interval_len = 10.
+
+# Imports (good practice for cell self-containment, though might be inherited in Quarto)
+import plotly.graph_objects as go
+import textwrap
+import numpy as np # For min/max and array operations
+
+# Compute schedules and objectives for the new parameters
+# Assumes T_intervals, s_dist, and d_interval_len are available from previous cells' execution
+# and compute_schedules_and_objectives function is defined.
+schedules_single, objective_values_single = compute_schedules_and_objectives(
+    q_single_case, 
+    w_single_case, 
+    N_patients_single_case, 
+    T_intervals # Use the existing global T_intervals (should be 48)
+)
+
+# Create the 3D scatter plot
+fig_single = go.Figure()
+
+if not schedules_single or not objective_values_single:
+    print(f"No data to plot for N={N_patients_single_case}, q={q_single_case}, w={w_single_case}")
+    fig_single.add_annotation(text="No data to plot for these parameters",
+                              xref="paper", yref="paper",
+                              x=0.5, y=0.5, showarrow=False,
+                              font=dict(size=16))
+    fig_single.update_layout(
+        title=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f} - No Data',
+        height=500, width=700
+    )
+
+else:
+    x_coords_single = [schedule[0] for schedule in schedules_single]
+    y_coords_single = [(schedule[-1] if len(schedule)>0 else 0) for schedule in schedules_single]
+    z_values_single = objective_values_single # This is a list
+
+    min_obj_val_single = min(z_values_single)
+    min_index_single = z_values_single.index(min_obj_val_single)
+
+    schedules_wrapped_single = [textwrap.wrap(str(schedule), width=75) for schedule in schedules_single]
+    formatted_schedules_str_single = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped_single]
+
+    hover_texts_single = [
+        f"Sch: {f_sch_str}<br>N_sched: {sum(sch_list)}<br>Obj: {obj_val:.4f}<br>" +
+        f"Start: {sch_list[0]}, Tail: {(sch_list[-1] if len(sch_list)>0 else 0)}"
+        for sch_list, f_sch_str, obj_val in zip(schedules_single, formatted_schedules_str_single, z_values_single)
+    ]
+
+    # --- Add visual representation of the plane: start_count + tail_count = 40 ---
+    if z_values_single: 
+        plane_z_min = np.min(z_values_single) 
+        plane_z_max = np.max(z_values_single) 
+        
+        if plane_z_min == plane_z_max: # Add margin if all z-values are the same
+            plane_z_min -= 0.5 
+            plane_z_max += 0.5
+        
+        # Define vertices for the plane segment x + y = 40
+        # P0=(0, 40, plane_z_min)
+        # P1=(40, 0, plane_z_min)
+        # P2=(40, 0, plane_z_max)
+        # P3=(0, 40, plane_z_max)
+        plane_mesh_x = [0, 40, 40, 0] 
+        plane_mesh_y = [40, 0, 0, 40] 
+        plane_mesh_z = [plane_z_min, plane_z_min, plane_z_max, plane_z_max]
+
+        fig_single.add_trace(go.Mesh3d(
+            x=plane_mesh_x,
+            y=plane_mesh_y,
+            z=plane_mesh_z,
+            # Triangles using vertex indices: (0,1,2) and (0,2,3)
+            i=[0, 0],  
+            j=[1, 2],  
+            k=[2, 3],  
+            opacity=0.15,
+            color='gray',
+            name='Plane S+T=40',
+            showlegend=True
+        ))
+
+    # --- Add normal data points ---
+    normal_indices_single = [idx for idx in range(len(z_values_single)) if idx != min_index_single]
+    normal_x_single = [x_coords_single[idx] for idx in normal_indices_single]
+    normal_y_single = [y_coords_single[idx] for idx in normal_indices_single]
+    normal_z_single = [z_values_single[idx] for idx in normal_indices_single]
+    normal_hover_single = [hover_texts_single[idx] for idx in normal_indices_single]
+
+    fig_single.add_trace(
+        go.Scatter3d(
+            x=normal_x_single, y=normal_y_single, z=normal_z_single,
+            mode='markers',
+            marker=dict(size=4, color=normal_z_single, colorscale='Viridis', opacity=0.7, colorbar=dict(title='Objective Value')),
+            hovertemplate='%{hovertext}<extra></extra>',
+            hovertext=normal_hover_single,
+            name='Data points' 
+        )
+    )
+
+    # --- Add minimum point ---
+    min_x_single = [x_coords_single[min_index_single]]
+    min_y_single = [y_coords_single[min_index_single]]
+    min_z_val_single = [z_values_single[min_index_single]]
+    min_hover_single = [hover_texts_single[min_index_single]]
+    
+    fig_single.add_trace(
+        go.Scatter3d(
+            x=min_x_single, y=min_y_single, z=min_z_val_single,
+            mode='markers',
+            marker=dict(size=6, color='red', opacity=1.0),
+            hovertemplate='%{hovertext}<extra></extra>',
+            hovertext=min_hover_single,
+            name=f'Minimum (Obj: {min_obj_val_single:.4f})' 
+        )
+    )
+
+    # --- Add projection points for start_count + tail_count = 40 ---
+    proj_x = []
+    proj_y = []
+    proj_z = []
+    proj_hover = []
+
+    for idx, schedule in enumerate(schedules_single):
+        start_count = schedule[0]
+        tail_count = schedule[-1] if len(schedule) > 0 else 0
+        
+        if start_count + tail_count == 40:
+            proj_x.append(start_count)
+            proj_y.append(tail_count)
+            proj_z.append(objective_values_single[idx])
+            proj_hover.append(hover_texts_single[idx]) 
+
+    if proj_x: 
+        fig_single.add_trace(
+            go.Scatter3d(
+                x=proj_x, y=proj_y, z=proj_z,
+                mode='markers',
+                marker=dict(
+                    size=5, 
+                    color='cyan', 
+                    opacity=0.9,
+                    symbol='diamond'
+                ),
+                hovertemplate='%{hovertext}<extra></extra>',
+                hovertext=proj_hover,
+                name='On Plane S+T=40' 
+            )
+        )
+
+    fig_single.update_layout(
+        title=dict(
+            text=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f}<br><sub>Optimal Objective Value: {min_obj_val_single:.4f}</sub>',
+            x=0.5, font=dict(size=16)
+        ),
+        scene=dict(
+            xaxis_title='Start Count (Schedule[0])',
+            yaxis_title='Tail Count (Schedule[-1])',
+            zaxis_title='Objective Value',
+            camera=dict(eye=dict(x=-1.5, y=-1.5, z=1.5)),
+            xaxis=dict(range=[0, N_patients_single_case], autorange=False), 
+            yaxis=dict(range=[0, N_patients_single_case], autorange=False)
+        ),
+        height=700, width=900,
+        showlegend=True,
+        legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255,255,255,0.5)") 
+    )
+
+fig_single.show()
+```
+
