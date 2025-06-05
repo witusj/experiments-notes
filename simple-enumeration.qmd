@@ -5,6 +5,23 @@ editor: visual
 jupyter: python3
 ---
 
+## Introduction
+
+Outpatient appointment scheduling is a critical operational challenge in healthcare systems, striving to efficiently manage patient flow while balancing multiple, often conflicting, objectives. The core dilemma involves minimizing patient waiting times, reducing clinician idle time, and preventing clinic sessions from running excessively late (tardiness). Effectively addressing this requires robust scheduling policies that can adapt to inherent uncertainties, such as variable service times and patient no-shows.
+
+Work by @kaandorp_optimal_2007 provides a comprehensive mathematical framework for tackling this problem. They proposed an objective function that considers a weighted average of expected patient waiting times, doctor idle time, and session tardiness, explicitly incorporating the possibility of patient no-shows. A key contribution of their research was the demonstration that, under certain conditions, their objective function exhibits multimodularity. This property is significant because it guarantees that a local search algorithm can converge to a globally optimal appointment schedule. Their model assumes discrete time intervals and exponentially distributed service times.
+
+This document details a computational exploration and implementation inspired by the principles and challenges outlined in the work of Kaandorp and Koole. Our primary objective is to investigate the characteristics of optimal, or near-optimal, appointment schedules under various parameter settings. While the original paper focuses on the theoretical properties and a local search method, this study employs a direct enumeration and evaluation approach for a specific class of schedule structures.
+
+Specifically, we implement a Python-based model to:
+
+1.  **Generate a Service Time Distribution:** Create a plausible distribution of patient service times with a target average, allowing for variability.
+2.  **Construct Candidate Schedules:** Systematically generate a variety of patient appointment schedules. The schedules explored here are characterized by a defined number of patients at the beginning ('start') and end ('tail') of the session, with the remaining patients distributed as evenly as possible across the central portion of the available time intervals.
+3.  **Evaluate Schedule Performance:** For each generated schedule, calculate an objective function value. This objective is a weighted sum, reflecting the trade-off between minimizing expected patient waiting time (EWT) and minimizing expected service provider underutilization or overtime (ESP). This evaluation incorporates the probability of patient no-shows (`q_no_show`) and a user-defined weight (`w_weight`) to adjust the relative importance of EWT and ESP.
+4.  **Visualize and Analyze Results:** Utilize interactive 3D visualizations to explore the solution space. This allows for the examination of how different parameters—such as the no-show probability (`q`), the objective function weight (`w`), and the total number of patients (`N_patients`)—influence the structure of optimal schedules and their corresponding objective values.
+
+Through this computational study, we aim to gain deeper insights into the sensitivity of optimal schedules to key operational parameters and to visualize the complex trade-offs inherent in outpatient appointment systems. The findings from this enumerative approach can also serve as a benchmark and provide foundational understanding for the development or comparison of more sophisticated heuristic or exact optimization algorithms.
+
 ```{python}
 import numpy as np
 import plotly.graph_objects as go
@@ -27,37 +44,110 @@ from functions import (
 ```{python}
 # --- Helper: generate_weighted_list ---
 def generate_weighted_list(max_s: int, l: float, i: int) -> Optional[np.ndarray]:
-    if not isinstance(max_s, int) or max_s <= 0: return None
-    if not isinstance(l, (int, float)) or not (1 <= l <= max_s): return None
-    if not isinstance(i, int) or not (0 <= i < max_s): return None
+    """
+    Generates a list of probabilities (weights) for service times using optimization.
+
+    The function aims to find a probability distribution over `max_s` service times
+    such that the expected service time is close to `l`. The probabilities
+    are split at index `i`; those before `i` are sorted ascendingly, and those
+    from `i` onwards are sorted descendingly.
+
+    Args:
+        max_s (int): The maximum possible service time (number of discrete service
+                     time units, e.g., 30 means service times 1, 2, ..., 30).
+                     Must be a positive integer.
+        l (float): The target average service time. Must be between 1 and `max_s`
+                   (inclusive).
+        i (int): The index (0-based) relative to `max_s` at which to split the
+                 sorting of probabilities. `0 <= i < max_s`.
+                 Probabilities for service times 1 to `i` are sorted ascendingly.
+                 Probabilities for service times `i+1` to `max_s` are sorted descendingly.
+
+    Returns:
+        Optional[np.ndarray]: An array of probabilities (weights) of length `max_s + 1`.
+                              Index 0 is unused (set to 0). Indices 1 to `max_s` store
+                              the probabilities for service times 1 to `max_s` respectively.
+                              Returns `None` if input validation fails, optimization
+                              does not converge, or a valid probability distribution
+                              cannot be formed (e.g., sum of probabilities is too low).
+    
+    Notes:
+        Uses `scipy.optimize.minimize` with the 'SLSQP' method.
+        The objective is to minimize `(dot_product(service_times, probabilities) - l)^2`.
+        Probabilities are constrained to sum to 1 and be between 0 and 1.
+    """
+    if not isinstance(max_s, int) or max_s <= 0:
+        # print("Validation failed: max_s must be a positive integer.")
+        return None
+    if not isinstance(l, (int, float)) or not (1 <= l <= max_s):
+        # print(f"Validation failed: l (target avg service time) {l} must be between 1 and max_s {max_s}.")
+        return None
+    if not isinstance(i, int) or not (0 <= i < max_s):
+        # print(f"Validation failed: i (sorting split index) {i} must be between 0 and max_s-1 {max_s-1}.")
+        return None
+
     def objective_fn(x: np.ndarray) -> float:
+        """Objective function for optimization: squared difference from target mean."""
         return (np.dot(np.arange(1, max_s + 1), x) - l) ** 2
+
     constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0})
-    bounds = [(0, 1)] * max_s
+    bounds = [(0, 1)] * max_s # Probabilities must be between 0 and 1
+    
+    # Initial guess: Dirichlet distribution ensures sum to 1 and positive values
     initial_guess = np.random.dirichlet(np.ones(max_s))
+
     try:
         result = minimize(objective_fn, initial_guess, method='SLSQP', bounds=bounds, constraints=constraints, options={'maxiter': 300, 'ftol': 1e-9})
-        if not result.success: return None
+        
+        if not result.success:
+            # print(f"Optimization failed to converge: {result.message}")
+            return None
+            
         optimized_probs = result.x
+        # Clip small negative values that might arise from numerical precision issues
         optimized_probs[optimized_probs < 0] = 0
+        
+        # Normalize if sum is not exactly 1.0 (but close)
         current_sum = np.sum(optimized_probs)
         if not np.isclose(current_sum, 1.0):
-            if current_sum > 1e-8: optimized_probs /= current_sum
-            else: return None
-    except Exception: return None
+            if current_sum > 1e-8: # Avoid division by zero or very small numbers
+                optimized_probs /= current_sum
+            else:
+                # print("Sum of optimized probabilities is too close to zero after optimization.")
+                return None # Sum too low, cannot reliably normalize
+                
+    except Exception as e:
+        # print(f"An exception occurred during optimization: {e}")
+        return None
+
+    # Prepare the final array `values` of size max_s + 1 (index 0 unused)
+    values = np.zeros(max_s + 1)
+    
+    # Split and sort the probabilities
     first_part_probs = optimized_probs[:i] if i > 0 else np.array([])
     second_part_probs = optimized_probs[i:]
-    values = np.zeros(max_s + 1)
-    if i > 0: values[1 : i + 1] = np.sort(first_part_probs)
-    values[i + 1 : max_s + 1] = np.sort(second_part_probs)[::-1]
+
+    if i > 0:
+        values[1 : i + 1] = np.sort(first_part_probs) # Ascending sort for the first part
+    
+    # Descending sort for the second part
+    values[i + 1 : max_s + 1] = np.sort(second_part_probs)[::-1] 
+    
+    # Final normalization check for the sorted and combined values
+    # This step is crucial because the sorting might have been applied to already normalized values,
+    # but if the original optimized_probs were not perfectly 1 due to clipping or other reasons,
+    # this ensures the `values` array (excluding index 0) sums to 1.
     final_sum = np.sum(values[1:])
     if not np.isclose(final_sum, 1.0):
-        if final_sum > 1e-8: values[1:] /= final_sum
-        else: return None
-    return values
-  
-# --- Helper: Generate evenly distributed patient schedule ---
+        if final_sum > 1e-8:
+            values[1:] /= final_sum
+        else:
+            # print("Sum of final probabilities after sorting is too close to zero.")
+            return None # Cannot form a valid distribution
 
+    return values
+
+# --- Helper: Generate evenly distributed patient schedule ---
 def generate_evenly_distributed_schedule_intervals(n_patients: int, t_intervals: int) -> List[int]:
     """
     Generates a list representing a schedule, aiming to distribute 'n_patients'
@@ -70,23 +160,27 @@ def generate_evenly_distributed_schedule_intervals(n_patients: int, t_intervals:
     - If n_patients == t_intervals (and both > 0): Returns a list of all ones.
     - If n_patients < t_intervals (and both > 0): The function attempts to mark
       'n_patients' distinct intervals using rounding.
-      The patient slots are chosen using the formula round(j * t_intervals / n_patients)
+      The patient slots are chosen using the formula `round(j * t_intervals / n_patients)`
       for j from 0 to n_patients-1.
-    - **Warning**: Using round() might lead to duplicate indices, potentially
-      resulting in fewer than 'n_patients' being scheduled. If exactly
-      'n_patients' must be scheduled, the floor-based approach or a
-      different algorithm should be used.
+    - **Warning**: Using `round()` might lead to duplicate indices, potentially
+      resulting in fewer than 'n_patients' being scheduled if collisions occur.
+      If exactly 'n_patients' must be scheduled and distinct slots are paramount,
+      a floor-based approach or a different distribution algorithm might be preferred.
 
     Args:
-        n_patients: The number of patients to schedule. Must be a non-negative integer.
-        t_intervals: The total number of available time intervals. Must be a non-negative integer.
+        n_patients (int): The number of patients to schedule.
+                          Must be a non-negative integer.
+        t_intervals (int): The total number of available time intervals.
+                           Must be a non-negative integer.
 
     Returns:
-        A list of integers of length 't_intervals'.
+        List[int]: A list of integers (0s and 1s) of length 't_intervals',
+                   representing the schedule. '1' for a scheduled patient, '0' otherwise.
 
     Raises:
         ValueError: If 'n_patients' or 't_intervals' are not non-negative integers.
-        ValueError: If 't_intervals' is less than 'n_patients' (and n_patients > 0).
+        ValueError: If 't_intervals' is less than 'n_patients' (and n_patients > 0),
+                    as it's impossible to schedule more patients than available intervals.
     """
     # Validate inputs
     if not isinstance(n_patients, int) or n_patients < 0:
@@ -110,15 +204,20 @@ def generate_evenly_distributed_schedule_intervals(n_patients: int, t_intervals:
         return [1] * t_intervals
     else: # n_patients < t_intervals
         schedule = [0] * t_intervals
-        scheduled_count = 0
+        # scheduled_count = 0 # Not used in current logic but could be for verification
         for j in range(n_patients):
             # Use round() and ensure the result is an integer for indexing
             index = int(round(j * t_intervals / n_patients))
 
-            # Ensure index stays within bounds (shouldn't happen, but safety first)
+            # Ensure index stays within bounds.
+            # This primarily handles the edge case where j = n_patients - 1,
+            # (n_patients - 1) * t_intervals / n_patients can round up to t_intervals.
             if index >= t_intervals:
                 index = t_intervals - 1
-
+            
+            # It's possible that `schedule[index]` is already 1 due to rounding collisions.
+            # The current logic overwrites, effectively scheduling one patient at that slot.
+            # If distinct patient counts are critical, this needs adjustment.
             schedule[index] = 1
 
         # Optional: Add a check/warning if the number of scheduled patients
@@ -126,57 +225,248 @@ def generate_evenly_distributed_schedule_intervals(n_patients: int, t_intervals:
         # actual_scheduled = sum(schedule)
         # if actual_scheduled < n_patients:
         #     print(f"Warning: Due to rounding, only {actual_scheduled} out of {n_patients} patients were scheduled.")
-
         return schedule
 
 # --- Helper: Generate start and tail numbers ---
-def generate_start_tail_distribution(N_patients: int, T_intervals) -> List[Tuple[int, int]]:
-    if not isinstance(N_patients, int) or N_patients <= 0: return []
+def generate_start_tail_distribution(N_patients: int, T_intervals: int) -> List[Tuple[int, int]]:
+    """
+    Generates valid combinations of 'start' and 'tail' patient counts for a schedule.
+
+    'Start' refers to the number of patients scheduled consecutively at the
+    beginning of the `T_intervals`. 'Tail' refers to those at the end.
+    The function iterates through all possible numbers of patients at the start (from 0 to N_patients)
+    and for each, all possible numbers of patients at the tail (from 0 up to remaining patients).
+    A (start, tail) combination is considered valid if the remaining patients
+    (N_patients - start - tail) can fit within the remaining intervals
+    (T_intervals - 2, assuming start and tail each occupy one conceptual "block"
+    or represent counts for the first and last actual interval/slot).
+
+    Args:
+        N_patients (int): The total number of patients to be scheduled.
+                          Must be a positive integer for useful output.
+        T_intervals (int): The total number of available time intervals.
+
+    Returns:
+        List[Tuple[int, int]]: A list of tuples, where each tuple is (start_patients, tail_patients).
+                               Returns an empty list if `N_patients <= 0`.
+    
+    Constraint for validity:
+        The number of patients to be scheduled in the "center" part of the schedule
+        (N_patients - start - tail) must be less than or equal to the number of
+        intervals available for the center part (T_intervals - 2). This assumes
+        the 'start' and 'tail' numbers might represent single bulk appointments or
+        counts for the very first and very last interval positions, leaving T-2 intervals
+        for the "center" distribution.
+    """
+    if not isinstance(N_patients, int) or N_patients <= 0:
+        return []
+    if not isinstance(T_intervals, int) or T_intervals < 0: # Allow T_intervals = 0, 1 for edge cases
+        # Consider raising error if T_intervals < 2 if the -2 logic is strict
+        pass
+
     distribution = []
-    for i in range(N_patients + 1):
+    for i in range(N_patients + 1):  # Number of patients at the start
         start = i
-        for j in range(N_patients + 1 - i):
-                tail = j
-                if N_patients - start - tail <= T_intervals - 2: distribution.append((start, tail))
+        for j in range(N_patients + 1 - i): # Number of patients at the tail
+            tail = j
+            # Number of patients to be scheduled in the center:
+            center_patients = N_patients - start - tail
+            # Number of intervals available for the center:
+            # Assumes start and tail might refer to the first and last interval slot counts,
+            # or conceptual blocks, leaving T_intervals - 2 for the middle part.
+            center_intervals = T_intervals - 2
+            
+            if center_intervals < 0: # Not enough intervals for even start/tail representation
+                if center_patients == 0: # Only if no center patients are needed
+                     # This case (e.g., T_intervals=1, N_patients=1, start=1, tail=0) might be valid
+                     # depending on interpretation. The condition below will handle it.
+                     pass # Let the condition below decide
+                else:
+                    continue # Cannot schedule center patients if no center_intervals
+
+            if center_patients <= center_intervals or (center_patients == 0 and center_intervals >= -1) : # Allow N-s-t=0 even if T-2 is -1 or 0
+                distribution.append((start, tail))
     return distribution
 ```
 
 ```{python}
 # --- Main computation function ---
-N_patients = 24
+N_patients_fig1 = 24  # Renamed to avoid conflict with N_patients for fig2
 T_intervals = 48
 d_interval_len = 10
 max_s_time = 30
 l_target_avg_service_time = 14.0
 i_sorting_split = 10
 
-v_star_matrix = get_v_star(T_intervals)
+# v_star_matrix = get_v_star(T_intervals) # This is not used in compute_schedules_and_objectives
 s_dist = generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)
-if s_dist is None: 
-    raise ValueError("Failed to generate service time distribution.")
+if s_dist is None:
+    raise ValueError("Failed to generate service time distribution (s_dist).")
 
-def compute_schedules_and_objectives(q_no_show: float, w_weight: float):
-    """Compute schedules and objectives for given parameters"""
+def compute_schedules_and_objectives(
+    q_no_show: float,
+    w_weight: float,
+    current_N_patients: int, # Added to make N_patients explicit
+    current_T_intervals: int # Added to make T_intervals explicit
+    ) -> Tuple[List[List[int]], List[float]]:
+    """
+    Computes various patient schedules and their corresponding objective function values.
+
+    This function orchestrates the generation of schedules based on start/tail
+    distributions and a central, evenly distributed portion. It then calculates
+    an objective value for each schedule, which is a weighted sum of expected
+    waiting time (EWT) and expected service provider overtime/idleness (ESP).
+
+    Args:
+        q_no_show (float): The probability of a patient not showing up.
+        w_weight (float): The weighting factor for the objective function.
+                          It balances EWT and ESP: `w_weight * EWT + (1 - w_weight) * ESP`.
+        current_N_patients (int): The total number of patients for this computation.
+        current_T_intervals (int): The total number of time intervals for this computation.
+
+    Returns:
+        Tuple[List[List[int]], List[float]]:
+            - schedules (List[List[int]]): A list of generated schedules. Each schedule
+              is a list of integers: `[start_count, c1, c2, ..., c(T-2), tail_count]`,
+              where `c_i` is 0 or 1 for the center part. The sum of elements in
+              a schedule should equal `current_N_patients`.
+            - objective_values (List[float]): A list of objective function values
+              corresponding to each schedule.
+
+    Raises:
+        ValueError: If `s_dist` (globally defined service time distribution) is None
+                    at the time of calling `compute_convolutions` (indirectly, as it's a global).
+        ValueError: If `generate_evenly_distributed_schedule_intervals` fails to produce
+                    a center schedule (e.g., returns None, though its current implementation raises).
     
-    convolutions_dict = compute_convolutions(s_dist.tolist(), N_patients, q_no_show)
-    
-    distribution = generate_start_tail_distribution(N_patients, T_intervals)
+    Dependencies:
+        - `s_dist` (global): Pre-computed service time distribution.
+        - `d_interval_len` (global): Length of each discrete interval.
+        - `compute_convolutions`: External function to get convolution dictionary.
+        - `generate_start_tail_distribution`: Helper to get start/tail patient counts.
+        - `generate_evenly_distributed_schedule_intervals`: Helper for the center part of schedule.
+        - `calculate_objective_serv_time_lookup`: External function for EWT and ESP.
+    """
+    if s_dist is None: # Should have been caught earlier, but good check
+        raise ValueError("s_dist (service time distribution) is None.")
+
+    # `s_dist` from `generate_weighted_list` is np.ndarray.
+    # `compute_convolutions` might expect a list.
+    s_dist_list = s_dist.tolist() if isinstance(s_dist, np.ndarray) else s_dist
+
+    convolutions_dict = compute_convolutions(s_dist_list, current_N_patients, q_no_show)
+
+    # Generate possible (start, tail) combinations for patient counts
+    # Note: generate_start_tail_distribution uses N_patients and T_intervals
+    # implicitly. It's better to pass them as arguments if they can vary.
+    # Here, we use current_N_patients and current_T_intervals.
+    start_tail_options = generate_start_tail_distribution(current_N_patients, current_T_intervals)
+
     schedules = []
     objective_values = []
-    
-    for start, tail in distribution:
-        schedule = [start]
-        center = generate_evenly_distributed_schedule_intervals(N_patients - start - tail, T_intervals - 2)
-        if center is None: 
-            raise ValueError("Failed to generate center schedule.")
-        schedule.extend(center)
-        schedule.append(tail)
-        schedules.append(schedule)
+
+    for start_count, tail_count in start_tail_options:
+        schedule_parts = [] # To build the full schedule: [start, center..., tail]
+
+        # The 'start_count' itself represents the number of patients in the first conceptual slot/block.
+        # In the context of `calculate_objective_serv_time_lookup`, this might be interpreted
+        # as the count for the first element of the schedule list.
+        schedule_parts.append(start_count)
+
+        num_center_patients = current_N_patients - start_count - tail_count
+        num_center_intervals = current_T_intervals - 2 # Intervals available for the center part
+
+        if num_center_patients < 0: # Should not happen if generate_start_tail_distribution is correct
+            # print(f"Warning: Negative center patients ({num_center_patients}) for start={start_count}, tail={tail_count}. Skipping.")
+            continue
         
-        ewt, esp = calculate_objective_serv_time_lookup(schedule, d_interval_len, convolutions_dict)
+        if num_center_intervals < 0:
+            if num_center_patients > 0:
+                # print(f"Warning: Cannot schedule {num_center_patients} center patients in {num_center_intervals} intervals. Skipping.")
+                continue
+            # If num_center_patients is 0 and num_center_intervals is < 0, center_schedule should be empty.
+            center_schedule_segment = []
+        elif num_center_patients == 0: # No patients for the center part
+             center_schedule_segment = [0] * num_center_intervals
+        else:
+            center_schedule_segment = generate_evenly_distributed_schedule_intervals(
+                num_center_patients,
+                num_center_intervals
+            )
+            # generate_evenly_distributed_schedule_intervals raises ValueError on failure
+            # so no need to check for None if its contract is maintained.
+
+        schedule_parts.extend(center_schedule_segment)
+        schedule_parts.append(tail_count) # Add the tail count as the last element
+
+        # Ensure the generated schedule has the correct total length current_T_intervals
+        # The structure is [start_val] + [c1, ..., c_{T-2}] + [tail_val]
+        # So, 1 (for start) + (T-2) (for center) + 1 (for tail) = T elements.
+        if len(schedule_parts) != current_T_intervals:
+            # This might happen if T_intervals < 2.
+            # Example: T_intervals = 1. num_center_intervals = -1.
+            # schedule_parts = [start_count] + [] + [tail_count] -> length 2, not 1.
+            # The interpretation of 'start' and 'tail' and how they map to the schedule list
+            # for `calculate_objective_serv_time_lookup` is critical here.
+            # Assuming `calculate_objective_serv_time_lookup` expects a list of length `current_T_intervals`
+            # where each element is a count of patients for that interval.
+            # If T_intervals=1, schedule should be [N_patients_fig1].
+            # If T_intervals=0, schedule should be [].
+            # The current structure [start, ccc, tail] implies T_intervals >= 2.
+            # Let's adjust if T_intervals < 2.
+            if current_T_intervals == 1:
+                if start_count + tail_count == current_N_patients and not center_schedule_segment: # Only start or tail contributes
+                     # The logic of start/tail might imply distinct first/last intervals.
+                     # For T_intervals=1, the schedule is just [N_patients_fig1].
+                     # We need a single value for the schedule.
+                     # This case is tricky with start/center/tail logic.
+                     # A simpler schedule representation might be needed for T_intervals < 2.
+                     # For now, let's assume `calculate_objective_serv_time_lookup` can handle it,
+                     # or this case (T_intervals < 2) is not expected for this specific schedule structure.
+                     # If `start_count` is meant to be schedule[0] and `tail_count` schedule[-1],
+                     # then for T_intervals=1, start_count and tail_count would refer to the same slot.
+                     # The current `generate_start_tail_distribution` allows (N,0) or (0,N) for T=1, N.
+                     # Let's assume the schedule sent to objective should be of length T_intervals.
+                     if current_N_patients == start_count and tail_count == 0:
+                         final_schedule = [start_count]
+                     elif current_N_patients == tail_count and start_count == 0:
+                         final_schedule = [tail_count]
+                     else: # Ambiguous or invalid state for T=1 with this start/tail split.
+                         # print(f"Warning: Ambiguous schedule for T_intervals=1 with start={start_count}, tail={tail_count}. Skipping.")
+                         continue
+                else: # Mismatch or center patients exist where they shouldn't
+                    # print(f"Warning: Patient count mismatch for T_intervals=1. Skipping.")
+                    continue
+
+            elif current_T_intervals == 0:
+                if current_N_patients == 0:
+                    final_schedule = []
+                else: # Cannot schedule patients in 0 intervals
+                    # print(f"Warning: Cannot schedule {current_N_patients} in 0 intervals. Skipping.")
+                    continue
+            else: # T_intervals >= 2, schedule_parts should be T_intervals long.
+                  # If not, there's a logic error in how center_schedule_segment was made.
+                  # This should ideally not happen if num_center_intervals is correct.
+                  # print(f"Warning: Schedule length {len(schedule_parts)} != T_intervals {current_T_intervals}. Skipping.")
+                  # print(f"  Details: N={current_N_patients}, T={current_T_intervals}, start={start_count}, tail={tail_count}, center_p={num_center_patients}, center_i={num_center_intervals}")
+                  # print(f"  Center segment: {center_schedule_segment}")
+                  continue
+        else:
+            final_schedule = schedule_parts
+
+        # Sanity check: sum of patients in the schedule should match current_N_patients
+        if sum(final_schedule) != current_N_patients:
+            # print(f"Warning: Sum of patients in schedule {sum(final_schedule)} != N_patients {current_N_patients}. Schedule: {final_schedule}. Skipping.")
+            continue
+
+        schedules.append(final_schedule)
+
+        # Calculate objective value for this schedule
+        # `d_interval_len` is used from global scope.
+        ewt, esp = calculate_objective_serv_time_lookup(final_schedule, d_interval_len, convolutions_dict)
         objective_value = w_weight * ewt + (1 - w_weight) * esp
         objective_values.append(objective_value)
-    
+
     return schedules, objective_values
 
 # --- Create 3x3 subplot grid ---
@@ -184,13 +474,13 @@ q_values = [0.1, 0.15, 0.2]
 w_values = [0.1, 0.5, 0.9]
 ```
 
-::: {.column-screen-inset}
+::: column-screen-inset
 ```{python}
 # Create subplots with 3D scenes
 fig = make_subplots(
     rows=3, cols=3,
     specs=[[{'type': 'scatter3d'} for _ in range(3)] for _ in range(3)],
-    subplot_titles=[f'q={q:.2f}, w={w:.1f}' for w in w_values for q in q_values],
+    subplot_titles=[f'q={q:.2f}, w={w:.1f}' for w in w_values for q in q_values], # Placeholder titles
     horizontal_spacing=0.02,
     vertical_spacing=0.12
 )
@@ -203,49 +493,71 @@ global_z_max = float('-inf')
 all_data = {}
 for i, w in enumerate(w_values):
     for j, q in enumerate(q_values):
-        schedules, objective_values = compute_schedules_and_objectives(q, w)
+        schedules, objective_values = compute_schedules_and_objectives(q, w, N_patients_fig1, T_intervals) # Pass N, T
         all_data[(i, j)] = (schedules, objective_values)
-        global_z_min = min(global_z_min, min(objective_values))
-        global_z_max = max(global_z_max, max(objective_values))
+        if objective_values: # Check if list is not empty
+            global_z_min = min(global_z_min, min(objective_values))
+            global_z_max = max(global_z_max, max(objective_values))
+
+# Handle case where no objective values were found (e.g., all lists were empty)
+if global_z_min == float('inf'): global_z_min = 0
+if global_z_max == float('-inf'): global_z_max = 1
+
 
 # Second pass: create plots
-subplot_titles = []
+subplot_titles_with_min_info = [] # To store titles with min objective info
 for i, w in enumerate(w_values):
     for j, q in enumerate(q_values):
         schedules, objective_values = all_data[(i, j)]
-        
-        x = [schedule[0] for schedule in schedules]
-        y = [schedule[-1] for schedule in schedules]
-        z = objective_values
-        
+
+        current_title = f'q={q:.2f}, w={w:.1f}'
+        if not schedules or not objective_values:
+            subplot_titles_with_min_info.append(f'{current_title}<br><sub>No data</sub>')
+            # Add an empty trace or skip plotting for this subplot
+            fig.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=i+1, col=j+1) # Add empty trace
+            continue
+
+        # Extract x, y, z coordinates for plotting
+        # x: value of the first element of the schedule (start_count)
+        # y: value of the last element of the schedule (tail_count)
+        # z: objective value
+        x_coords = [schedule[0] for schedule in schedules]
+        y_coords = [schedule[-1] for schedule in schedules] # schedule can be shorter than T_intervals if T_intervals < 2
+        # Ensure y_coords access is safe if schedule can be very short (e.g. length 1)
+        y_coords = [(schedule[-1] if len(schedule)>0 else 0) for schedule in schedules]
+
+
+        z_values = objective_values
+
         # Find minimum point
-        min_index = z.index(min(z))
-        min_obj = z[min_index]
-        min_schedule = schedules[min_index]
-        
-        # Store subtitle info
-        subplot_titles.append(f'q={q:.2f}, w={w:.1f}<br><sub>Min: {min_obj:.4f}</sub>')
-        
+        min_obj_val = min(z_values)
+        min_index = z_values.index(min_obj_val)
+        # min_schedule_at_min_obj = schedules[min_index] # For debugging or detailed hover
+
+        subplot_titles_with_min_info.append(f'{current_title}<br><sub>Min: {min_obj_val:.4f}</sub>')
+
         # Create hover text
         schedules_wrapped = [textwrap.wrap(str(schedule), width=75) for schedule in schedules]
-        formatted_schedules = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped]
-        
-        hover_texts = [f"Sch: {f_schedule}, N: {sum(schedule)}<br>Obj: {obj_val:.4f}<br>" 
-                      for schedule, f_schedule, obj_val in zip(schedules, formatted_schedules, z)]
-        
-        # Separate normal and minimum points
-        normal_indices = [idx for idx in range(len(z)) if idx != min_index]
-        normal_x = [x[idx] for idx in normal_indices]
-        normal_y = [y[idx] for idx in normal_indices]
-        normal_z = [z[idx] for idx in normal_indices]
+        formatted_schedules_str = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped]
+
+        hover_texts = [
+            f"Sch: {f_sch_str}, N_sch: {sum(sch_list)}<br>Obj: {obj_val:.4f}<br>"
+            for sch_list, f_sch_str, obj_val in zip(schedules, formatted_schedules_str, z_values)
+        ]
+
+        # Separate normal and minimum points for distinct plotting
+        normal_indices = [idx for idx in range(len(z_values)) if idx != min_index]
+        normal_x = [x_coords[idx] for idx in normal_indices]
+        normal_y = [y_coords[idx] for idx in normal_indices]
+        normal_z = [z_values[idx] for idx in normal_indices]
         normal_hover = [hover_texts[idx] for idx in normal_indices]
-        
-        min_x = [x[min_index]]
-        min_y = [y[min_index]]
-        min_z = [z[min_index]]
+
+        min_x = [x_coords[min_index]]
+        min_y = [y_coords[min_index]]
+        min_z_val = [z_values[min_index]] # Renamed to avoid conflict
         min_hover = [hover_texts[min_index]]
-        
-        # Add normal points
+
+        # Add normal points scatter plot
         fig.add_trace(
             go.Scatter3d(
                 x=normal_x,
@@ -254,74 +566,76 @@ for i, w in enumerate(w_values):
                 mode='markers',
                 marker=dict(
                     size=4,
-                    color=normal_z,
+                    color=normal_z,          # Color by Z value (objective)
                     colorscale='Viridis',
                     opacity=0.7,
-                    cmin=global_z_min,
-                    cmax=global_z_max,
-                    colorbar=dict(title='Objective') if i == 0 and j == 2 else None,  # Only show colorbar once
-                    showscale=True if i == 0 and j == 2 else False
+                    cmin=global_z_min,       # Use global min for color scale
+                    cmax=global_z_max,       # Use global max for color scale
+                    colorbar=dict(title='Objective Value') if i == 0 and j == 2 else None, # Show colorbar once
+                    showscale=(i == 0 and j == 2) # Control visibility of the color bar
                 ),
-                name=f'Other (q={q:.2f}, w={w:.1f})',
-                hovertemplate='%{hovertext}<extra></extra>',
+                name=f'Data (q={q:.2f}, w={w:.1f})', # Legend name (if legend shown)
+                hovertemplate='%{hovertext}<extra></extra>', # Custom hover text
                 hovertext=normal_hover,
                 showlegend=False
             ),
             row=i+1, col=j+1
         )
-        
-        # Add minimum point
+
+        # Add minimum point highlighted
         fig.add_trace(
             go.Scatter3d(
                 x=min_x,
                 y=min_y,
-                z=min_z,
+                z=min_z_val,
                 mode='markers',
                 marker=dict(
                     size=6,
-                    color='red',
+                    color='red',    # Distinct color for minimum point
                     opacity=1.0
                 ),
-                name=f'Min (q={q:.2f}, w={w:.1f})',
-                hovertemplate='%{hovertext}<extra></extra>',
+                name=f'Minimum (q={q:.2f}, w={w:.1f})', # Legend name
+                hovertemplate='%{hovertext}<extra></extra>', # Custom hover text
                 hovertext=min_hover,
                 showlegend=False
             ),
             row=i+1, col=j+1
         )
-        
-# Update subplot titles with minimum information
-for idx, title in enumerate(subplot_titles):
-    fig.layout.annotations[idx].text = title
-    
-# Update layout for better aesthetics
+
+# Update subplot titles with the minimum objective information
+for idx, title_text in enumerate(subplot_titles_with_min_info):
+    if idx < len(fig.layout.annotations): # Safety check
+        fig.layout.annotations[idx].text = title_text
+
+# Update overall layout for the figure
 fig.update_layout(
     title=dict(
-        text='3D Analysis: Schedule Optimization Across Different Parameters<br><sub>Rows: w (weight), Columns: q (no-show probability)</sub>',
-        x=0.5,
+        text=f'3D Analysis: Schedule Optimization (N={N_patients_fig1})<br><sub>Rows: w (weighting factor), Columns: q (no-show probability)</sub>',
+        x=0.5, # Center title
         y=0.98,
         font=dict(size=16)
     ),
     height=1200,
     width=1400,
     margin=dict(t=100, b=100, l=50, r=50),
-    font=dict(size=10)
+    font=dict(size=10) # Default font size for other elements
 )
 
-# Update 3D scene properties for all subplots
-for i in range(1, 4):
-    for j in range(1, 4):
-        scene_name = f'scene{(i-1)*3 + j}' if (i-1)*3 + j > 1 else 'scene'
+# Update 3D scene properties for all subplots (axes titles, camera angle)
+for r_idx_loop in range(1, 4): # 1-based for rows
+    for c_idx_loop in range(1, 4): # 1-based for columns
+        # Calculate scene name (e.g., 'scene', 'scene2', 'scene3', ..., 'scene9')
+        scene_num = (r_idx_loop - 1) * 3 + c_idx_loop
+        scene_name_key = f'scene{scene_num}' if scene_num > 1 else 'scene'
+
         fig.update_layout(**{
-            scene_name: dict(
-                xaxis_title='First element',
-                yaxis_title='Last element', 
-                zaxis_title='Objective',
-                camera=dict(
-                    eye=dict(x=-1.5, y=-1.5, z=1.5)  # Negative x,y moves origin to front
-                ),
-                xaxis=dict(range=[0, None]),  # Start x-axis from 0
-                yaxis=dict(range=[0, None])   # Start y-axis from 0
+            scene_name_key: dict(
+                xaxis_title='Start Count (Schedule[0])',
+                yaxis_title='Tail Count (Schedule[-1])',
+                zaxis_title='Objective Value',
+                camera=dict(eye=dict(x=-1.5, y=-1.5, z=1.5)), # Adjust camera view
+                xaxis=dict(range=[0, None]), # Ensure x-axis starts at 0
+                yaxis=dict(range=[0, None])  # Ensure y-axis starts at 0
             )
         })
 
@@ -329,25 +643,29 @@ fig.show()
 ```
 :::
 
-::: {.column-screen-inset}
+::: column-screen-inset
 ```{python}
 # --- Parameters and Setup for Figure 2 ---
-N_patients = 48  # Update N_patients for the second figure
-# T_intervals, d_interval_len, max_s_time, l_target_avg_service_time, i_sorting_split, 
-# v_star_matrix, and s_dist are unchanged from Figure 1 setup
+N_patients_fig2 = 48  # Update N_patients for the second figure
+# T_intervals, d_interval_len, max_s_time, l_target_avg_service_time, i_sorting_split
+# are assumed to be the same as for Figure 1.
+# `s_dist` is also assumed to be the same (re-used).
+if s_dist is None: # Recalculate if it wasn't set or if params changed
+    s_dist = generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)
+    if s_dist is None:
+        raise ValueError("Failed to generate service time distribution for Figure 2.")
+
 
 q_values_fig2 = [0.1, 0.2]
 w_values_fig2 = [0.1, 0.9]
 
 # --- Create 2x2 subplot grid for Figure 2 ---
-# Create subplots with 3D scenes
 fig2 = make_subplots(
     rows=len(w_values_fig2), cols=len(q_values_fig2),
     specs=[[{'type': 'scatter3d'} for _ in range(len(q_values_fig2))] for _ in range(len(w_values_fig2))],
-    # Initial subplot titles (will be updated with min objective later)
-    subplot_titles=[f'q={q_val:.2f}, w={w_val:.1f}' for w_val in w_values_fig2 for q_val in q_values_fig2],
+    subplot_titles=[f'q={q_val:.2f}, w={w_val:.1f}' for w_val in w_values_fig2 for q_val in q_values_fig2], # Placeholder
     horizontal_spacing=0.02,
-    vertical_spacing=0.12  # Adjusted vertical spacing for potentially fewer rows
+    vertical_spacing=0.12
 )
 
 # Global color scale limits for consistency in Figure 2
@@ -358,145 +676,110 @@ global_z_max_fig2 = float('-inf')
 all_data_fig2 = {}
 for i, w in enumerate(w_values_fig2):
     for j, q in enumerate(q_values_fig2):
-        # compute_schedules_and_objectives will use N_patients=48
-        schedules, objective_values = compute_schedules_and_objectives(q, w) 
-        all_data_fig2[(i, j)] = (schedules, objective_values)
-        if objective_values: # Ensure objective_values is not empty
-            global_z_min_fig2 = min(global_z_min_fig2, min(objective_values))
-            global_z_max_fig2 = max(global_z_max_fig2, max(objective_values))
-        else: # Handle cases where no schedules/objectives might be generated
-            # This might indicate an issue or an edge case for these parameters
-            print(f"Warning: No objective values for q={q}, w={w}, N_patients={N_patients}")
+        schedules_fig2, objective_values_fig2 = compute_schedules_and_objectives(q, w, N_patients_fig2, T_intervals) # Use N_patients_fig2
+        all_data_fig2[(i, j)] = (schedules_fig2, objective_values_fig2)
+        if objective_values_fig2: # Ensure list is not empty
+            global_z_min_fig2 = min(global_z_min_fig2, min(objective_values_fig2))
+            global_z_max_fig2 = max(global_z_max_fig2, max(objective_values_fig2))
+        else:
+            print(f"Warning: No objective values for Figure 2 with q={q}, w={w}, N_patients={N_patients_fig2}")
 
-
-# If no data was generated at all, global_z_min/max might remain inf/-inf. Set to default.
-if global_z_min_fig2 == float('inf'): global_z_min_fig2 = 0
-if global_z_max_fig2 == float('-inf'): global_z_max_fig2 = 1
+if global_z_min_fig2 == float('inf'): global_z_min_fig2 = 0 # Default if no data
+if global_z_max_fig2 == float('-inf'): global_z_max_fig2 = 1 # Default if no data
 
 
 # Second pass: create plots for Figure 2
-subplot_titles_with_min_fig2 = [] # To store titles with min objective info
+subplot_titles_with_min_fig2 = []
 for i, w in enumerate(w_values_fig2):
     for j, q in enumerate(q_values_fig2):
         schedules, objective_values = all_data_fig2[(i, j)]
-        
-        if not schedules: # Skip if no schedules were generated for this combination
-            subplot_titles_with_min_fig2.append(f'q={q:.2f}, w={w:.1f}<br><sub>No data</sub>')
+
+        current_title_fig2 = f'q={q:.2f}, w={w:.1f}'
+        if not schedules or not objective_values:
+            subplot_titles_with_min_fig2.append(f'{current_title_fig2}<br><sub>No data</sub>')
+            fig2.add_trace(go.Scatter3d(x=[], y=[], z=[]), row=i+1, col=j+1) # Add empty trace
             continue
 
-        x_coords = [schedule[0] for schedule in schedules] # 'x' was 'x_coords' to avoid conflict
-        y_coords = [schedule[-1] for schedule in schedules] # 'y' was 'y_coords'
-        z_coords = objective_values # 'z' was 'z_coords'
-        
-        # Find minimum point
-        min_index = z_coords.index(min(z_coords))
-        min_obj = z_coords[min_index]
-        # min_schedule = schedules[min_index] # Not explicitly used in title below, but good for debugging
-        
-        # Store subtitle info
-        subplot_titles_with_min_fig2.append(f'q={q:.2f}, w={w:.1f}<br><sub>Min: {min_obj:.4f}</sub>')
-        
-        # Create hover text
-        schedules_wrapped = [textwrap.wrap(str(schedule), width=75) for schedule in schedules]
-        formatted_schedules = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped]
-        
-        hover_texts = [f"Sch: {f_schedule}, N: {sum(schedule)}<br>Obj: {obj_val:.4f}<br>" 
-                      for schedule, f_schedule, obj_val in zip(schedules, formatted_schedules, z_coords)]
-        
-        # Separate normal and minimum points
-        normal_indices = [idx for idx in range(len(z_coords)) if idx != min_index]
-        normal_x = [x_coords[idx] for idx in normal_indices]
-        normal_y = [y_coords[idx] for idx in normal_indices]
-        normal_z = [z_coords[idx] for idx in normal_indices]
-        normal_hover = [hover_texts[idx] for idx in normal_indices]
-        
-        min_x = [x_coords[min_index]]
-        min_y = [y_coords[min_index]]
-        min_z = [z_coords[min_index]]
-        min_hover = [hover_texts[min_index]]
-        
-        # Add normal points
+        x_coords_fig2 = [schedule[0] for schedule in schedules]
+        y_coords_fig2 = [(schedule[-1] if len(schedule)>0 else 0) for schedule in schedules] # Safe access
+        z_values_fig2 = objective_values
+
+        min_obj_fig2 = min(z_values_fig2)
+        min_index_fig2 = z_values_fig2.index(min_obj_fig2)
+
+        subplot_titles_with_min_fig2.append(f'{current_title_fig2}<br><sub>Min: {min_obj_fig2:.4f}</sub>')
+
+        schedules_wrapped_fig2 = [textwrap.wrap(str(schedule), width=75) for schedule in schedules]
+        formatted_schedules_str_fig2 = ["<br>".join(sl) for sl in schedules_wrapped_fig2]
+
+        hover_texts_fig2 = [
+            f"Sch: {f_sch_str}, N_sch: {sum(sch_list)}<br>Obj: {obj_val:.4f}<br>"
+            for sch_list, f_sch_str, obj_val in zip(schedules, formatted_schedules_str_fig2, z_values_fig2)
+        ]
+
+        normal_indices_fig2 = [idx for idx in range(len(z_values_fig2)) if idx != min_index_fig2]
+        normal_x_fig2 = [x_coords_fig2[idx] for idx in normal_indices_fig2]
+        normal_y_fig2 = [y_coords_fig2[idx] for idx in normal_indices_fig2]
+        normal_z_fig2 = [z_values_fig2[idx] for idx in normal_indices_fig2]
+        normal_hover_fig2 = [hover_texts_fig2[idx] for idx in normal_indices_fig2]
+
+        min_x_fig2 = [x_coords_fig2[min_index_fig2]]
+        min_y_fig2 = [y_coords_fig2[min_index_fig2]]
+        min_z_val_fig2 = [z_values_fig2[min_index_fig2]]
+        min_hover_fig2 = [hover_texts_fig2[min_index_fig2]]
+
         fig2.add_trace(
             go.Scatter3d(
-                x=normal_x,
-                y=normal_y,
-                z=normal_z,
-                mode='markers',
+                x=normal_x_fig2, y=normal_y_fig2, z=normal_z_fig2, mode='markers',
                 marker=dict(
-                    size=4,
-                    color=normal_z,
-                    colorscale='Viridis', # You can choose a different colorscale if you like
-                    opacity=0.7,
-                    cmin=global_z_min_fig2,
-                    cmax=global_z_max_fig2,
-                    # Show colorbar on the top-right plot of this 2x2 grid
-                    colorbar=dict(title='Objective') if i == 0 and j == (len(q_values_fig2) - 1) else None,
-                    showscale=True if i == 0 and j == (len(q_values_fig2) - 1) else False
+                    size=4, color=normal_z_fig2, colorscale='Viridis', opacity=0.7,
+                    cmin=global_z_min_fig2, cmax=global_z_max_fig2,
+                    colorbar=dict(title='Objective Value') if i == 0 and j == (len(q_values_fig2) - 1) else None,
+                    showscale=(i == 0 and j == (len(q_values_fig2) - 1))
                 ),
-                name=f'Other (q={q:.2f}, w={w:.1f})', # Name for legend (if shown)
-                hovertemplate='%{hovertext}<extra></extra>',
-                hovertext=normal_hover,
-                showlegend=False
-            ),
-            row=i+1, col=j+1
+                name=f'Data (q={q:.2f}, w={w:.1f})',
+                hovertemplate='%{hovertext}<extra></extra>', hovertext=normal_hover_fig2, showlegend=False
+            ), row=i+1, col=j+1
         )
-        
-        # Add minimum point
+
         fig2.add_trace(
             go.Scatter3d(
-                x=min_x,
-                y=min_y,
-                z=min_z,
-                mode='markers',
-                marker=dict(
-                    size=6,
-                    color='red',
-                    opacity=1.0
-                ),
-                name=f'Min (q={q:.2f}, w={w:.1f})', # Name for legend (if shown)
-                hovertemplate='%{hovertext}<extra></extra>',
-                hovertext=min_hover,
-                showlegend=False
-            ),
-            row=i+1, col=j+1
+                x=min_x_fig2, y=min_y_fig2, z=min_z_val_fig2, mode='markers',
+                marker=dict(size=6, color='red', opacity=1.0),
+                name=f'Minimum (q={q:.2f}, w={w:.1f})',
+                hovertemplate='%{hovertext}<extra></extra>', hovertext=min_hover_fig2, showlegend=False
+            ), row=i+1, col=j+1
         )
-        
-# Update subplot titles with minimum information for Figure 2
+
+# Update subplot titles for Figure 2
 for idx, title_text in enumerate(subplot_titles_with_min_fig2):
-    if idx < len(fig2.layout.annotations): # Check to prevent error if a subplot had no data
+    if idx < len(fig2.layout.annotations):
         fig2.layout.annotations[idx].text = title_text
-    
-# Update layout for Figure 2 aesthetics
+
+# Update layout for Figure 2
 fig2.update_layout(
     title=dict(
-        text=f'<b>Figure 2:</b> N_patients={N_patients} - Schedule Optimization<br><sub>Rows: w (weight), Columns: q (no-show probability)</sub>',
-        x=0.5,
-        y=0.98, # Adjusted y to give a bit more space if title is long
-        font=dict(size=16)
+        text=f'<b>Figure 2:</b> N_patients={N_patients_fig2} - Schedule Optimization<br><sub>Rows: w (weight), Columns: q (no-show probability)</sub>',
+        x=0.5, y=0.98, font=dict(size=16)
     ),
-    height=1000, # Adjusted height for a 2x2 grid, can be same as original (1200)
-    width=1200,  # Adjusted width for a 2x2 grid, can be same as original (1400)
-    margin=dict(t=100, b=100, l=50, r=50), # Increased top margin for potentially longer title
-    font=dict(size=10)
+    height=1000, width=1200,
+    margin=dict(t=100, b=100, l=50, r=50), font=dict(size=10)
 )
 
-# Update 3D scene properties for all subplots in Figure 2
+# Update 3D scene properties for Figure 2
 num_rows_fig2 = len(w_values_fig2)
 num_cols_fig2 = len(q_values_fig2)
-for r_loop_idx in range(num_rows_fig2):      # 0-indexed loop for rows
-    for c_loop_idx in range(num_cols_fig2):  # 0-indexed loop for columns
-        # Plotly scene indices are 1-based (scene, scene2, scene3, ...)
+for r_loop_idx in range(num_rows_fig2):
+    for c_loop_idx in range(num_cols_fig2):
         scene_idx_plotly = r_loop_idx * num_cols_fig2 + c_loop_idx + 1
-        scene_name = f'scene{scene_idx_plotly}' if scene_idx_plotly > 1 else 'scene'
-        
+        scene_name_key_fig2 = f'scene{scene_idx_plotly}' if scene_idx_plotly > 1 else 'scene'
+
         fig2.update_layout(**{
-            scene_name: dict(
-                xaxis_title='First element',
-                yaxis_title='Last element', 
-                zaxis_title='Objective',
-                camera=dict(
-                    eye=dict(x=-1.5, y=-1.5, z=1.5)
-                ),
+            scene_name_key_fig2: dict(
+                xaxis_title='Start Count (Schedule[0])',
+                yaxis_title='Tail Count (Schedule[-1])',
+                zaxis_title='Objective Value',
+                camera=dict(eye=dict(x=-1.5, y=-1.5, z=1.5)),
                 xaxis=dict(range=[0, None]),
                 yaxis=dict(range=[0, None])
             )
@@ -505,5 +788,3 @@ for r_loop_idx in range(num_rows_fig2):      # 0-indexed loop for rows
 fig2.show()
 ```
 :::
-
-
