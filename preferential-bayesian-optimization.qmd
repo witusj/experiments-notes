@@ -20,9 +20,9 @@ We require $x_j \ge 0$ for all $j = 0, \ldots, T-1$. Consequently, a valid sched
 
 @kaandorp_optimal_2007 define a neighborhood structure for local search based on perturbation vectors derived from a set of $T$ basis change vectors, $v_i \in \mathbb{D}^{T}$, for $i = 0, \ldots, T-1$. These basis vectors represent elementary shifts of allocation between time slots:
 
--   $v\_0 = (-1, 0, \ldots, 0, 1)$ (Shift unit *from* slot 0 *to* slot $T-1$)
--   $v\_1 = (1, -1, 0, \ldots, 0)$ (Shift unit *from* slot 1 *to* slot 0)
--   $v\_i = (0, \ldots, 0, \underbrace{1}*{\text{pos } i-1}, \underbrace{-1}*{\text{pos } i}, 0, \ldots, 0)$ for $i = 2, \ldots, T-1$ (Shift unit *from* slot $i$ *to* slot $i-1$)
+-   $v_0 = (-1, 0, \ldots, 0, 1)$ (Shift unit *from* slot 0 *to* slot $T-1$)
+-   $v_1 = (1, -1, 0, \ldots, 0)$ (Shift unit *from* slot 1 *to* slot 0)
+-   $v_i = (0, \ldots, 0, \underbrace{1}*{\text{pos } i-1}, \underbrace{-1}*{\text{pos } i}, 0, \ldots, 0)$ for $i = 2, \ldots, T-1$ (Shift unit *from* slot $i$ *to* slot $i-1$)
 
 A key property of these basis vectors is that the sum of components for each vector is zero: $\sum_{j=0}^{T-1} v_{ij} = 0$ for all $i=0, \ldots, T-1$.
 

@@ -798,120 +798,7 @@ fig2.show()
 ```
 :::
 
-```{python}
-#| code-fold: true
-#| label: fig-single-case-N48-q01-w09
-#| fig-cap: "3D chart for N=48, q=0.1, w=0.9. X-axis: Start Count, Y-axis: Tail Count, Z-axis: Objective Value."
-
-# Parameters for the new chart
-N_patients_single_case = 48
-q_single_case = 0.1
-w_single_case = 0.9
-# T_intervals is assumed to be the globally defined T_intervals = 48.
-# s_dist is assumed to be the globally computed service time distribution.
-# d_interval_len is assumed to be the globally defined d_interval_len = 10.
-
-# Imports (good practice for cell self-containment, though might be inherited in Quarto)
-import plotly.graph_objects as go
-import textwrap
-import numpy as np # For min/max if used, and potentially by downstream functions
-
-# Compute schedules and objectives for the new parameters
-# Assumes T_intervals, s_dist, and d_interval_len are available from previous cells' execution
-# and compute_schedules_and_objectives function is defined.
-schedules_single, objective_values_single = compute_schedules_and_objectives(
-    q_single_case, 
-    w_single_case, 
-    N_patients_single_case, 
-    T_intervals # Use the existing global T_intervals (should be 48)
-)
-
-# Create the 3D scatter plot
-fig_single = go.Figure()
-
-if not schedules_single or not objective_values_single:
-    print(f"No data to plot for N={N_patients_single_case}, q={q_single_case}, w={w_single_case}")
-    # Add a text annotation to the figure if it's empty
-    fig_single.add_annotation(text="No data to plot for these parameters",
-                              xref="paper", yref="paper",
-                              x=0.5, y=0.5, showarrow=False,
-                              font=dict(size=16))
-    fig_single.update_layout(
-        title=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f} - No Data',
-        height=500, width=700
-    )
-
-else:
-    x_coords_single = [schedule[0] for schedule in schedules_single]
-    # Ensure y_coords access is safe if schedule can be very short
-    y_coords_single = [(schedule[-1] if len(schedule)>0 else 0) for schedule in schedules_single]
-    z_values_single = objective_values_single
-
-    min_obj_val_single = min(z_values_single)
-    min_index_single = z_values_single.index(min_obj_val_single)
-
-    schedules_wrapped_single = [textwrap.wrap(str(schedule), width=75) for schedule in schedules_single]
-    formatted_schedules_str_single = ["<br>".join(schedule_lines) for schedule_lines in schedules_wrapped_single]
-
-    hover_texts_single = [
-        f"Sch: {f_sch_str}<br>N_sched: {sum(sch_list)}<br>Obj: {obj_val:.4f}<br>" +
-        f"Start: {sch_list[0]}, Tail: {(sch_list[-1] if len(sch_list)>0 else 0)}"
-        for sch_list, f_sch_str, obj_val in zip(schedules_single, formatted_schedules_str_single, z_values_single)
-    ]
-
-    normal_indices_single = [idx for idx in range(len(z_values_single)) if idx != min_index_single]
-    normal_x_single = [x_coords_single[idx] for idx in normal_indices_single]
-    normal_y_single = [y_coords_single[idx] for idx in normal_indices_single]
-    normal_z_single = [z_values_single[idx] for idx in normal_indices_single]
-    normal_hover_single = [hover_texts_single[idx] for idx in normal_indices_single]
-
-    min_x_single = [x_coords_single[min_index_single]]
-    min_y_single = [y_coords_single[min_index_single]]
-    min_z_val_single = [z_values_single[min_index_single]]
-    min_hover_single = [hover_texts_single[min_index_single]]
-
-    fig_single.add_trace(
-        go.Scatter3d(
-            x=normal_x_single, y=normal_y_single, z=normal_z_single,
-            mode='markers',
-            marker=dict(size=4, color=normal_z_single, colorscale='Viridis', opacity=0.7, colorbar=dict(title='Objective Value')),
-            hovertemplate='%{hovertext}<extra></extra>',
-            hovertext=normal_hover_single,
-            name='Data points'
-        )
-    )
-
-    fig_single.add_trace(
-        go.Scatter3d(
-            x=min_x_single, y=min_y_single, z=min_z_val_single,
-            mode='markers',
-            marker=dict(size=6, color='red', opacity=1.0),
-            hovertemplate='%{hovertext}<extra></extra>',
-            hovertext=min_hover_single,
-            name=f'Minimum (Obj: {min_obj_val_single:.4f})'
-        )
-    )
-
-    fig_single.update_layout(
-        title=dict(
-            text=f'3D Schedule Analysis: N={N_patients_single_case}, q={q_single_case:.2f}, w={w_single_case:.1f}<br><sub>Optimal Objective Value: {min_obj_val_single:.4f}</sub>',
-            x=0.5, font=dict(size=16)
-        ),
-        scene=dict(
-            xaxis_title='Start Count (Schedule[0])',
-            yaxis_title='Tail Count (Schedule[-1])',
-            zaxis_title='Objective Value',
-            camera=dict(eye=dict(x=-1.5, y=-1.5, z=1.5)), # Consistent camera angle
-            xaxis=dict(range=[0, N_patients_single_case], autorange=False), # Set x-axis range based on N
-            yaxis=dict(range=[0, N_patients_single_case], autorange=False)  # Set y-axis range based on N
-        ),
-        height=700, width=900, # Adjust size as needed
-        showlegend=True,
-        legend=dict(yanchor="top", y=0.9, xanchor="left", x=0.1) # Position legend
-    )
-
-fig_single.show()
-```
+A projection of a solution space is a subset of the solution space that satisfies some additional constraints, such as a fixed sum of certain components. In this case, we are interested in projections where the sum of the start count and tail count is equal to a target value.
 
 ```{python}
 #| code-fold: true
@@ -920,16 +807,11 @@ fig_single.show()
 
 # Parameters for the new chart
 N_patients_single_case = 48
-q_single_case = 0.1
-w_single_case = 0.9
+q_single_case = 0.2
+w_single_case = 0.5
 # T_intervals is assumed to be the globally defined T_intervals = 48.
 # s_dist is assumed to be the globally computed service time distribution.
 # d_interval_len is assumed to be the globally defined d_interval_len = 10.
-
-# Imports (good practice for cell self-containment, though might be inherited in Quarto)
-import plotly.graph_objects as go
-import textwrap
-import numpy as np # For min/max and array operations
 
 # Compute schedules and objectives for the new parameters
 # Assumes T_intervals, s_dist, and d_interval_len are available from previous cells' execution
@@ -1093,8 +975,21 @@ else:
 fig_single.show()
 ```
 
+A function $f$ is said to be integer convex if the following holds. For vectors $x$ and $d$ in $\mathbb{Z}^m$, we have
+$$f(x + d) - f(x) \geq f(x) - f(x-d).$$
+
+*Let $f$ be multimodular: then it is integer convex* [@altman_multimodularity_2000].*
+
+In this case we are interested in the specific set of projections where the sum of the start count and tail count is equal to a target value.
+
+Let $m \leq T$ be a target value for the sum of the start count and tail count. We can generate a set of projections where the start count and tail count sum to $m$ by starting with a schedule that has $m$ patients in the first interval, $0$ patients in the last interval, and evenly distributed patients in the center intervals. Then we can iteratively add the vector $v_0 = (-1, 0, \ldots, 0, 1)$ to this schedule until we've reached $m$ iterations.
+
+Because the function $f$ is multimodular, the projections generated in this way will be integer convex.
+
 
 ```{python}
+#| code-fold: true
+
 def generate_schedules_w_equal_start_tail_sum(
     target_sum: int,
     N: int,
@@ -1144,8 +1039,12 @@ def generate_schedules_w_equal_start_tail_sum(
     initial_objective_value = w * ewt + (1 - w) * esp
     obj_diff = None
     projections = [(np.array(initial_schedule), initial_objective_value, obj_diff)]
-    for i in range(1, T - 1):
+    for i in range(1, target_sum + 1):  # Iterate from 1 to target_sum
         new_schedule = initial_schedule + v_star_zero  # Add v_star_zero to each interval
+        if np.any(new_schedule < 0):
+            print(f"\nStopping at iteration {i}: Schedule became invalid with negative values.")
+            print(f"Invalid schedule: {new_schedule[:5]}...")
+            break # Exit the loop
         ewt, esp = calculate_objective_serv_time_lookup(
         new_schedule, d, convolutions
     )
@@ -1157,26 +1056,22 @@ def generate_schedules_w_equal_start_tail_sum(
     
     return projections
   
-# Test the function with example parameters
-target_sum_example = 10
-N_example = 12  # Renamed to avoid conflict with N_patients for fig2
-T_example = 12
-d_example = 10
-max_s_time_example = 30
-l_target_avg_service_time_example = 14.0
-i_sorting_split_example = 10
-w_weight_example = 0.9
-q_no_show_example = 0.1
+# Parameters for the new chart
+target_sum = 40
+# N_patients_single_case = 48
+# q_single_case = 0.2
+# w_single_case = 0.5
+# T_intervals is assumed to be the globally defined T_intervals = 48.
+# s_dist is assumed to be the globally computed service time distribution.
+# d_interval_len is assumed to be the globally defined d_interval_len = 10.
 
-# v_star_matrix = get_v_star(T_intervals) # This is not used in compute_schedules_and_objectives
-s_dist = generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)
-if s_dist is None:
-    raise ValueError("Failed to generate service time distribution (s_dist).")
-convolutions_example = compute_convolutions(s_dist, N_example, q_no_show_example)
-projections_example = generate_schedules_w_equal_start_tail_sum(target_sum_example, N_example, T_example, d_example, convolutions_example, w_weight_example)
+convolutions_projections = compute_convolutions(s_dist, N_patients_single_case, q_single_case)
+projections_example = generate_schedules_w_equal_start_tail_sum(target_sum, N_patients_single_case, T_intervals, d_interval_len, convolutions_projections, w_single_case )
 ```
 
 ```{python}
+#| code-fold: true
+
 # Extract data for plotting
 schedules = [p[0] for p in projections_example]
 objectives = [p[1] for p in projections_example]
