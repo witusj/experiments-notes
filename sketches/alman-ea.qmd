@@ -1,0 +1,161 @@
+---
+title: "Paper Overview: Multimodularity, Convexity, and Optimization Properties"
+author: "Altman, Gaujal, and Hordijk"
+format: html
+engine: knitr
+---
+
+## Overview of the Paper
+
+This paper delves into the mathematical properties of **multimodular functions**, which are crucial for solving optimization problems, particularly in the field of queuing systems. The authors aim to provide simpler, more elementary proofs for existing theories and to generalize these concepts to broader applications.
+
+The key contributions of the paper can be broken down into three main parts:
+
+1.  **Theory of Multimodular Functions**: The first part of the paper revisits the foundational theory of multimodular functions. It establishes a critical link between **multimodularity**, a property of functions on discrete integer grids, and **convexity**, a property of continuous functions. The authors provide a direct proof that a function is multimodular if and only if its piecewise linear interpolation (its "continuous extension") is convex.
+
+2.  **Optimization Tools**: The second part develops general optimization tools for problems involving average costs. Instead of analyzing a single function, the paper considers sequences of multimodular functions. It proves that under these general conditions, **regular sequences** (also called balanced sequences) are optimal for minimizing these average costs. This approach is more direct and powerful than previous methods, avoiding the need for complex stability arguments.
+
+3.  **Applications**: Finally, the paper demonstrates the practical value of this theory by applying it to control problems in queuing systems. A key example is the admission control for a G/G/1 queue (a general single-server queue) and a more detailed analysis of a D/D/1 queue (a deterministic single-server queue). They show that a regular admission policy minimizes the average queue length in an infinite queue but not necessarily in a finite one, unless an additional no-loss constraint is imposed.
+
+In essence, the paper provides a robust mathematical framework for proving the optimality of regular, predictable policies in complex, dynamic systems.
+
+---
+
+## Explaining Section 2.2: Multimodularity and Convexity
+
+This section forges a fundamental link between the discrete world of integers and the continuous world of real numbers. The central idea is that **multimodularity is the discrete equivalent of convexity**. Let's break down how this works.
+
+### The Bridge: From Discrete Points to a Continuous Surface
+
+Imagine a function `f` that is only defined at integer coordinates, like `f(1, 2)` or `f(5, 3)`. This is a **discrete function** on a grid, $\mathbb{Z}^m$. Multimodularity is a property that describes the "shape" or "curvature" of this discrete function.
+
+On the other hand, **convexity** is a familiar concept for continuous functions. A function is convex if the line segment connecting any two points on its graph lies on or above the graph itself. It has a characteristic "bowl" shape.
+
+To connect these two ideas, we need a principled way to "fill in the gaps" between the integer points of `f` to create a continuous surface. This new continuous function is called `f̃`.
+
+### Building Blocks: Atoms and Triangulation
+
+The paper uses special building blocks called **atoms** to create the continuous surface.
+
+* **What is an atom?** In an m-dimensional space, an atom is a simplex (a generalized triangle) formed by `m+1` integer vertices that are connected in a specific way.
+* **Triangulation:** The entire continuous space can be perfectly tiled by these atoms, without any gaps or overlaps. This tiling process is called "simplicial decomposition" or "triangulation."
+
+### Constructing the Continuous Function `f̃`
+
+Once we have our space tiled with atoms, we can define the value of our continuous function `f̃` at any point `z`.
+
+1.  **Locate the Atom:** First, find the atom that contains the point `z`.
+2.  **Linearly Interpolate:** The value `f̃(z)` is a weighted average (a linear interpolation) of the values of the original discrete function `f` at the vertices of that atom.
+
+### The Main Result: Theorem 2.1
+
+The core conclusion of this section is profound:
+
+> A discrete function `f` is **multimodular** if and only if its continuous extension `f̃` (constructed via the atomic triangulation) is **convex**.
+
+This means the specific constraints that multimodularity places on the values of `f` at integer points are exactly the right conditions to guarantee that the interpolated surface `f̃` will have a proper, global "bowl" shape.
+
+### Distinguishing "Integer Convex" from True "Discrete Convexity" (Multimodularity)
+
+A key point of the paper is that not all intuitive definitions of "discrete convexity" are equally useful. The authors argue that **multimodularity** is the correct and powerful counterpart to continuous convexity, while the simpler "integer convexity" is not sufficient.
+
+* **Integer Convexity**: This is the most direct analogue of the second-derivative test. A function `f` is integer convex if, for any integer point `x` and direction `d`, the slope does not decrease.
+    * **Formula**: `f(x+d) - f(x) ≥ f(x) - f(x-d)`.
+    * **What it checks**: It examines the function's behavior along a **single dimension or direction at a time**.
+
+* **Discrete Convexity (Multimodularity)**: This is a more complex, multi-dimensional property.
+    * **Formula**: `f(x+v) + f(x+w) ≥ f(x) + f(x+v+w)` for any two different basis directions `v` and `w`.
+    * **What it checks**: It examines the function's behavior across **multiple dimensions simultaneously**. It describes the interaction between different directions, ensuring the function "curves up" in a coordinated way.
+
+::: {.callout-warning}
+**The Core Difference: 1D vs. Multi-D**
+
+* **Integer Convexity** is a one-dimensional check. It's like checking that a surface is convex only along the N-S and E-W directions, but ignoring the diagonal NE-SW direction.
+* **Multimodularity** is a multi-dimensional check. It ensures the surface curves upwards correctly across all directions, including diagonals. This is why it's a stronger condition.
+:::
+
+Every multimodular function is also integer convex, but the reverse is not true.
+
+#### The Counter-Example: `f(x, y) = max(x, y)`
+
+The paper uses `f(x) = max(xᵢ)` to show this difference perfectly.
+
+1.  **It IS Integer Convex:** The graph of this function is made of flat planes. If you walk along any straight line, the slope is either constant or it increases, but it never decreases. So it satisfies the definition of integer convexity.
+
+2.  **It is NOT Multimodular:** It fails the multi-dimensional check. The paper shows that for `x = (i+1, i)`, `f(x-e₁) + f(x+e₂) = 2i+1`, while `f(x) + f(x-e₁+e₂) = 2i+2`. Since `2i+1 < 2i+2`, the inequality `f(x+v)+f(x+w) ≥ f(x)+f(x+v+w)` is violated.
+
+#### Why the Distinction Matters
+
+This is not just a technicality. The reason multimodularity is the "correct" form of discrete convexity for optimization is that **only multimodularity guarantees that a local minimum is also a global minimum**. An integer convex function can have local minima that are not global, making optimization much harder. Because multimodularity ensures a true "bowl shape" in its continuous extension, finding the bottom of the bowl is straightforward.
+
+### Interactive Visualization
+
+The Python code below uses `plotly` to visualize this concept. It first plots a multimodular function (`f(x, y) = x² + y²`) and shows its smooth, convex continuous extension. It then plots a non-multimodular function, clearly showing how its extension is not convex.
+
+```{python}
+#| label: fig-visualization
+#| fig-cap: "On the left, a multimodular function and its convex extension. On the right, a non-multimodular function whose extension is not convex."
+#| layout-ncol: 2
+
+import plotly.graph_objects as go
+import numpy as np
+from scipy.spatial import Delaunay
+
+# --- 1. Define the Multimodular Function ---
+def multimodular_func(x, y):
+    """A simple convex function, which is multimodular on the integer grid."""
+    return x**2 + y**2
+
+# --- 2. Define the Non-Multimodular Function ---
+def non_multimodular_func(x, y):
+    """
+    A function whose continuous extension is clearly not convex.
+    """
+    return np.sin(x) * np.cos(y) * 4
+
+# --- Helper function to create plots ---
+def create_plot(func, title):
+    # Create a grid of integer points
+    x_int = np.arange(-5, 6, 1)
+    y_int = np.arange(-5, 6, 1)
+    x_grid, y_grid = np.meshgrid(x_int, y_int)
+    z_grid = func(x_grid, y_grid)
+
+    # Plot the discrete integer points
+    fig = go.Figure(data=[go.Scatter3d(
+        x=x_grid.flatten(),
+        y=y_grid.flatten(),
+        z=z_grid.flatten(),
+        mode='markers',
+        marker=dict(size=4, color='red'),
+        name='Discrete f(x,y)'
+    )])
+
+    # Create the continuous, triangulated surface (the extension f_tilde)
+    points2D = np.vstack([x_grid.flatten(), y_grid.flatten()]).T
+    tri = Delaunay(points2D)
+
+    fig.add_trace(go.Mesh3d(
+        x=x_grid.flatten(),
+        y=y_grid.flatten(),
+        z=z_grid.flatten(),
+        i=tri.simplices[:, 0],
+        j=tri.simplices[:, 1],
+        k=tri.simplices[:, 2],
+        opacity=0.6,
+        name='Continuous Extension f̃(x,y)'
+    ))
+
+    fig.update_layout(
+        title=title,
+        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z')
+    )
+    return fig
+
+# --- Generate and show the plots ---
+fig1 = create_plot(multimodular_func, 'Multimodular Function: Convex Extension')
+fig2 = create_plot(non_multimodular_func, 'Non-Multimodular Function: Non-Convex Extension')
+
+fig1.show()
+fig2.show()
+```

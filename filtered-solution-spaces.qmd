@@ -1,5 +1,5 @@
 ---
-title: "Simple enumeration"
+title: "Filtered solution spaces for outpatient appointment scheduling"
 author: "Witek ten Hove"
 editor: visual
 jupyter: python3
@@ -16,7 +16,7 @@ This document details a computational exploration and implementation inspired by
 Specifically, we implement a Python-based model to:
 
 1.  **Generate a Service Time Distribution:** Create a plausible distribution of patient service times with a target average, allowing for variability.
-2.  **Construct Candidate Schedules:** Systematically generate a variety of patient appointment schedules. The schedules explored here are characterized by a defined number of patients at the beginning ('start') and end ('tail') of the session, with the remaining patients distributed as evenly as possible across the central portion of the available time intervals.
+2.  **Construct Candidate Schedules:** Systematically generate a variety of patient appointment schedules. The schedules explored here are characterized by a defined number of patients at the beginning ('start') and end ('tail') of the session, with the remaining patients distributed as evenly as possible across the central portion of the available time intervals. We will explore this fitered solution space.
 3.  **Evaluate Schedule Performance:** For each generated schedule, calculate an objective function value. This objective is a weighted sum, reflecting the trade-off between minimizing expected patient waiting time (EWT) and minimizing expected service provider underutilization or overtime (ESP). This evaluation incorporates the probability of patient no-shows (`q_no_show`) and a user-defined weight (`w_weight`) to adjust the relative importance of EWT and ESP.
 4.  **Visualize and Analyze Results:** Utilize interactive 3D visualizations to explore the solution space. This allows for the examination of how different parameters—such as the no-show probability (`q`), the objective function weight (`w`), and the total number of patients (`N_patients`)—influence the structure of optimal schedules and their corresponding objective values.
 
@@ -1141,16 +1141,19 @@ def generate_schedules_w_equal_start_tail_sum(
     ewt, esp = calculate_objective_serv_time_lookup(
         initial_schedule, d, convolutions
     )
-    objective_value = w * ewt + (1 - w) * esp
-    projections = [(np.array(initial_schedule), objective_value)]
+    initial_objective_value = w * ewt + (1 - w) * esp
+    obj_diff = None
+    projections = [(np.array(initial_schedule), initial_objective_value, obj_diff)]
     for i in range(1, T - 1):
         new_schedule = initial_schedule + v_star_zero  # Add v_star_zero to each interval
         ewt, esp = calculate_objective_serv_time_lookup(
         new_schedule, d, convolutions
     )
-        objective_value = w * ewt + (1 - w) * esp
-        projections.append((new_schedule, objective_value))
+        new_objective_value = w * ewt + (1 - w) * esp
+        obj_diff = new_objective_value - initial_objective_value
+        projections.append((new_schedule, new_objective_value, obj_diff))
         initial_schedule = new_schedule  # Update for next iteration
+        initial_objective_value = new_objective_value  # Update objective value for next iteration
     
     return projections
   
@@ -1171,8 +1174,53 @@ if s_dist is None:
     raise ValueError("Failed to generate service time distribution (s_dist).")
 convolutions_example = compute_convolutions(s_dist, N_example, q_no_show_example)
 projections_example = generate_schedules_w_equal_start_tail_sum(target_sum_example, N_example, T_example, d_example, convolutions_example, w_weight_example)
-    print(f"Generated {len(projections_example)} projections with start_count + tail_count = {target_sum_example}.")
-    for proj in projections_example:
-        print(proj)
 ```
 
+```{python}
+# Extract data for plotting
+schedules = [p[0] for p in projections_example]
+objectives = [p[1] for p in projections_example]
+deltas = [p[2] for p in projections_example]
+# Replace None in deltas with 0 for plotting
+deltas[0] = 0
+
+# Create the chart
+fig_projections = make_subplots(
+    rows=2, cols=1,
+    shared_xaxes=True,
+    vertical_spacing=0.1,
+    subplot_titles=("Objective Value per Schedule Iteration", "Change in Objective (Delta) per Iteration")
+)
+
+# Add Objective Value trace
+fig_projections.add_trace(go.Scatter(
+    x=list(range(len(objectives))),
+    y=objectives,
+    mode='lines+markers',
+    name='Objective Value',
+    hovertemplate='<b>Iteration %{x}</b><br>Objective: %{y:.2f}<br>Schedule: %{customdata}<extra></extra>',
+    customdata=[str(s) for s in schedules],
+    marker=dict(color='royalblue')
+), row=1, col=1)
+
+# Add Delta trace
+fig_projections.add_trace(go.Bar(
+    x=list(range(len(deltas))),
+    y=deltas,
+    name='Objective Delta',
+    hovertemplate='<b>Iteration %{x}</b><br>Delta: %{y:.2f}<extra></extra>',
+    marker=dict(color='lightcoral')
+), row=2, col=1)
+
+# Update layout
+fig_projections.update_layout(
+    title_text='Analysis of Scheduling Projections',
+    height=600,
+    showlegend=False,
+    xaxis2_title='Schedule Iteration',
+    yaxis_title='Objective Value',
+    yaxis2_title='Objective Delta'
+)
+
+fig_projections.show()
+```
