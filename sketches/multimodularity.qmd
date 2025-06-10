@@ -1,0 +1,195 @@
+---
+title: "Understanding Multimodularity in Outpatient Scheduling"
+author: "An Explanation of Kaandorp & Koole (2007)"
+format:
+  html:
+    polyfill: false
+JupyterExecute:
+  execute: true
+  cache: false
+  engine: python3
+  kernel: /Users/witoldtenhove/Documents/Projects/vu/appointment-scheduling/experiments-notes/.myenv
+---
+
+## Introduction
+
+In their 2007 paper, "Optimal outpatient appointment scheduling," Guido Kaandorp and Ger Koole tackle a classic problem: how to schedule a series of outpatient appointments to balance patient waiting time, doctor's idle time, and the risk of running late. With a vast number of possible schedules, checking every single one is computationally impossible.
+
+The authors propose using a **local search algorithm**. This method starts with a feasible schedule and iteratively tries to find a better one in its "neighborhood" by making small changes, like moving a single appointment to an adjacent time slot. The crucial question is whether this process can get stuck in a "good" but not "best" solution (a local optimum instead of a global optimum).
+
+The paper's main technical contribution is proving that this won't happen. They prove that the objective function—a weighted sum of waiting time, idle time, and tardiness—has a special property called **multimodularity**. For functions with this property, any local optimum is guaranteed to also be the global optimum.
+
+## What is Multimodularity?
+
+Think of the concept of convexity for functions of continuous variables. A convex function has a single "bowl" shape, so any local minimum you find must be the global minimum. **Multimodularity** is a similar concept for functions defined on a grid of integers (a lattice, $\mathbb{Z}^{m}$).
+
+A function $f(x)$ is multimodular if for any schedule $x$ and any two distinct "moves" $v$ and $w$ from a specific set of moves, the following inequality holds:
+
+$$f(x+v) + f(x+w) \ge f(x) + f(x+v+w) \text{ }$$
+
+In the context of this paper:
+
+* `x` is the appointment schedule, a vector $(x_1, ..., x_T)$ where $x_t$ is the number of patients scheduled for time interval $t$.
+* A "move" $u_{t}$ represents shifting one patient's appointment from time slot $t$ to the earlier slot $t-1$.
+
+The inequality suggests a kind of "diminishing returns." The improvement gained by making two moves together is less than or equal to the sum of the improvements from making each move separately. This property ensures the optimization landscape has no misleading local minima, allowing the local search to find the true global optimum.
+
+## The Proof Strategy: Coupling and Scenarios
+
+The proof technique relies on **coupling** to compare four schedules simultaneously:
+
+1.  **$x$**: The original schedule.
+2.  **$x+u_i$**: The schedule with one move (e.g., patient from time $i \rightarrow i-1$).
+3.  **$x+u_j$**: The schedule with a different move (e.g., patient from $j \rightarrow j-1$).
+4.  **$x+u_i+u_j$**: The schedule with both moves.
+
+The authors prove the inequality by analyzing all possible ways the patient queue could evolve, breaking it down into a series of cases (e.g., Case A, B, C, etc.). The most critical factor is whether the queue becomes empty between the two moves.
+
+* **Case A: The Queue Empties**. If the clinic becomes empty between time $i$ and $j$, the system "resets". The effect of the first move is independent of the second. In this situation, the inequality becomes an equality.
+* **Case B: The Queue Does NOT Empty**. If the system remains busy, the first move makes the system slightly less congested. This can slightly reduce the benefit of the second move. This interaction between the moves is what gives rise to the inequality.
+
+## Python Illustration with Plotly
+
+Let's model a simplified version of this system to illustrate the multimodularity of patient waiting time. We'll simulate a **Case B** scenario where the queue does not empty.
+
+**Scenario Setup:**
+
+* **T = 5** time slots of 10 minutes each.
+* **N = 4** patients.
+* Average service time = **15 minutes**.
+* Initial schedule **x** = `[1, 1, 1, 1, 0]`.
+* Move **u_2**: Move patient from time 10 to time 0.
+* Move **u_3**: Move patient from time 20 to time 10.
+
+We will simulate the four resulting schedules and check if the waiting time function `W(x)` satisfies the multimodularity inequality.
+
+```{python}
+#| fig-cap: "An interactive view of the patient queue evolution for four schedules. Hover over the lines to see data points. The multimodularity principle governs how the benefits of multiple moves combine."
+
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+def simulate_waiting_time(schedule, service_time=15, interval_duration=10):
+    """
+    A simplified simulation to calculate total patient waiting time.
+    """
+    patient_arrivals = []
+    for time_slot, num_patients in enumerate(schedule):
+        for _ in range(num_patients):
+            patient_arrivals.append(time_slot * interval_duration)
+    
+    patient_arrivals.sort()
+    
+    total_waiting_time = 0
+    finish_times = []
+    
+    if not patient_arrivals:
+        return 0, [], []
+
+    first_arrival = patient_arrivals[0]
+    finish_times.append(first_arrival + service_time)
+    
+    for i in range(1, len(patient_arrivals)):
+        arrival_time = patient_arrivals[i]
+        doctor_free_time = finish_times[i-1]
+        
+        start_time = max(arrival_time, doctor_free_time)
+        waiting_time = start_time - arrival_time
+        total_waiting_time += waiting_time
+        
+        finish_times.append(start_time + service_time)
+        
+    max_time = max(finish_times) if finish_times else 50
+    time_points = np.arange(0, max_time + 1, 1)
+    queue_length = []
+    for t in time_points:
+        arrived = sum(1 for at in patient_arrivals if at <= t)
+        finished = sum(1 for ft in finish_times if ft <= t)
+        queue_length.append(arrived - finished)
+        
+    return total_waiting_time, time_points, queue_length
+
+# --- Define Schedules ---
+schedules = {
+    'x': [1, 1, 1, 1, 0],
+    'x + u_2': [2, 0, 1, 1, 0],
+    'x + u_3': [1, 2, 0, 1, 0],
+    'x + u_2 + u_3': [2, 1, 0, 1, 0]
+}
+
+# --- Run Simulations ---
+results = {}
+for name, schedule in schedules.items():
+    wait_time, time_points, queue_length = simulate_waiting_time(schedule)
+    results[name] = {
+        'wait': wait_time,
+        'time': time_points,
+        'queue': queue_length
+    }
+
+# --- Verify Multimodularity ---
+wait_x = results['x']['wait']
+wait_x_u2 = results['x + u_2']['wait']
+wait_x_u3 = results['x + u_3']['wait']
+wait_x_u2_u3 = results['x + u_2 + u_3']['wait']
+
+sum_individual_moves = wait_x_u2 + wait_x_u3
+sum_base_and_combined = wait_x + wait_x_u2_u3
+
+print("--- Multimodularity Check for Waiting Time ---")
+print(f"W(x)             : {wait_x} minutes")
+print(f"W(x + u_2)       : {wait_x_u2} minutes")
+print(f"W(x + u_3)       : {wait_x_u3} minutes")
+print(f"W(x + u_2 + u_3) : {wait_x_u2_u3} minutes\n")
+
+print(f"W(x+u_2) + W(x+u_3)      = {wait_x_u2} + {wait_x_u3} = {sum_individual_moves}")
+print(f"W(x) + W(x+u_2+u_3)      = {wait_x} + {wait_x_u2_u3} = {sum_base_and_combined}\n")
+
+print(f"Is W(x+u_2) + W(x+u_3) >= W(x) + W(x+u_2+u_3)? -> {sum_individual_moves >= sum_base_and_combined}")
+
+# --- Visualization with Plotly ---
+fig = make_subplots(
+    rows=2, cols=2,
+    subplot_titles=(
+        f"Schedule x: {schedules['x']}",
+        f"Schedule x+u_2: {schedules['x + u_2']}",
+        f"Schedule x+u_3: {schedules['x + u_3']}",
+        f"Schedule x+u_2+u_3: {schedules['x + u_2 + u_3']}"
+    ),
+    shared_xaxes=True,
+    shared_yaxes=True,
+    vertical_spacing=0.15
+)
+
+# Add traces to subplots (no changes here)
+fig.add_trace(go.Scatter(x=results['x']['time'], y=results['x']['queue'], name=f"Wait: {wait_x} min"), row=1, col=1)
+fig.add_trace(go.Scatter(x=results['x + u_2']['time'], y=results['x + u_2']['queue'], name=f"Wait: {wait_x_u2} min"), row=1, col=2)
+fig.add_trace(go.Scatter(x=results['x + u_3']['time'], y=results['x + u_3']['queue'], name=f"Wait: {wait_x_u3} min"), row=2, col=1)
+fig.add_trace(go.Scatter(x=results['x + u_2 + u_3']['time'], y=results['x + u_2 + u_3']['queue'], name=f"Wait: {wait_x_u2_u3} min"), row=2, col=2)
+
+
+# Update layout with more aggressive spacing
+fig.update_layout(
+    title=dict(
+        text='Queue Length Evolution for Four Schedules',
+        y=0.97,
+        x=0.5,
+        xanchor='center',
+        yanchor='top'
+        # Note: I've removed `automargin` as it's not needed with manual adjustments
+    ),
+    # FIX 3: Increase the top margin value for more guaranteed space
+    margin=dict(t=120, b=80),
+    height=800,
+    showlegend=True
+)
+
+# Update axis titles (no changes here)
+fig.update_yaxes(title_text="Patients in Queue", row=1, col=1)
+fig.update_yaxes(title_text="Patients in Queue", row=2, col=1)
+fig.update_xaxes(title_text="Time (minutes)", row=2, col=1)
+fig.update_xaxes(title_text="Time (minutes)", row=2, col=2)
+
+fig.show()
+```

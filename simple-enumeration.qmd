@@ -1093,3 +1093,86 @@ else:
 fig_single.show()
 ```
 
+
+```{python}
+def generate_schedules_w_equal_start_tail_sum(
+    target_sum: int,
+    N: int,
+    T: int,
+    d: int,
+    convolutions: Dict[int, np.ndarray],
+    w: float = 0.5
+) -> List[Tuple[List[int], float]]:
+    """
+    Generate filtered solution space projections based on a target sum for start_count + tail_count.
+    
+    Parameters:
+        target_sum (int): The target sum for start_count + tail_count.
+        N (int): Total number of patients.
+        T (int): Number of intervals
+        
+    Returns:
+        projections: Filtered projections as tuple of (schedule, objective).
+    """
+    ## Validate inputs
+    if not isinstance(target_sum, int) or target_sum < 0:
+        raise ValueError("target_sum must be a non-negative integer.")
+    if not isinstance(N, int) or N < 0:
+        raise ValueError("N must be a non-negative integer.")
+    if not isinstance(T, int) or T < 0:
+        raise ValueError("T must be a non-negative integer.")
+      
+    ## Create v_star
+    v_star_matrix = get_v_star(T)
+    v_star_zero = v_star_matrix[0]  # Assuming we want the first row for T intervals
+    
+    ## Create center_schedule_segment
+    num_center_patients = N - target_sum # Patients in the center part. Must be non-negative.
+    num_center_intervals = T - 2 # Intervals available for the center part. Must be non-negative.
+    if num_center_patients < 0 or num_center_intervals < 0:
+        # print(f"Warning: Invalid center part with N={N}, T={T}, target_sum={target_sum}. Skipping.")
+        return []  # No valid projections if center part is negative
+    center_schedule_segment = generate_evenly_distributed_schedule_intervals(
+                num_center_patients,
+                num_center_intervals
+            )
+    # Create initial schedule
+    initial_schedule = [target_sum] + center_schedule_segment + [0]  # Start with target_sum, center part, and tail 0
+    ewt, esp = calculate_objective_serv_time_lookup(
+        initial_schedule, d, convolutions
+    )
+    objective_value = w * ewt + (1 - w) * esp
+    projections = [(np.array(initial_schedule), objective_value)]
+    for i in range(1, T - 1):
+        new_schedule = initial_schedule + v_star_zero  # Add v_star_zero to each interval
+        ewt, esp = calculate_objective_serv_time_lookup(
+        new_schedule, d, convolutions
+    )
+        objective_value = w * ewt + (1 - w) * esp
+        projections.append((new_schedule, objective_value))
+        initial_schedule = new_schedule  # Update for next iteration
+    
+    return projections
+  
+# Test the function with example parameters
+target_sum_example = 10
+N_example = 12  # Renamed to avoid conflict with N_patients for fig2
+T_example = 12
+d_example = 10
+max_s_time_example = 30
+l_target_avg_service_time_example = 14.0
+i_sorting_split_example = 10
+w_weight_example = 0.9
+q_no_show_example = 0.1
+
+# v_star_matrix = get_v_star(T_intervals) # This is not used in compute_schedules_and_objectives
+s_dist = generate_weighted_list(max_s_time, l_target_avg_service_time, i_sorting_split)
+if s_dist is None:
+    raise ValueError("Failed to generate service time distribution (s_dist).")
+convolutions_example = compute_convolutions(s_dist, N_example, q_no_show_example)
+projections_example = generate_schedules_w_equal_start_tail_sum(target_sum_example, N_example, T_example, d_example, convolutions_example, w_weight_example)
+    print(f"Generated {len(projections_example)} projections with start_count + tail_count = {target_sum_example}.")
+    for proj in projections_example:
+        print(proj)
+```
+
