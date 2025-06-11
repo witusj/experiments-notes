@@ -1121,6 +1121,8 @@ fig_projections.show()
 ```
 
 ```{python}
+#| code-fold: true
+
 target_sum = max(0, N_patients_single_case - T_intervals + 2)  # Start from max(0, N - (T - 2)) to ensure non-negative start
 stop = 20
 lowest_objective_value = float('inf')  # Initialize to a very high value
