@@ -975,14 +975,14 @@ else:
 fig_single.show()
 ```
 
-A function $f$ is said to be integer convex if the following holds. For vectors $x$ and $d$ in $\mathbb{Z}^m$, we have
+A function $f$ is said to be integer convex if the following holds. For vectors $x$ and $d$ in $\mathbb{Z}^T$, we have
 $$f(x + d) - f(x) \geq f(x) - f(x-d).$$
 
-*Let $f$ be multimodular: then it is integer convex* [@altman_multimodularity_2000].*
+*Let $f$ be multimodular: then it is integer convex [@altman_multimodularity_2000].*
 
 In this case we are interested in the specific set of projections where the sum of the start count and tail count is equal to a target value.
 
-Let $m \leq T$ be a target value for the sum of the start count and tail count. We can generate a set of projections where the start count and tail count sum to $m$ by starting with a schedule that has $m$ patients in the first interval, $0$ patients in the last interval, and evenly distributed patients in the center intervals. Then we can iteratively add the vector $v_0 = (-1, 0, \ldots, 0, 1)$ to this schedule until we've reached $m$ iterations.
+Let $m \leq N$ be a target value for the sum of the start count and tail count. We can generate a set of projections where the start count and tail count sum to $m$ by starting with a schedule that has $m$ patients in the first interval, $0$ patients in the last interval, and evenly distributed patients in the center intervals. Then we can iteratively add the vector $v_0 = (-1, 0, \ldots, 0, 1)$ to this schedule until we've reached $m$ iterations.
 
 Because the function $f$ is multimodular, the projections generated in this way will be integer convex.
 
@@ -1118,4 +1118,51 @@ fig_projections.update_layout(
 )
 
 fig_projections.show()
+```
+
+```{python}
+target_sum = max(0, N_patients_single_case - T_intervals + 2)  # Start from max(0, N - (T - 2)) to ensure non-negative start
+stop = 20
+lowest_objective_value = float('inf')  # Initialize to a very high value
+while target_sum <= stop:
+  found_lower = False
+  num_center_patients = N_patients_single_case - target_sum # Patients in the center part
+  num_center_intervals = T_intervals - 2 # Intervals available for the center part
+
+  if num_center_patients < 0: # Should not happen if generate_start_tail_distribution is correct
+      # print(f"Warning: Negative center patients ({num_center_patients}) for start={start_count}, tail={tail_count}. Skipping.")
+      continue
+  
+  if num_center_intervals < 0:
+      if num_center_patients > 0:
+          # print(f"Warning: Cannot schedule {num_center_patients} center patients in {num_center_intervals} intervals. Skipping.")
+          continue
+      # If num_center_patients is 0 and num_center_intervals is < 0, center_schedule should be empty.
+      center_schedule_segment = []
+  elif num_center_patients == 0: # No patients for the center part
+       center_schedule_segment = [0] * num_center_intervals
+  else:
+      center_schedule_segment = generate_evenly_distributed_schedule_intervals(
+          num_center_patients,
+          num_center_intervals
+      )
+      # generate_evenly_distributed_schedule_intervals raises ValueError on failure
+      # so no need to check for None if its contract is maintained.
+  for s in range(target_sum + 1):
+    schedule_parts = [s]  # Start with the start count
+    t = target_sum - s
+    schedule_parts.extend(center_schedule_segment)
+    schedule_parts.append(t)
+    ewt, esp = calculate_objective_serv_time_lookup(
+        schedule_parts, d_interval_len, convolutions_projections
+    )
+    new_objective_value = w_single_case * ewt + (1 - w_single_case) * esp
+    if new_objective_value < lowest_objective_value:
+        lowest_objective_value = new_objective_value
+        print(f"New lowest objective value found: {lowest_objective_value} for target_sum={target_sum}, schedule={schedule_parts}. Sum schedule={sum(schedule_parts)}")
+        found_lower = True
+  if not found_lower:
+    print(f"No lower objective value found for target_sum={target_sum}. Stopping search.")
+    break 
+  target_sum += 1
 ```
