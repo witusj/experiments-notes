@@ -26,6 +26,7 @@ Through this computational study, we aim to gain deeper insights into the sensit
 #| code-fold: true
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.linalg import hadamard
@@ -34,6 +35,7 @@ import random
 import textwrap
 from typing import List, Tuple, Dict, Optional
 import unittest
+import time
 
 from functions import (
     get_v_star,
@@ -1171,5 +1173,6 @@ while target_sum <= stop:
 
 v_star = get_v_star(T_intervals)
 x_star, c_star = local_search_w_timer(best_schedule, d_interval_len, convolutions_projections, w_single_case, v_star, T_intervals, time_limit = 60, echo = False)
-print(f"Best schedule found: {x_star} with objective value {c_star}")
+print(f"Final best schedule found: {x_star} with objective value {c_star}")
 ```
+
