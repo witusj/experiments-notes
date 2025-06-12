@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from typing import List, Tuple, Dict, Iterable, TypeVar, Union
+from typing import List, Tuple, Dict, Iterable, TypeVar, Union, Optional
 import copy
 import random
 from itertools import combinations
@@ -526,4 +526,85 @@ def local_search(x: Union[List[int], np.ndarray],
         else:
             t += 1  # Increase neighborhood size if no improvement
 
+    return x_star, c_star
+  
+def local_search_w_timer(x: Union[List[int], np.ndarray],
+                 d: int,
+                 convolutions: Dict[int, np.ndarray],
+                 w: float,
+                 v_star: np.ndarray,
+                 size: int = 2,
+                 time_limit: Optional[int] = None,
+                 echo: bool = False) -> Tuple[np.ndarray, float]:
+    """
+    Perform local search to optimize a schedule with an optional time limit.
+
+    Parameters:
+        x (Union[List[int], np.ndarray]): The initial solution vector.
+        d (int): Duration threshold for a time slot.
+        convolutions (Dict[int, np.ndarray]): Precomputed convolutions of the service time PMF.
+        w (float): Weighting factor for combining the objectives.
+        v_star (np.ndarray): Array of adjustment vectors.
+        size (int, optional): Maximum number of patients to switch in a neighborhood (default is 2).
+        time_limit (Optional[int], optional): Maximum time in seconds for the search. 
+                                              If None, runs to completion. Defaults to None.
+        echo (bool, optional): If True, prints progress messages. Defaults to False.
+
+    Returns:
+        Tuple[np.ndarray, float]: A tuple containing the best solution found and its associated cost.
+    """
+    start_time = time.time() # Start the timer
+
+    x_star = np.array(x).flatten()  # Best solution (1D array)
+    objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
+    c_star = w * objectives_star[0] + (1 - w) * objectives_star[1]
+    if echo:
+        print(f"Initial solution: {x_star}, cost: {c_star:.4f}")
+    
+    T = len(x_star)  # Length of the solution vector
+
+    t = 1
+    while t <= size: # Loop up to 'size'
+        # Check time limit at the start of each major iteration (new neighborhood size)
+        if time_limit is not None and (time.time() - start_time) > time_limit:
+            if echo:
+                print(f"\nTime limit of {time_limit}s reached. Returning best solution found.")
+            return x_star, c_star
+
+        if echo:
+            print(f'\nRunning local search with switching {t} patient(s)')
+
+        # Generate neighborhood by switching t patients
+        ids_gen = powerset(range(T), t)
+        neighborhood = get_neighborhood(x_star, v_star, ids_gen)
+        if echo:
+            print(f"Size of neighborhood: {len(neighborhood)}")
+
+        found_better_solution = False
+        for i, neighbor in enumerate(neighborhood):
+            # Check time limit frequently within large neighborhoods
+            if i % 100 == 0: # Avoid checking on every single iteration for performance
+                if time_limit is not None and (time.time() - start_time) > time_limit:
+                    if echo:
+                        print(f"\nTime limit of {time_limit}s reached. Returning best solution found.")
+                    return x_star, c_star
+
+            waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
+            cost = w * waiting_time + (1 - w) * spillover
+            
+            if cost < c_star:
+                x_star = neighbor
+                c_star = cost
+                if echo:
+                    print(f"Found better solution: {x_star}, cost: {c_star:.4f}")
+                found_better_solution = True
+                break  # Exit neighborhood loop to restart search from the new best solution
+
+        if found_better_solution:
+            t = 1  # Restart search with t = 1 if improvement is found
+        else:
+            t += 1  # Increase neighborhood size if no improvement
+
+    if echo:
+        print("\nLocal search completed.")
     return x_star, c_star

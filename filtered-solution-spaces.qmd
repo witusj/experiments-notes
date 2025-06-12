@@ -36,10 +36,10 @@ from typing import List, Tuple, Dict, Optional
 import unittest
 
 from functions import (
-    bailey_welch_schedule,
     get_v_star,
     compute_convolutions,
     calculate_objective_serv_time_lookup,
+    local_search_w_timer
 )
 ```
 
@@ -1161,10 +1161,15 @@ while target_sum <= stop:
     new_objective_value = w_single_case * ewt + (1 - w_single_case) * esp
     if new_objective_value < lowest_objective_value:
         lowest_objective_value = new_objective_value
+        best_schedule = schedule_parts
         print(f"New lowest objective value found: {lowest_objective_value} for target_sum={target_sum}, schedule={schedule_parts}. Sum schedule={sum(schedule_parts)}")
         found_lower = True
   if not found_lower:
-    print(f"No lower objective value found for target_sum={target_sum}. Stopping search.")
+    print(f"No lower objective value found for target_sum={target_sum}. Stopping search.\nBest schedule so far: {best_schedule} with objective value {lowest_objective_value}")
     break 
   target_sum += 1
+
+v_star = get_v_star(T_intervals)
+x_star, c_star = local_search_w_timer(best_schedule, d_interval_len, convolutions_projections, w_single_case, v_star, T_intervals, time_limit = 60, echo = False)
+print(f"Best schedule found: {x_star} with objective value {c_star}")
 ```
