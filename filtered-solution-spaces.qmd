@@ -300,7 +300,7 @@ def generate_start_tail_distribution(N_patients: int, T_intervals: int) -> List[
 #| code-fold: true
 
 # --- Main computation function ---
-N_patients_fig1 = 24  # Renamed to avoid conflict with N_patients for fig2
+N_patients_fig1 = 24
 T_intervals = 48
 d_interval_len = 10
 max_s_time = 30
@@ -1058,8 +1058,8 @@ def generate_schedules_w_equal_start_tail_sum(
     return projections
   
 # Parameters for the new chart
-target_sum = 40
-# N_patients_single_case = 48
+target_sum = 24
+# N_patients_single_case = 40
 # q_single_case = 0.2
 # w_single_case = 0.5
 # T_intervals is assumed to be the globally defined T_intervals = 48.
@@ -1171,84 +1171,12 @@ while target_sum <= stop:
   target_sum += 1
 
 v_star = get_v_star(T_intervals)
-x_star, c_star = local_search_w_timer(best_schedule, d_interval_len, convolutions_projections, w_single_case, v_star, T_intervals, time_limit = 10, echo = False)
+x_star, c_star, log = local_search_w_timer(best_schedule, d_interval_len, convolutions_projections, w_single_case, v_star, T_intervals, time_limit = 10, process_start_time = time.time(), echo = False)
 print(f"Final best schedule found: {x_star} with objective value {c_star}")
 ```
 
 ```{python}
 #| code-fold: true
-
-# --- Helper Function ---
-def local_search_w_timer_new(
-    x: Union[List[int], np.ndarray], d: int, convolutions: Dict, w: float,
-    time_limit: Optional[int], process_start_time: float, echo: bool = False
-) -> Tuple[np.ndarray, float, List[Dict]]:
-    """
-    Performs local search by moving one patient at a time, logging all improvements found.
-    This uses a "first improvement" hill-climbing strategy.
-    """
-    local_search_start_time = time.time()
-    
-    x_star = np.array(x).flatten()
-    ewt, esp = calculate_objective_serv_time_lookup(x_star, d, convolutions)
-    c_star = w * ewt + (1 - w) * esp
-    
-    log = []
-    T = len(x_star)
-    
-    while True: # Keep searching until no improvement is found in a full pass
-        time_since_process_start = time.time() - process_start_time
-        if time_limit is not None and time_since_process_start > time_limit:
-            if echo: print(f"Local search time limit of {time_limit}s reached.")
-            break
-
-        found_improvement_in_pass = False
-        
-        # Iterate over all pairs of slots to try moving one patient
-        for i, j in combinations(range(T), 2):
-            # Try moving from i to j
-            if x_star[i] > 0:
-                neighbor = x_star.copy()
-                neighbor[i] -= 1
-                neighbor[j] += 1
-                
-                # Evaluate this neighbor
-                waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
-                cost = w * waiting_time + (1 - w) * spillover
-                if cost < c_star:
-                    x_star, c_star = neighbor, cost
-                    found_improvement_in_pass = True
-            
-            # If an improvement was found, also check moving from j to i before logging and restarting
-            if not found_improvement_in_pass and x_star[j] > 0:
-                neighbor = x_star.copy()
-                neighbor[j] -= 1
-                neighbor[i] += 1
-
-                waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
-                cost = w * waiting_time + (1 - w) * spillover
-                if cost < c_star:
-                    x_star, c_star = neighbor, cost
-                    found_improvement_in_pass = True
-
-            if found_improvement_in_pass:
-                time_elapsed = time.time() - process_start_time
-                log_entry = {
-                    "schedule": x_star.tolist(), "cost": c_star,
-                    "source": "local_search", "time_elapsed": time_elapsed
-                }
-                log.append(log_entry)
-                if echo: print(f"LS found better solution: cost={c_star:.4f} at {time_elapsed:.2f}s")
-                break # Break from inner loop to restart the pass
-
-        if found_improvement_in_pass:
-            continue # An improvement was found, so restart the search pass
-        else:
-            break # No improvement in a full pass, terminate
-            
-    return x_star, c_star, log
-
-# --- Main Function with Integrated Logging ---
 
 def find_optimal_schedule(
     N_patients: int, T_intervals: int, d_interval_len: int, w: float,
@@ -1329,10 +1257,16 @@ def find_optimal_schedule(
     # --- Stage 2: Local Search Refinement ---
     print("\n--- Stage 2: Local Search Refinement ---")
     if local_search_time_limit > 0 and T_intervals > 1:
-        _, _, local_search_log = local_search_w_timer_new(
-            initial_schedule, d_interval_len, convolutions_projections, w,
-            time_limit=local_search_time_limit, 
-            process_start_time=total_start_time, echo=False
+        _, _, local_search_log = local_search_w_timer(
+            initial_schedule,
+            d_interval_len,
+            convolutions_projections,
+            w,
+            v_star=get_v_star(T_intervals),
+            size=T_intervals,
+            time_limit=local_search_time_limit,
+            process_start_time = total_start_time,
+            echo=False
         )
         # Update the source label for plotting
         source_label = "local_search" if start_with_heuristic else "local_search_from_start"
@@ -1342,11 +1276,11 @@ def find_optimal_schedule(
         optimization_log.extend(local_search_log)
     
     total_time_taken = time.time() - total_start_time
-    print(f"\n🏁 Optimization complete in {total_time_taken:.2f} seconds.")
+    print(f"\n🏁 Optimization complete in {total_time_taken:.2f} seconds. Best schedule found: {optimization_log[-1]['schedule']} with cost {optimization_log[-1]['cost']:.4f}")
     
     return optimization_log, total_time_taken
 
-# --- Example Usage & Plotting ---
+# --- Plotting ---
 
 # Define parameters
 N_PATIENTS = N_patients_single_case

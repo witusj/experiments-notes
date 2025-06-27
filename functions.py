@@ -535,6 +535,7 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
                  v_star: np.ndarray,
                  size: int = 2,
                  time_limit: Optional[int] = None,
+                 process_start_time: float = time.time(),
                  echo: bool = False) -> Tuple[np.ndarray, float]:
     """
     Perform local search to optimize a schedule with an optional time limit.
@@ -553,7 +554,7 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
     Returns:
         Tuple[np.ndarray, float]: A tuple containing the best solution found and its associated cost.
     """
-    start_time = time.time() # Start the timer
+    start_time = process_start_time # Start the timer
 
     x_star = np.array(x).flatten()  # Best solution (1D array)
     objectives_star = calculate_objective_serv_time_lookup(x_star, d, convolutions)
@@ -562,7 +563,7 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
         print(f"Initial solution: {x_star}, cost: {c_star:.4f}")
     
     T = len(x_star)  # Length of the solution vector
-
+    log = []
     t = 1
     while t <= size: # Loop up to 'size'
         # Check time limit at the start of each major iteration (new neighborhood size)
@@ -587,7 +588,7 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
                 if time_limit is not None and (time.time() - start_time) > time_limit:
                     if echo:
                         print(f"\nTime limit of {time_limit}s reached. Returning best solution found.")
-                    return x_star, c_star
+                    return x_star, c_star, log
 
             waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
             cost = w * waiting_time + (1 - w) * spillover
@@ -595,6 +596,12 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
             if cost < c_star:
                 x_star = neighbor
                 c_star = cost
+                time_elapsed = time.time() - start_time
+                log_entry = {
+                    "schedule": x_star.tolist(), "cost": c_star,
+                    "source": "local_search", "time_elapsed": time_elapsed
+                }
+                log.append(log_entry)
                 if echo:
                     print(f"Found better solution: {x_star}, cost: {c_star:.4f}")
                 found_better_solution = True
@@ -607,4 +614,73 @@ def local_search_w_timer(x: Union[List[int], np.ndarray],
 
     if echo:
         print("\nLocal search completed.")
-    return x_star, c_star
+    return x_star, c_star, log
+
+def local_search_w_timer_new(
+    x: Union[List[int], np.ndarray], d: int, convolutions: Dict, w: float,
+    time_limit: Optional[int], process_start_time: float, echo: bool = False
+) -> Tuple[np.ndarray, float, List[Dict]]:
+    """
+    Performs local search by moving one patient at a time, logging all improvements found.
+    This uses a "first improvement" hill-climbing strategy.
+    """
+    local_search_start_time = time.time()
+    
+    x_star = np.array(x).flatten()
+    ewt, esp = calculate_objective_serv_time_lookup(x_star, d, convolutions)
+    c_star = w * ewt + (1 - w) * esp
+    
+    log = []
+    T = len(x_star)
+    
+    while True: # Keep searching until no improvement is found in a full pass
+        time_since_process_start = time.time() - process_start_time
+        if time_limit is not None and time_since_process_start > time_limit:
+            if echo: print(f"Local search time limit of {time_limit}s reached.")
+            break
+
+        found_improvement_in_pass = False
+        
+        # Iterate over all pairs of slots to try moving one patient
+        for i, j in combinations(range(T), 2):
+            # Try moving from i to j
+            if x_star[i] > 0:
+                neighbor = x_star.copy()
+                neighbor[i] -= 1
+                neighbor[j] += 1
+                
+                # Evaluate this neighbor
+                waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
+                cost = w * waiting_time + (1 - w) * spillover
+                if cost < c_star:
+                    x_star, c_star = neighbor, cost
+                    found_improvement_in_pass = True
+            
+            # If an improvement was found, also check moving from j to i before logging and restarting
+            if not found_improvement_in_pass and x_star[j] > 0:
+                neighbor = x_star.copy()
+                neighbor[j] -= 1
+                neighbor[i] += 1
+
+                waiting_time, spillover = calculate_objective_serv_time_lookup(neighbor, d, convolutions)
+                cost = w * waiting_time + (1 - w) * spillover
+                if cost < c_star:
+                    x_star, c_star = neighbor, cost
+                    found_improvement_in_pass = True
+
+            if found_improvement_in_pass:
+                time_elapsed = time.time() - process_start_time
+                log_entry = {
+                    "schedule": x_star.tolist(), "cost": c_star,
+                    "source": "local_search", "time_elapsed": time_elapsed
+                }
+                log.append(log_entry)
+                if echo: print(f"LS found better solution: cost={c_star:.4f} at {time_elapsed:.2f}s")
+                break # Break from inner loop to restart the pass
+
+        if found_improvement_in_pass:
+            continue # An improvement was found, so restart the search pass
+        else:
+            break # No improvement in a full pass, terminate
+            
+    return x_star, c_star, log
